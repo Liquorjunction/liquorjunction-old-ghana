@@ -37,6 +37,7 @@ use Auth;
 use DB;
 use Carbon\Carbon;
 use App\Models\TransactionTokens;
+use App\Services\MojoPay;
 
 
 class CheckoutController extends Controller
@@ -2414,44 +2415,34 @@ class CheckoutController extends Controller
         }
 
         if ($payment_method == 1) {
-            $grand_total_amount = $grand_total_amount;
-            $redirectUrl = route('orderSuccessCard', ['userid' => $user_id, 'orderid' => $order->id, 'amount' => $grand_total_amount, 'earnedpoints' => (int) round($earnedpoints)]);
-            $backUrl = url('/callBackUrl');
-            $xmlPayload = '<?xml version="1.0" encoding="utf-8"?><API3G><CompanyToken>4CF16A78-27EA-47A7-B1D4-6E52343C8DC1</CompanyToken><Request>createToken</Request><Transaction><PaymentAmount>' . $grand_total_amount . '</PaymentAmount><PaymentCurrency>GHS</PaymentCurrency><CompanyRef>49FKEOA</CompanyRef><RedirectURL>' . $redirectUrl . '</RedirectURL><BackURL>' . $backUrl . '</BackURL><CompanyRefUnique>0</CompanyRefUnique><PTL>5</PTL></Transaction><Services><Service><ServiceType>87197</ServiceType><ServiceDescription>Food And Beverages</ServiceDescription><ServiceDate>' . date('Y-m-d H:i:s') . '</ServiceDate></Service></Services></API3G>';
+            try {
+                $paymentUrl = app(MojoPay::class)->createCheckoutSession(
+                    (string) $grand_total_amount,
+                    (string) $order->id,
+                    'Order ' . $order->order_id
+                );
+            } catch (\Throwable $exception) {
+                logger()->error('Mojo checkout failed', [
+                    'order_id' => $order->id,
+                    'message' => $exception->getMessage(),
+                ]);
+                $result['code'] = strval(0);
+                $result['message'] = 'something_went_wrong';
+                $result['error_type'] = 'payment_failed';
+                $result['result'] = NULL;
 
-            $getToken = \Helper::createToken($xmlPayload, $grand_total_amount, $redirectUrl, $backUrl, $user_id, $user_address_id, $order->id);
-
-            logger()->info("+++++++++++++++++++++++++++checkoutMobile - createTokenMobile+++++++++++++++++++++++");
-            logger()->info($getToken);
-
-            logger()->info("-----------------------------------------");
-            $result = json_decode(json_encode($getToken), true);
-            if (@$result['original']['error']) {
-                $result['code']     =  strval(0);
-                $result['message']  =  'something_went_wrong';
-                $result['error_type']  =  'payment_failed';
-                $result['result']   =  NULL;
-
-                $mainResult   =   $result;
-                return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+                return response()->json(new \App\Http\Resources\V1\SettingResource($result));
             }
 
-            if (@$result['original']['token']) {
-                $token = $result['original']['token'][0];
-                $paymentUrl = 'https://secure.3gdirectpay.com/payv3.php?ID=' . $token;
-                // dd($paymentUrl);
+            $response_data['order_number'] = $order_custom_id;
+            $response_data['payment_url'] = $paymentUrl;
 
-                $response_data['order_number'] = $order_custom_id;
-                $response_data['payment_url'] = $paymentUrl;
+            $result['code'] = strval(1);
+            $result['message'] = 'order_sucessfully_placed';
+            $result['result'] = $response_data;
+            $result['generate_token'] = '';
 
-                $result['code']     =  strval(1);
-                $result['message']  =  'order_sucessfully_placed';
-                $result['result']   =  $response_data;
-                $result['generate_token']    =  $token;
-
-                $mainResult   =   $result;
-                return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            }
+            return response()->json(new \App\Http\Resources\V1\SettingResource($result));
         }
 
         $title = "Online Order Confirm";

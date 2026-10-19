@@ -62,4 +62,11 @@ return [
         // 'key_path' => env('APPLE_PRIVATE_KEY'),
     ],
 
+    'mojopay' => [
+        'client_id' => env('MOJO_CLIENT_ID'),
+        'client_secret' => env('MOJO_CLIENT_SECRET'),
+        'webhook_secret' => env('MOJO_WEBHOOK_SECRET'),
+        'base_url' => env('MOJO_BASE_URL', 'https://omni.mojo-pay.com/v1'),
+    ],
+
 ];

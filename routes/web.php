@@ -12,6 +12,7 @@ use App\Http\Controllers\Frontend\ProductController;
 use App\Http\Controllers\Frontend\StoreController;
 use App\Http\Controllers\Frontend\CartController;
 use App\Http\Controllers\Frontend\CheckoutController;
+use App\Http\Controllers\Frontend\MojoPayController;
 use App\Http\Controllers\Frontend\MyProfileController;
 use App\Http\Controllers\Frontend\StoreMapController;
 use App\Http\Controllers\Frontend\BlogController;
@@ -38,6 +39,10 @@ Route::get('/phpinfo', function () {
 Route::get('/linkstorage', function () {
     Artisan::call('storage:link');
 });
+
+Route::post('/webhooks/mojopay', [MojoPayController::class, 'webhook'])->name('mojo.webhook');
+Route::get('/mojopay/return/{order}', [MojoPayController::class, 'returned'])->name('mojo.return');
+Route::get('/mojopay/cancel/{order}', [MojoPayController::class, 'cancelled'])->name('mojo.cancel');
 
 // Backend Routes
 Route::get('/admin/login', function () {

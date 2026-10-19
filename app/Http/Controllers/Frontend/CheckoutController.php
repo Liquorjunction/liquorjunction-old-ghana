@@ -43,6 +43,7 @@ use Session;
 use File;
 use Helper;
 use Redirect;
+use App\Services\MojoPay;
 use App\Models\Area;
 use App\Models\Country;
 use App\Models\Region;
@@ -892,80 +893,7 @@ class CheckoutController extends Controller
 
     public function orderSuccessCard(Request $request, $userid, $orderid, $amount, $earnedpoints)
     {
-        // echo "string";exit;
-        $orderId = $orderid;
-        $userId = $userid;
-        $Amount = $amount;
-        $earnedpoints = (int)($earnedpoints ?: 0);
-
-
-        $orderData = Order::find($orderid);
-        $orderData->status = 1;
-        if ($orderData->save()) {
-            try {
-                $tranId = @$_GET['TransID'] ?: $this->geneateTranscationId();
-                $transactions = Transactions::where('order_id', $orderId)->update(['status' => 1, 'payment_status' => 1]);
-
-                $orderDetails = OrderDetails::where('order_id', $orderData->id)->get();
-
-                if (!empty($orderDetails) && $orderData->is_stock_updated != 1) {
-                    foreach ($orderDetails as $item) {
-                        $existing = ProductVariants::find($item->variant_id);
-                        $available_qty = $existing->available_qty - $item->quantity;
-                        $sold_qty = $existing->sold_qty + $item->quantity;
-
-                        $existing->available_qty = $available_qty;
-                        $existing->sold_qty = $sold_qty;
-                        $existing->save();
-                    }
-                    $updatStockStatus = Order::find($orderData->id);
-                    $updatStockStatus->is_stock_updated = 1;
-                    $updatStockStatus->save();
-
-                    $userData = DB::table('main_users')->where('id', $userId)->first();
-                    $title = "Online Order Confirm";
-                    $message = "Online Order Confirm";
-                    $remember_token = "fYPZqDsO90pgmZAzTKD0ow:APA91bEF6Pv3waTLBb8lRSUCrjz_M3Vxf14zF3IDHBckRoI79Ojw66aRbuDNhuHWT21qsPYwhOvXxGhILv-nJ0ZCNWzEEuo2tWQ1pDULgeBkPPoAbPaV6ulPJ0W1H8zhA2IcPn8zHl8P";
-                    $device_token = $userData->device_token;
-                    // echo "<pre>";print_r($device_token);exit();
-                    $device_type = 1;
-
-                    $notification = new Notification();
-                    $notification->order_id = @$orderData->id;
-                    $notification->sender_id = @$userId;
-                    $notification->receiver_id = @$userId;
-                    $notification->notification_type = 1;
-                    $notification->title = @$title;
-                    $notification->message = @$message;
-                    $notification->is_read = 0;
-                    $notification->save();
-
-
-                    $admin_notification = new AdminNotifications();
-                    $admin_notification->sender_id = @$userId;
-                    $admin_notification->order_id = @$orderData->id;
-                    $admin_notification->receiver_id = @$userId;
-                    $admin_notification->notification_type = 1;
-                    $admin_notification->title = @$title;
-                    $admin_notification->message = @$message;
-                    $admin_notification->is_read = 0;
-                    $admin_notification->save();
-
-                    $this->sendOrderConfirmationEmail($userId, $orderData);
-                }
-
-                // update cart status
-                $updatepsw = Cart::where('user_id', $userId)->update(array('status' => 2));
-
-                Session::forget('buy_now_info');
-                Session::forget('checkout_in_progress');
-                Session::forget('checkout_page_load_time');
-
-                return view('frontend.checkout.order-success', compact('orderData', 'earnedpoints'));
-            } catch (\Throwable $th) {
-                abort(404);
-            }
-        }
+        return redirect()->route('mojo.return', ['order' => $orderid]);
     }
 
 
@@ -1924,36 +1852,26 @@ class CheckoutController extends Controller
         }
 
         if ($payment_method == 1) {
-            $grand_total_amount = $grand_total_amount;
-             if ($userData && $userData->is_guest_user == 1) {
-            Session::flush();
-            Auth::guard('user')->logout();
-        }
-            $redirectUrl = route('orderSuccessCard', ['userid' => $user_id, 'orderid' => $order->id, 'amount' => $grand_total_amount, 'earnedpoints' => $earnedpoints]);
-            $backUrl = url('/callBackUrl');
-            $xmlPayload = '<?xml version=\"1.0\" encoding=\"utf-8\"?><API3G><CompanyToken>4CF16A78-27EA-47A7-B1D4-6E52343C8DC1</CompanyToken><Request>createToken</Request><Transaction><PaymentAmount>' . $grand_total_amount . '</PaymentAmount><PaymentCurrency>GHS</PaymentCurrency><CompanyRef>49FKEOA</CompanyRef><RedirectURL>' . $redirectUrl . '</RedirectURL><BackURL>' . $backUrl . '</BackURL><CompanyRefUnique>0</CompanyRefUnique><PTL>5</PTL>
-            </Transaction><Services><Service><ServiceType>87197</ServiceType><ServiceDescription>Food And Beverages</ServiceDescription><ServiceDate>' . date('Y-m-d H:i:s') . '</ServiceDate></Service></Services>
-            </API3G>';
+            if ($userData && $userData->is_guest_user == 1) {
+                Session::flush();
+                Auth::guard('user')->logout();
+            }
 
-            $getToken = \Helper::createToken($xmlPayload, $grand_total_amount, $redirectUrl, $backUrl, $user_id, $user_address_id, $order->id);
-            logger()->info("+++++++++++++++++++++++++++checkout - createToken+++++++++++++++++++++++");
-            logger()->info($getToken);
-
-            logger()->info("-----------------------------------------");
-            $result = json_decode(json_encode($getToken), true);
-
-            if (@$result['original']['error']) {
+            try {
+                $paymentUrl = app(MojoPay::class)->createCheckoutSession(
+                    (string) $grand_total_amount,
+                    (string) $order->id,
+                    'Order ' . $order->order_id
+                );
+            } catch (\Throwable $exception) {
+                logger()->error('Mojo checkout failed', [
+                    'order_id' => $order->id,
+                    'message' => $exception->getMessage(),
+                ]);
                 return response()->json(['error' => true, 'message' => @Helper::language('something_went_wrong'), 'type' => 'payment_error']);
             }
 
-            if (@$result['original']['token']) {
-                // if ($is_buy_now != 1) {
-                //     $updatepsw = Cart::where('user_id', $user_id)->update(array('status' => 2));
-                // }
-                $token = $result['original']['token'][0];
-                $paymentUrl = 'https://secure.3gdirectpay.com/payv3.php?ID=' . $token;
-                return response()->json(['success' => true, 'redirect_url' => $paymentUrl]);
-            }
+            return response()->json(['success' => true, 'redirect_url' => $paymentUrl]);
         }
 
         $userData = DB::table('main_users')->where('id', $user_id)->first();

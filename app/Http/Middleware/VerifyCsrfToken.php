@@ -18,5 +18,6 @@ class VerifyCsrfToken extends Middleware
         'api/v1/comment',
         'api/v1/order',
         'school-login',
+        'webhooks/mojopay',
     ];
 }
