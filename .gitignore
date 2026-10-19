@@ -1,0 +1,11 @@
+/public
+/vendor
+/storage/framework/
+.env
+
+AuthKey_*.p8
+liquor-junction.json
+*.sql
+error_log
+
+/storage/logs/

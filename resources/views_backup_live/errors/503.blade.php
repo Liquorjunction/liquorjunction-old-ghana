@@ -1,0 +1,18 @@
+@extends('dashboard.layouts.auth')
+@section('title', "503")
+@section('content')
+    <div class="content-text">
+            <div class="error-page largest-text">
+                <div class="image-center">
+                    <img src="{{ asset('assets/dashboard/images/error.png') }}" alt="page-not-found">
+                </div>
+                <h1>503</h1>
+                <h2 class="mb-4">We’re making some improvements behind the scenes 🚧
+The site will be back online very soon.
+<br>
+Thanks for your patience!</h2>
+                <a href="{{ route('frontend.home') }}" class="common-btn hvr-radial-out">Go Home</a>
+            </div>
+        </div>
+@endsection
+

@@ -1,0 +1,143 @@
+@extends('dashboard.layouts.master')
+@section('title', 'View Promo Code')
+@section('content')
+
+<link href="{{ asset('assets/dashboard/css/select2.min.css') }}" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css" type="text/css" />
+<style type="text/css">
+    .select2-container {
+        width: 100% !important;
+    }
+
+    .form-control:disabled,
+    .form-control[readonly] {
+        background-color: #ffffff;
+        opacity: 1;
+    }
+
+    .table tbody>tr>td,
+    .table thead>tr>th {
+
+        border-left: 1px solid #dfdfdf !important;
+
+    }
+
+    .table_design {
+        padding: 0 !important;
+    }
+
+    .table_design th {
+        width: 200px !important;
+    }
+</style>
+
+<div class="padding list-school">
+    <div class="box">
+        <div class="box-header dker">
+            <h3>View Promo Code</h3>
+            <small>
+                <a href="{{ route('adminHome') }}">{{ __('backend.dashboard') }}</a> /
+                <a href="{{ route('promocode') }}">Promo Code</a> /
+                View Promo Code
+            </small>
+        </div>
+        {{-- <div class="box-tool">
+            <ul class="nav">
+                <li class="nav-item inline">
+                    <a class="nav-link" href="{{route('promocode')}}">
+                        <i class="material-icons md-18">×</i>
+                    </a>
+                </li>
+            </ul>
+        </div> --}}
+        <div class="box nav-active-border b-info">
+            <div class="tab-content clear b-t">
+                <div class="tab-pane active" id="tab_details">
+                    <div class="box-body">
+                        <form class="table_design">
+                            <table class="table table-bordered m-a-0">
+                                <tr>
+                                    <tbody>
+                                        <th>Promo Code</th>
+                                        <td>{{$Promocode->promo_name}}</td>
+                                    </tbody>
+                                </tr>
+                                {{-- <tr>
+                                    <th>Applicable On</th>
+                                    <td>
+                                        @php
+                                            $types = [1 => 'Brand', 2 => 'Category', 3 => 'Product'];
+                                        @endphp
+
+                                        {{ $types[$Promocode->product_type] ?? 'N/A' }}
+                                    </td>
+                                </tr> --}}
+                                <tr>
+                                    <tbody>
+                                        <th>Minimum Amount</th>
+                                        <td>{{$Promocode->minimum_amount}} {{ $setting->currency_symbol ?? '' }}</td>
+                                    <tbody>
+                                </tr>
+                                  <tr>
+                                    <tbody>
+                                        <th>Per User Limit</th>
+                                        <td>{{$Promocode->total_usage}}</td>
+                                    <tbody>
+                                </tr>
+                                <tr>
+                                    <tbody>
+                                        <th>Discount Percentage</th>
+                                        <td>{{$Promocode->discount_percentage.'%'}}</td>
+                                    <tbody>
+                                </tr>
+                                <tr>
+                                    <tbody>
+                                        <th>Start Date</th>
+                                        <td>{{ ($Promocode->start_date ? Carbon\Carbon::parse($Promocode->start_date)->format(env('DATE_FORMAT', 'Y-m-d')) : "-") }}</td>
+                                    </tbody>
+                                </tr>
+                                <tr>
+                                    <tbody>
+                                        <th>End Date</th>
+                                        <td>
+                                            {{ ($Promocode->end_date ? Carbon\Carbon::parse($Promocode->end_date)->format(env('DATE_FORMAT', 'Y-m-d')) : "-") }}
+                                        </td>
+                                    </tbody>
+                                </tr>
+                               
+                                <tr>
+                                    <tbody>
+                                        <th>Created Date</th>
+                                        <?php $date = \Helper::formatDatetime($Promocode->created_at) . ' ' . \Helper::formatTimeLocal($Promocode->created_at) ?>
+                                        <td>{{ ($Promocode->created_at ? Carbon\Carbon::parse($Promocode->created_at)->format(env('DATE_FORMAT', 'Y-m-d')) : "-") }}</td>
+                                    <tbody>
+                                </tr>
+                            </table>
+                        </form>
+                        <div class="form-group row">
+                            <div class="col-sm-2">
+                                <a href="{{ url()->previous() }}" class="btn btn-default m-t" style="margin: 0 0 0 0px">
+                                    <i class="material-icons">
+                                        &#xe5cd;</i> Cancel
+                                </a>
+                            </div>
+                            <div class="col-sm-10"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endsection
+    @push("after-scripts")
+
+    <script src="{{ asset('assets/dashboard/js/jquery.validate.min.js') }} "></script>
+    <!-- <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC3ksZwnrjrnMtiZXZJ7cx9YEckAlt3vh4&libraries=places&callback=initialize"
+async defer></script> -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC3ksZwnrjrnMtiZXZJ7cx9YEckAlt3vh4&libraries=places&callback=initialize" async defer></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/js/select2.min.js"></script>
+    <script type="text/javascript">
+        $(".tab-content :input").prop("disabled", true);
+    </script>
+    @endpush
