@@ -18,6 +18,7 @@ use App\Models\OrderTracking;
 use App\Models\OrderDetails;
 use App\Models\Product;
 use App\Models\Transactions;
+use App\Models\PaymentLog;
 use App\Models\UsersPayments;
 use App\Models\Notification;
 use App\Models\ProductVariants;
@@ -2416,16 +2417,20 @@ class CheckoutController extends Controller
 
         if ($payment_method == 1) {
             try {
-                $paymentUrl = app(MojoPay::class)->createCheckoutSession(
+                $mojoPay = app(MojoPay::class);
+                $session = $mojoPay->createCheckoutSession(
                     (string) $grand_total_amount,
                     (string) $order->id,
                     'Order ' . $order->order_id
                 );
+                $mojoPay->rememberSession((int) $order->id, $session['id']);
+                PaymentLog::record((int) $order->id, 'checkout_started', 'pending', 'Customer sent to Mojo', 'app');
             } catch (\Throwable $exception) {
                 logger()->error('Mojo checkout failed', [
                     'order_id' => $order->id,
                     'message' => $exception->getMessage(),
                 ]);
+                PaymentLog::record((int) $order->id, 'checkout_started', 'failed', 'Could not open Mojo checkout', 'app');
                 $result['code'] = strval(0);
                 $result['message'] = 'something_went_wrong';
                 $result['error_type'] = 'payment_failed';
@@ -2435,7 +2440,7 @@ class CheckoutController extends Controller
             }
 
             $response_data['order_number'] = $order_custom_id;
-            $response_data['payment_url'] = $paymentUrl;
+            $response_data['payment_url'] = $session['url'];
 
             $result['code'] = strval(1);
             $result['message'] = 'order_sucessfully_placed';

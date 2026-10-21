@@ -250,6 +250,14 @@ $urlAfterRoot = substr($fullPagePath, strpos($fullPagePath, env('BACKEND_PATH'))
                             <span class="nav-text">{{ __('backend.order_management') }}</span>
                         </a>
                     </li>
+                    <li class="{{ request()->routeIs('paymentlog') ? 'active' : '' }}">
+                        <a href="{{ route('paymentlog') }}">
+                            <span class="nav-icon">
+                                <img src="{{ asset('assets/dashboard/images/liquor_icons/Order management.svg')}}">
+                            </span>
+                            <span class="nav-text">Payment logs</span>
+                        </a>
+                    </li>
                     @endif
                     @php
                     $county_module_permission = @Helper::GetRolePermission(Auth::user()->user_type,10,'read');                                                 

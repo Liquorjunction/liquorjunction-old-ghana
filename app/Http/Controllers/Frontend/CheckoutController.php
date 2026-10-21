@@ -22,6 +22,7 @@ use App\Models\Product;
 use App\Models\ProductVariants;
 use App\Models\Promocode;
 use App\Models\Transactions;
+use App\Models\PaymentLog;
 use App\Models\TransactionTokens;
 use App\Models\UsersPayments;
 use App\Models\UserAddress;
@@ -1858,20 +1859,24 @@ class CheckoutController extends Controller
             }
 
             try {
-                $paymentUrl = app(MojoPay::class)->createCheckoutSession(
+                $mojoPay = app(MojoPay::class);
+                $session = $mojoPay->createCheckoutSession(
                     (string) $grand_total_amount,
                     (string) $order->id,
                     'Order ' . $order->order_id
                 );
+                $mojoPay->rememberSession((int) $order->id, $session['id']);
+                PaymentLog::record((int) $order->id, 'checkout_started', 'pending', 'Customer sent to Mojo', 'website');
             } catch (\Throwable $exception) {
                 logger()->error('Mojo checkout failed', [
                     'order_id' => $order->id,
                     'message' => $exception->getMessage(),
                 ]);
+                PaymentLog::record((int) $order->id, 'checkout_started', 'failed', 'Could not open Mojo checkout', 'website');
                 return response()->json(['error' => true, 'message' => @Helper::language('something_went_wrong'), 'type' => 'payment_error']);
             }
 
-            return response()->json(['success' => true, 'redirect_url' => $paymentUrl]);
+            return response()->json(['success' => true, 'redirect_url' => $session['url']]);
         }
 
         $userData = DB::table('main_users')->where('id', $user_id)->first();

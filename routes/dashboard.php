@@ -26,6 +26,7 @@ use App\Http\Controllers\Dashboard\TimeFrameController;
 use App\Http\Controllers\Dashboard\MaterialCategoryController;
 use App\Http\Controllers\Dashboard\LoyaltyController;
 use App\Http\Controllers\Dashboard\OrderController;
+use App\Http\Controllers\Dashboard\PaymentLogController;
 use App\Http\Controllers\Dashboard\PurchaseOrderController;
 use App\Http\Controllers\Dashboard\UserReportController;
 use App\Http\Controllers\Dashboard\EarningReportController;
@@ -438,6 +439,9 @@ Route::middleware(['subAdminAuth'])->group(function () {
     Route::get('/adminorder/{id}/print', [OrderController::class, 'print'])->name('adminorder.print');
     Route::post('/adminorder/UpdateAll', 'OrderController@orderstatusUpdateAll')->name('orderstatusUpdateAll');
     Route::post('/send-sms', [OrderController::class,'sendsms'])->name('send-sms');
+
+    Route::get('/payment-logs', [PaymentLogController::class, 'index'])->name('paymentlog');
+    Route::post('/payment-logs/anyData', [PaymentLogController::class, 'anyData'])->name('paymentlog.anyData');
 
     //Admin Purchase Order
     Route::get('/purchase-order', [PurchaseOrderController::class, 'index'])->name('adminpurchaseorder');

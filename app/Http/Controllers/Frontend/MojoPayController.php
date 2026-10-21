@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\PaymentLog;
 use App\Services\MojoPay;
 use App\Services\OnlineOrderFulfillment;
 use Illuminate\Http\Request;
@@ -41,11 +42,20 @@ class MojoPayController extends Controller
             return response('OK', 200);
         }
 
+        $sessionId = (string) ($event['data']['object']['id'] ?? '');
+        if ($sessionId !== '') {
+            $mojoPay->rememberSession((int) $order->id, $sessionId);
+        }
+
         $type = (string) ($event['type'] ?? '');
         if ($type === 'checkout_session.succeeded') {
             $fulfillment->markPaid($order);
-        } elseif ($type === 'checkout_session.failed') {
+            PaymentLog::record((int) $order->id, 'webhook', 'success', $type, 'webhook');
+        } elseif (in_array($type, ['checkout_session.failed', 'checkout_session.cancelled', 'checkout_session.canceled', 'checkout_session.expired'], true)) {
             $fulfillment->markFailed($order);
+            PaymentLog::record((int) $order->id, 'webhook', 'failed', $type, 'webhook');
+        } elseif ($type !== '') {
+            PaymentLog::record((int) $order->id, 'webhook', 'pending', $type, 'webhook');
         }
 
         return response('OK', 200);
@@ -58,18 +68,17 @@ class MojoPayController extends Controller
             abort(404);
         }
 
-        $status = $mojoPay->paymentStatus((string) $orderData->id);
+        $status = $this->statusForOrder($orderData, $mojoPay);
         if ($status === 'succeeded') {
-            $fulfillment->markPaid($orderData);
-            $orderData = Order::with('user')->find($orderData->id);
-            $earnedpoints = $this->earnedPoints($orderData->id);
-            $this->clearCheckoutSession();
-
-            return view('frontend.checkout.order-success', compact('orderData', 'earnedpoints'));
+            PaymentLog::record((int) $orderData->id, 'customer_returned', 'success', 'Mojo session succeeded', 'return');
+            return $this->paidView($orderData, $fulfillment);
         }
 
         if ($status === 'failed') {
             $fulfillment->markFailed($orderData);
+            PaymentLog::record((int) $orderData->id, 'customer_returned', 'failed', 'Mojo session failed', 'return');
+        } else {
+            PaymentLog::record((int) $orderData->id, 'customer_returned', 'pending', 'Payment not confirmed yet', 'return');
         }
 
         return view('frontend.checkout.payment-pending', [
@@ -82,21 +91,44 @@ class MojoPayController extends Controller
     {
         $orderData = $this->findOrder($order);
         if ($orderData) {
-            $status = $mojoPay->paymentStatus((string) $orderData->id);
+            $status = $this->statusForOrder($orderData, $mojoPay);
             if ($status === 'succeeded') {
-                $fulfillment->markPaid($orderData);
-                $orderData = Order::with('user')->find($orderData->id);
-                $earnedpoints = $this->earnedPoints($orderData->id);
-                $this->clearCheckoutSession();
+                PaymentLog::record((int) $orderData->id, 'customer_cancelled', 'success', 'Payment already succeeded', 'cancel');
+                return $this->paidView($orderData, $fulfillment);
+            }
 
-                return view('frontend.checkout.order-success', compact('orderData', 'earnedpoints'));
+            if ($status !== 'unknown') {
+                $fulfillment->markFailed($orderData);
+                PaymentLog::record((int) $orderData->id, 'customer_cancelled', 'failed', 'Cancelled on Mojo page', 'cancel');
+            } else {
+                PaymentLog::record((int) $orderData->id, 'customer_cancelled', 'pending', 'Status could not be checked', 'cancel');
             }
         }
 
         return view('frontend.checkout.payment-pending', [
             'title' => 'Payment cancelled',
-            'message' => 'The payment was cancelled. Your order has not been marked as paid.',
+            'message' => 'The payment was cancelled. This order is marked as failed, not paid.',
         ]);
+    }
+
+    private function statusForOrder(Order $order, MojoPay $mojoPay): string
+    {
+        $sessionId = $mojoPay->sessionIdForOrder((int) $order->id);
+        if ($sessionId === null) {
+            return 'unknown';
+        }
+
+        return $mojoPay->sessionStatus($sessionId);
+    }
+
+    private function paidView(Order $order, OnlineOrderFulfillment $fulfillment)
+    {
+        $fulfillment->markPaid($order);
+        $orderData = Order::with('user')->find($order->id);
+        $earnedpoints = $this->earnedPoints($orderData->id);
+        $this->clearCheckoutSession();
+
+        return view('frontend.checkout.order-success', compact('orderData', 'earnedpoints'));
     }
 
     private function findOrder($reference): ?Order

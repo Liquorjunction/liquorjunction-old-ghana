@@ -2,14 +2,16 @@
 
 namespace App\Services;
 
+use App\Models\Transactions;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use RuntimeException;
 
 class MojoPay
 {
-    public function createCheckoutSession(string $amount, string $merchantReference, string $description): string
+    public function createCheckoutSession(string $amount, string $merchantReference, string $description): array
     {
         $payload = [
             'amount_mode' => 'fixed',
@@ -28,7 +30,8 @@ class MojoPay
             ->post($this->endpoint('/checkout/sessions'), $payload);
 
         $url = $response->json('url');
-        if (!$response->successful() || empty($url)) {
+        $sessionId = (string) $response->json('id');
+        if (!$response->successful() || $url === null || $url === '' || $sessionId === '') {
             logger()->warning('Mojo checkout session failed', [
                 'reference' => $merchantReference,
                 'status' => $response->status(),
@@ -37,24 +40,57 @@ class MojoPay
             throw new RuntimeException('Unable to start Mojo Pay checkout.');
         }
 
-        return $url;
+        return [
+            'url' => $url,
+            'id' => $sessionId,
+        ];
     }
 
-    public function paymentStatus(string $merchantReference): string
+    public function rememberSession(int $orderId, string $sessionId): void
+    {
+        Cache::put($this->sessionCacheKey($orderId), $sessionId, now()->addHours(48));
+
+        try {
+            $this->ensureSessionColumn();
+            Transactions::where('order_id', $orderId)->update(['mojo_session_id' => $sessionId]);
+        } catch (\Throwable $exception) {
+            logger()->warning('Could not store Mojo session id', [
+                'order_id' => $orderId,
+                'message' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    public function sessionIdForOrder(int $orderId): ?string
+    {
+        $cached = Cache::get($this->sessionCacheKey($orderId));
+        if (is_string($cached) && $cached !== '') {
+            return $cached;
+        }
+
+        try {
+            if (!Schema::hasColumn('transactions', 'mojo_session_id')) {
+                return null;
+            }
+            $stored = Transactions::where('order_id', $orderId)->value('mojo_session_id');
+            return is_string($stored) && $stored !== '' ? $stored : null;
+        } catch (\Throwable $exception) {
+            return null;
+        }
+    }
+
+    public function sessionStatus(string $sessionId): string
     {
         $response = Http::withToken($this->accessToken())
             ->acceptJson()
             ->timeout(30)
-            ->get($this->endpoint('/transactions/verify/' . rawurlencode($merchantReference)));
-
-        if ($response->status() === 404) {
-            return 'pending';
-        }
+            ->get($this->endpoint('/checkout/sessions/' . rawurlencode($sessionId)));
 
         if (!$response->successful()) {
-            logger()->warning('Mojo verify failed', [
-                'reference' => $merchantReference,
+            logger()->warning('Mojo session status failed', [
+                'session_id' => $sessionId,
                 'status' => $response->status(),
+                'error' => $response->json('error') ?? $response->json('message'),
             ]);
             return 'unknown';
         }
@@ -144,5 +180,21 @@ class MojoPay
         }
 
         return $status === '' ? 'unknown' : 'pending';
+    }
+
+    private function sessionCacheKey(int $orderId): string
+    {
+        return 'mojopay.session.' . $orderId;
+    }
+
+    private function ensureSessionColumn(): void
+    {
+        if (Schema::hasColumn('transactions', 'mojo_session_id')) {
+            return;
+        }
+
+        Schema::table('transactions', function ($table) {
+            $table->string('mojo_session_id', 64)->nullable();
+        });
     }
 }
