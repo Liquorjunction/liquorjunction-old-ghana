@@ -30,6 +30,9 @@ class OnlineOrderFulfillment
             }
 
             $lockedOrder->status = 1;
+            if ((int) $lockedOrder->order_status === 4) {
+                $lockedOrder->order_status = 1;
+            }
             $lockedOrder->save();
 
             if ($transaction) {
@@ -100,12 +103,18 @@ class OnlineOrderFulfillment
     public function markFailed(Order $order): void
     {
         DB::transaction(function () use ($order) {
+            $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->first();
             $transaction = Transactions::where('order_id', $order->id)->lockForUpdate()->first();
             if (!$transaction || (string) $transaction->payment_status === '1') {
                 return;
             }
             $transaction->payment_status = '2';
             $transaction->save();
+
+            if ($lockedOrder && (int) $lockedOrder->order_status === 1) {
+                $lockedOrder->order_status = 4;
+                $lockedOrder->save();
+            }
         });
     }
 }
