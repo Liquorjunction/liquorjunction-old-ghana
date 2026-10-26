@@ -11,16 +11,19 @@ use RuntimeException;
 
 class MojoPay
 {
-    public function createCheckoutSession(string $amount, string $merchantReference, string $description): array
+    public function createCheckoutSession(string $amount, string $merchantReference, string $description, string $channel = 'website'): array
     {
+        $successRoute = $channel === 'app' ? 'mojo.app.success' : 'mojo.return';
+        $cancelRoute = $channel === 'app' ? 'mojo.app.cancel' : 'mojo.cancel';
+
         $payload = [
             'amount_mode' => 'fixed',
             'currency' => 'GHS',
             'amount' => $this->formatAmount($amount),
             'merchant_reference' => $merchantReference,
             'description' => $description,
-            'success_url' => route('mojo.return', ['order' => $merchantReference]),
-            'cancel_url' => route('mojo.cancel', ['order' => $merchantReference]),
+            'success_url' => route($successRoute, ['order' => $merchantReference]),
+            'cancel_url' => route($cancelRoute, ['order' => $merchantReference]),
         ];
 
         $response = Http::withToken($this->accessToken())

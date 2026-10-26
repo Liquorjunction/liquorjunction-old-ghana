@@ -143,6 +143,10 @@
                                         <span
                                             class="body-normal text-dark-grey d-block mb-0">{{ Helper::getOrderStatus($orderInformation->order_status) }}</span>
                                     </li>
+                                    <li class="flex-md-fill">
+                                        <span class="body-normal text-dark d-block mb-1">Payment Status</span>
+                                        <span class="body-normal text-dark-grey d-block mb-0">{{ Helper::paymentStatusLabel(optional($orderInformation->transcations)->payment_status) }}</span>
+                                    </li>
                                     {{-- <li>
                                     <span class="body-normal text-dark-grey d-block mb-1">Note</span>
                                     <span class="body-normal text-dark-grey d-block mb-0">

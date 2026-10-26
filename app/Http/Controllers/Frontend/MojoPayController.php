@@ -63,6 +63,26 @@ class MojoPayController extends Controller
 
     public function returned(string $order, MojoPay $mojoPay, OnlineOrderFulfillment $fulfillment)
     {
+        return $this->handleReturn($order, $mojoPay, $fulfillment, false);
+    }
+
+    public function appReturned(string $order, MojoPay $mojoPay, OnlineOrderFulfillment $fulfillment)
+    {
+        return $this->handleReturn($order, $mojoPay, $fulfillment, true);
+    }
+
+    public function cancelled(string $order, MojoPay $mojoPay, OnlineOrderFulfillment $fulfillment)
+    {
+        return $this->handleCancel($order, $mojoPay, $fulfillment, false);
+    }
+
+    public function appCancelled(string $order, MojoPay $mojoPay, OnlineOrderFulfillment $fulfillment)
+    {
+        return $this->handleCancel($order, $mojoPay, $fulfillment, true);
+    }
+
+    private function handleReturn(string $order, MojoPay $mojoPay, OnlineOrderFulfillment $fulfillment, bool $app)
+    {
         $orderData = $this->findOrder($order);
         if (!$orderData) {
             abort(404);
@@ -71,29 +91,44 @@ class MojoPayController extends Controller
         $status = $this->statusForOrder($orderData, $mojoPay);
         if ($status === 'succeeded') {
             PaymentLog::record((int) $orderData->id, 'customer_returned', 'success', 'Mojo session succeeded', 'return');
+            if ($app) {
+                $fulfillment->markPaid($orderData);
+                return $this->appResult('Payment successful', 'Your payment is confirmed. Return to the app.');
+            }
+
             return $this->paidView($orderData, $fulfillment);
         }
 
         if ($status === 'failed') {
             $fulfillment->markFailed($orderData);
             PaymentLog::record((int) $orderData->id, 'customer_returned', 'failed', 'Mojo session failed', 'return');
+            $title = 'Payment failed';
+            $message = 'This payment was not completed.';
         } else {
             PaymentLog::record((int) $orderData->id, 'customer_returned', 'pending', 'Payment not confirmed yet', 'return');
+            $title = 'Payment not confirmed';
+            $message = 'We have not confirmed this payment yet. If you completed it, wait a moment and refresh this page.';
         }
 
-        return view('frontend.checkout.payment-pending', [
-            'title' => 'Payment not confirmed',
-            'message' => 'We have not confirmed this payment yet. If you completed it, wait a moment and refresh this page.',
-        ]);
+        if ($app) {
+            return $this->appResult($title, $message);
+        }
+
+        return view('frontend.checkout.payment-pending', compact('title', 'message'));
     }
 
-    public function cancelled(string $order, MojoPay $mojoPay, OnlineOrderFulfillment $fulfillment)
+    private function handleCancel(string $order, MojoPay $mojoPay, OnlineOrderFulfillment $fulfillment, bool $app)
     {
         $orderData = $this->findOrder($order);
         if ($orderData) {
             $status = $this->statusForOrder($orderData, $mojoPay);
             if ($status === 'succeeded') {
                 PaymentLog::record((int) $orderData->id, 'customer_cancelled', 'success', 'Payment already succeeded', 'cancel');
+                if ($app) {
+                    $fulfillment->markPaid($orderData);
+                    return $this->appResult('Payment successful', 'Your payment is confirmed. Return to the app.');
+                }
+
                 return $this->paidView($orderData, $fulfillment);
             }
 
@@ -105,10 +140,18 @@ class MojoPayController extends Controller
             }
         }
 
-        return view('frontend.checkout.payment-pending', [
-            'title' => 'Payment cancelled',
-            'message' => 'The payment was cancelled. This order is marked as failed, not paid.',
-        ]);
+        $title = 'Payment cancelled';
+        $message = 'The payment was cancelled. This order is marked as failed, not paid.';
+        if ($app) {
+            return $this->appResult($title, $message);
+        }
+
+        return view('frontend.checkout.payment-pending', compact('title', 'message'));
+    }
+
+    private function appResult(string $title, string $message)
+    {
+        return response()->view('frontend.checkout.app-payment-result', compact('title', 'message'));
     }
 
     private function statusForOrder(Order $order, MojoPay $mojoPay): string

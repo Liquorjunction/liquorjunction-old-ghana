@@ -43,6 +43,8 @@ Route::get('/linkstorage', function () {
 Route::post('/webhooks/mojopay', [MojoPayController::class, 'webhook'])->name('mojo.webhook');
 Route::get('/mojopay/return/{order}', [MojoPayController::class, 'returned'])->name('mojo.return');
 Route::get('/mojopay/cancel/{order}', [MojoPayController::class, 'cancelled'])->name('mojo.cancel');
+Route::get('/mojopay/thankyou/{order}', [MojoPayController::class, 'appReturned'])->name('mojo.app.success');
+Route::get('/mojopay/payment-failed/{order}', [MojoPayController::class, 'appCancelled'])->name('mojo.app.cancel');
 
 // Backend Routes
 Route::get('/admin/login', function () {

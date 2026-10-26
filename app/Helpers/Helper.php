@@ -2098,6 +2098,19 @@ if (!empty($sessionCart)) {
         }
         return $status;
     }
+
+    static function paymentStatusLabel($status)
+    {
+        if ((string) $status === '1') {
+            return 'Success';
+        }
+        if ((string) $status === '2') {
+            return 'Failed';
+        }
+
+        return 'Pending';
+    }
+
     static function avrageRating($product_id)
     {
         //  dd($product_id);

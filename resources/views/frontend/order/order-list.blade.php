@@ -111,6 +111,10 @@
                             <span class="body-normal text-dark d-block mb-1">{{Helper::language('order_status')}}</span>
                             <span class="body-normal text-dark-grey d-block mb-0">{{Helper::getOrderStatus($result->order_status)}}</span>
                         </li>
+                        <li>
+                            <span class="body-normal text-dark d-block mb-1">Payment Status</span>
+                            <span class="body-normal text-dark-grey d-block mb-0">{{ Helper::paymentStatusLabel(optional($result->transcations)->payment_status) }}</span>
+                        </li>
                          <li class="flex-sm-fill">
                             <span class="body-normal text-dark d-block mb-1">{{ Helper::language('total_amount_label') }}</span>
                             <span class="body-normal text-dark-grey d-block mb-0">{{$result->payable_amount.Helper::Settings( 'currency_symbol')}}</span>

@@ -2421,7 +2421,8 @@ class CheckoutController extends Controller
                 $session = $mojoPay->createCheckoutSession(
                     (string) $grand_total_amount,
                     (string) $order->id,
-                    'Order ' . $order->order_id
+                    'Order ' . $order->order_id,
+                    'app'
                 );
                 $mojoPay->rememberSession((int) $order->id, $session['id']);
                 PaymentLog::record((int) $order->id, 'checkout_started', 'pending', 'Customer sent to Mojo', 'app');

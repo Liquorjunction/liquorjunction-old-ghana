@@ -37,7 +37,7 @@ class OrderController extends Controller
 
     public function index(){
         $user_id = $this->user_id;
-        $orderInfo = Order::with('order_details','orderInfo')->where([['user_id',$user_id]])->orderBy('id','desc')->get();
+        $orderInfo = Order::with('order_details','orderInfo','transcations')->where([['user_id',$user_id]])->orderBy('id','desc')->get();
         // dd($orderInfo);
         return view("frontend.order.order-list", compact('orderInfo'));
     }
