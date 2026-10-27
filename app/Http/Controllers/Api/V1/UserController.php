@@ -2002,7 +2002,7 @@ class UserController extends Controller
         if ($post) {
             $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
 
-            $orderData = Order::with('order_details', 'orderInfo')->where([['user_id', $userData->id], ['status', 1]])->orderBy('id', 'desc');
+            $orderData = Order::with('order_details', 'orderInfo', 'transcations')->where([['user_id', $userData->id], ['status', 1]])->orderBy('id', 'desc');
             //dd($orderData);
             $page = 1;
             if ($request->page != '') {
@@ -2064,11 +2064,23 @@ class UserController extends Controller
                         $status = $order_status->name ?? '';
                     }
 
+                    if (@$data->transcations->payment_type == 1) {
+                        $payment_type = 'Card(Debit/Credit)';
+                    } elseif (@$data->transcations->payment_type == 2) {
+                        $payment_type = 'Card';
+                    } elseif (@$data->transcations->payment_type == 3) {
+                        $payment_type = 'Cash On Delivery';
+                    } else {
+                        $payment_type = '-';
+                    }
+
                     $orderArr[] = [
                         "order_number" => strval(@$data->order_id),
                         "order_id" => strval(@$data->id),
                         "order_date_time" => strval(@$ordersDate),
                         "order_status" => strval(@$status),
+                        "payment_status" => strval(Helper::paymentStatusLabel(optional($data->transcations)->payment_status)),
+                        "payment_type" => strval($payment_type),
                         "note" => strval(@$data->note ? @$data->note : ''),
                         "delivery_date" => strval(@$delivery_date),
                         "product_name" => strval(@$title),
@@ -2616,7 +2628,7 @@ class UserController extends Controller
                 if (@$orderInformation->transcations->payment_type == 1) {
                     $payment_type = 'Card(Debit/Credit)';
                 } elseif (@$orderInformation->transcations->payment_type == 2) {
-                    $payment_type = 'Cart';
+                    $payment_type = 'Card';
                 } elseif (@$orderInformation->transcations->payment_type == 3) {
                     $payment_type = 'Cash On Delivery';
                 } else {
@@ -2637,6 +2649,7 @@ class UserController extends Controller
                 $mainArr["delivery_instructions"] = strval(@$orderInformation->delivery_instructions);
                 $mainArr["cart_discount"] = strval(@$orderInformation->cart_discount);
                 $mainArr["giftMessage"] = strval(@$orderInformation->giftMessage);
+                $mainArr["payment_status"] = strval(Helper::paymentStatusLabel(optional($orderInformation->transcations)->payment_status));
                 $mainArr["payment_type"] = strval(@$payment_type);
                 $mainArr["customer_name"] = strval(@$customer_name);
                 $mainArr["customer_phone"] = strval(@$mobile_number);
