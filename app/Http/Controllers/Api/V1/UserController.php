@@ -2002,7 +2002,12 @@ class UserController extends Controller
         if ($post) {
             $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
 
-            $orderData = Order::with('order_details', 'orderInfo', 'transcations')->where([['user_id', $userData->id], ['status', 1]])->orderBy('id', 'desc');
+            // status 1 = paid/active, status 2 = unpaid online (pending or failed payment).
+            // Website My Orders shows both; unpaid online must appear so Failed/Pending can show.
+            $orderData = Order::with('order_details', 'orderInfo', 'transcations')
+                ->where('user_id', $userData->id)
+                ->whereIn('status', [1, 2])
+                ->orderBy('id', 'desc');
             //dd($orderData);
             $page = 1;
             if ($request->page != '') {
