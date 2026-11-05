@@ -17,7 +17,6 @@ class Order extends Model
         'transaction_id',
         'supplier_id',
         'order_id',
-        'delivery_address_id',
         'delivery_address',
         'billing_address',
         'isSameAddress',
@@ -69,7 +68,8 @@ class Order extends Model
     {
         return $this->belongsTo(MainUser::class);
     }
-    
+
+
     public static function getTopSellingProduct(){
         $top_product_count = DB::table('order_detail')->leftjoin('order','order.id','=','order_detail.order_id')->selectRaw('product_id, count(product_id) as number_of_product')->groupBy('product_id')->where('order.status','!=',4)->orderBy('number_of_product','desc')->get();
         return $top_product_count;

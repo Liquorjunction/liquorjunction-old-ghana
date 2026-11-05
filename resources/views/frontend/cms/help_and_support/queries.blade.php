@@ -63,7 +63,7 @@ if(\Session::get('language')==1){
                                         <div class="input-group phone-number">
                                             <select class="numbers" name="phone_code">
                                                 @foreach ($countryInfo as $value)
-                                                <option @if(old('phone_code')==$value->id)? {{'selected'}}@endif  value="{{$value->id}}" >{{$value->phonecode.' ('.$value->shortname.')' }}</option>
+                                                <option @if(old('phone_code')==$value->id)? {{'selected'}}@endif  value="{{$value->id}}" >+{{$value->phonecode}}</option>
                                                 @endforeach
                                             </select>
                                             <input type="tel" onkeypress="return restrictInput(this,event, 'digits')" name="phone_number" placeholder="{{@Helper::language('enter_phone_number_place')}}" value="{{old('phone_number')}}">

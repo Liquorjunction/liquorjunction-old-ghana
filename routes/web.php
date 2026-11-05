@@ -208,6 +208,7 @@ Route::middleware(['PreventBackHistory'])->group(function () {
         Route::post('/update-bill-address', [MyProfileController::class, 'updateBillAddress'])->name('update-bill-address');
         Route::post('/address-remove', [MyProfileController::class, 'addressRemove'])->name('addressremove');
         Route::post('/billaddressremove', [MyProfileController::class, 'billaddressremove'])->name('billaddressremove');
+        Route::get('/get-address-details/{type}/{id}', [MyProfileController::class, 'getAddressDetails'])->name('get-address-details');
         Route::get('/change-password', [MyProfileController::class, 'changePassword'])->name('userchange-password');
         Route::post('/update-password', [MyProfileController::class, 'updatePassword'])->name('update-password');
         Route::post('/user-logout', [MyProfileController::class, 'logoutUser'])->name('user-logout');

@@ -1844,6 +1844,12 @@ class CheckoutController extends Controller
             ($user_address_data->region->title) ? $delivery_address .= ',| ' . $user_address_data->region->title : '';
             ($user_address_data->area->title) ? $delivery_address .= ',| ' . $user_address_data->area->title : '';
             ($user_address_data->phone) ? $delivery_address .= ',| +' . $user_address_data->phonecode . ' ' . $user_address_data->phone : '';
+            if (!empty($user_address_data->latitude)) {
+                $delivery_address .= ',| ' . $user_address_data->latitude;
+            }
+            if (!empty($user_address_data->longitude)) {
+                $delivery_address .= ',| ' . $user_address_data->longitude;
+            }
         }
 
         if (!empty($user_bill_address_id) && $purchase_order_type == 1) {

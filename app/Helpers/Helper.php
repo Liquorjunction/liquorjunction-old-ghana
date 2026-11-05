@@ -2500,4 +2500,236 @@ if (!empty($sessionCart)) {
 
         return $xmlPayload;
     }
+
+
+    protected static $countriesCache = null;
+
+    /**
+     * Deduplicate repeated consecutive words (e.g. "Ajmer Ajmer" -> "Ajmer", "305004 305004" -> "305004")
+     */
+    public static function deduplicateConsecutiveWords($string)
+    {
+        return preg_replace('/\b(\w+)(?:\s+\1\b)+/i', '$1', trim((string)$string));
+    }
+
+    /**
+     * Parse, clean, deduplicate and format an order delivery_address or billing_address string.
+     * Returns ['name', 'phone', 'address', 'lat', 'lng', 'parts']
+     */
+    public static function formatOrderAddress($rawAddress, $fallbackPhone = null)
+    {
+        if (empty($rawAddress)) {
+            return [
+                'name' => '',
+                'phone' => $fallbackPhone ? trim($fallbackPhone) : '',
+                'address' => '',
+                'lat' => null,
+                'lng' => null,
+                'parts' => [],
+            ];
+        }
+
+        $rawAddress = trim((string)$rawAddress);
+
+        if (strpos($rawAddress, ',|') === false) {
+            $cleanSingle = self::deduplicateConsecutiveWords($rawAddress);
+            return [
+                'name' => '',
+                'phone' => $fallbackPhone ? trim($fallbackPhone) : '',
+                'address' => $cleanSingle,
+                'lat' => null,
+                'lng' => null,
+                'parts' => [$cleanSingle],
+            ];
+        }
+
+        $rawParts = explode(',|', $rawAddress);
+        $parts = array_values(array_filter(array_map('trim', $rawParts), 'strlen'));
+
+        $name = '';
+        $phone = $fallbackPhone ? trim($fallbackPhone) : '';
+        $lat = null;
+        $lng = null;
+
+        // 1. First element is Customer Name
+        if (!empty($parts)) {
+            $name = array_shift($parts);
+        }
+
+        // 2. Extract Latitude & Longitude from the end if present
+        $pCount = count($parts);
+        if ($pCount >= 2) {
+            $possibleLng = $parts[$pCount - 1];
+            $possibleLat = $parts[$pCount - 2];
+            if (is_numeric($possibleLat) && is_numeric($possibleLng)) {
+                $latF = (float)$possibleLat;
+                $lngF = (float)$possibleLng;
+                if ($latF >= -90 && $latF <= 90 && $lngF >= -180 && $lngF <= 180) {
+                    $lng = array_pop($parts);
+                    $lat = array_pop($parts);
+                }
+            }
+        }
+
+        // 3. Extract Phone Number from parts (Starts with '+' or contains valid phone digits)
+        foreach ($parts as $k => $part) {
+            $cleanPart = trim($part);
+            if (strpos($cleanPart, '+') === 0 && preg_match('/^\+[0-9\s\-\(\)]{6,}$/', $cleanPart)) {
+                if (empty($phone)) {
+                    $phone = $cleanPart;
+                }
+                unset($parts[$k]);
+            }
+        }
+        $parts = array_values($parts);
+
+        // 4. Deduplicate duplicate consecutive words inside each part
+        foreach ($parts as $k => $part) {
+            $parts[$k] = self::deduplicateConsecutiveWords($part);
+        }
+
+        // 5. Clean and deduplicate tokens across segments
+        if (self::$countriesCache === null) {
+            try {
+                self::$countriesCache = \Illuminate\Support\Facades\DB::table('countries')
+                    ->where('status', 1)
+                    ->pluck('name')
+                    ->map(fn($c) => strtolower(trim($c)))
+                    ->toArray();
+            } catch (\Throwable $e) {
+                self::$countriesCache = [];
+            }
+        }
+        $countries = self::$countriesCache ?: [];
+
+        $assembledTokens = [];
+        $seenTokens = [];
+
+        foreach ($parts as $partIndex => $part) {
+            $segments = array_map('trim', explode(',', $part));
+            foreach ($segments as $seg) {
+                $seg = self::deduplicateConsecutiveWords($seg);
+                if ($seg === '') continue;
+
+                $lowerSeg = strtolower($seg);
+                if (isset($seenTokens[$lowerSeg])) {
+                    continue;
+                }
+
+                // If street address already ends with this token (e.g. street is "Vaishali Nagar ajmer" and seg is "ajmer"),
+                // trim it from the street so we don't repeat the word
+                if (!empty($assembledTokens)) {
+                    $first = &$assembledTokens[0];
+                    if (preg_match('/\s+' . preg_quote($seg, '/') . '$/i', $first)) {
+                        $first = preg_replace('/\s+' . preg_quote($seg, '/') . '$/i', '', $first);
+                    }
+                }
+
+                $alreadyIncluded = false;
+                foreach ($assembledTokens as $existing) {
+                    if (strcasecmp($existing, $seg) === 0) {
+                        $alreadyIncluded = true;
+                        break;
+                    }
+                }
+
+                if (!$alreadyIncluded) {
+                    $seenTokens[$lowerSeg] = true;
+                    $assembledTokens[] = $seg;
+                }
+            }
+        }
+
+        // 6. Move country to the end if it was placed early
+        $countryIdx = -1;
+        for ($i = 0; $i < count($assembledTokens) - 1; $i++) {
+            if (in_array(strtolower($assembledTokens[$i]), $countries)) {
+                $countryIdx = $i;
+                break;
+            }
+        }
+        if ($countryIdx !== -1) {
+            $cName = $assembledTokens[$countryIdx];
+            array_splice($assembledTokens, $countryIdx, 1);
+            $assembledTokens[] = $cName;
+        }
+
+        $formattedAddress = implode(', ', $assembledTokens);
+
+        return [
+            'name' => $name,
+            'phone' => $phone,
+            'address' => $formattedAddress,
+            'lat' => $lat,
+            'lng' => $lng,
+            'parts' => $assembledTokens,
+        ];
+    }
+
+    /**
+     * Format a UserAddress or UserBillAddress instance into clean, non-repetitive address lines or single string.
+     */
+    public static function formatUserAddress($data, $asHtml = true)
+    {
+        if (!$data) return '';
+
+        $street = self::deduplicateConsecutiveWords(is_object($data) ? ($data->address ?? '') : ($data['address'] ?? ''));
+        $area = self::deduplicateConsecutiveWords(is_object($data) ? (@$data->area->title ?? '') : ($data['area_title'] ?? ''));
+        $city = self::deduplicateConsecutiveWords(is_object($data) ? ($data->city ?? '') : ($data['city'] ?? ''));
+        $region = self::deduplicateConsecutiveWords(is_object($data) ? (@$data->region->title ?? '') : ($data['region_title'] ?? ''));
+        $zip = self::deduplicateConsecutiveWords(is_object($data) ? ($data->zip_code ?? '') : ($data['zip_code'] ?? ''));
+        $country = self::deduplicateConsecutiveWords(is_object($data) ? (@$data->country->name ?? '') : ($data['country_name'] ?? ''));
+
+        // Break street address by comma to filter out redundant parts already present in street
+        $segments = array_values(array_filter(array_map('trim', explode(',', $street)), 'strlen'));
+        $cleanStreetSegments = [];
+        foreach ($segments as $seg) {
+            $lower = strtolower($seg);
+            if ($country && $lower === strtolower($country)) continue;
+            if ($region && $lower === strtolower($region)) continue;
+            if ($area && $lower === strtolower($area)) continue;
+            if ($city && $lower === strtolower($city)) continue;
+            $cleanStreetSegments[] = $seg;
+        }
+
+        if (empty($cleanStreetSegments)) {
+            $cleanStreetSegments = $segments;
+        }
+        $primaryStreet = implode(', ', $cleanStreetSegments);
+
+        // Locality / Area / City / Zip
+        $localityParts = [];
+        if (!empty($area)) {
+            $localityParts[] = $area;
+        }
+        if (!empty($city) && strcasecmp($city, $area) !== 0) {
+            $localityParts[] = $city;
+        }
+        if (!empty($zip)) {
+            $localityParts[] = $zip;
+        }
+        $localityLine = implode(', ', $localityParts);
+
+        // Region / Country
+        $regionParts = [];
+        if (!empty($region)) {
+            $regionParts[] = $region;
+        }
+        if (!empty($country)) {
+            $regionParts[] = $country;
+        }
+        $regionLine = implode(', ', $regionParts);
+
+        if ($asHtml) {
+            $outputLines = [];
+            if (!empty($primaryStreet)) $outputLines[] = htmlspecialchars($primaryStreet);
+            if (!empty($localityLine)) $outputLines[] = htmlspecialchars($localityLine);
+            if (!empty($regionLine)) $outputLines[] = htmlspecialchars($regionLine);
+
+            return implode('<br>', $outputLines);
+        } else {
+            $all = array_filter([$primaryStreet, $localityLine, $regionLine], 'strlen');
+            return implode(', ', $all);
+        }
+    }
 }

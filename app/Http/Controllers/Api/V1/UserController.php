@@ -2002,7 +2002,12 @@ class UserController extends Controller
         if ($post) {
             $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
 
-            $orderData = Order::with('order_details', 'orderInfo')->where([['user_id', $userData->id], ['status', 1]])->orderBy('id', 'desc');
+            // status 1 = paid/active, status 2 = unpaid online (pending or failed payment).
+            // Website My Orders shows both; unpaid online must appear so Failed/Pending can show.
+            $orderData = Order::with('order_details', 'orderInfo', 'transcations')
+                ->where('user_id', $userData->id)
+                ->whereIn('status', [1, 2])
+                ->orderBy('id', 'desc');
             //dd($orderData);
             $page = 1;
             if ($request->page != '') {
@@ -2064,11 +2069,23 @@ class UserController extends Controller
                         $status = $order_status->name ?? '';
                     }
 
+                    if (@$data->transcations->payment_type == 1) {
+                        $payment_type = 'Card(Debit/Credit)';
+                    } elseif (@$data->transcations->payment_type == 2) {
+                        $payment_type = 'Card';
+                    } elseif (@$data->transcations->payment_type == 3) {
+                        $payment_type = 'Cash On Delivery';
+                    } else {
+                        $payment_type = '-';
+                    }
+
                     $orderArr[] = [
                         "order_number" => strval(@$data->order_id),
                         "order_id" => strval(@$data->id),
                         "order_date_time" => strval(@$ordersDate),
                         "order_status" => strval(@$status),
+                        "payment_status" => strval(Helper::paymentStatusLabel(optional($data->transcations)->payment_status)),
+                        "payment_type" => strval($payment_type),
                         "note" => strval(@$data->note ? @$data->note : ''),
                         "delivery_date" => strval(@$delivery_date),
                         "product_name" => strval(@$title),
@@ -2616,7 +2633,7 @@ class UserController extends Controller
                 if (@$orderInformation->transcations->payment_type == 1) {
                     $payment_type = 'Card(Debit/Credit)';
                 } elseif (@$orderInformation->transcations->payment_type == 2) {
-                    $payment_type = 'Cart';
+                    $payment_type = 'Card';
                 } elseif (@$orderInformation->transcations->payment_type == 3) {
                     $payment_type = 'Cash On Delivery';
                 } else {
@@ -2637,6 +2654,7 @@ class UserController extends Controller
                 $mainArr["delivery_instructions"] = strval(@$orderInformation->delivery_instructions);
                 $mainArr["cart_discount"] = strval(@$orderInformation->cart_discount);
                 $mainArr["giftMessage"] = strval(@$orderInformation->giftMessage);
+                $mainArr["payment_status"] = strval(Helper::paymentStatusLabel(optional($orderInformation->transcations)->payment_status));
                 $mainArr["payment_type"] = strval(@$payment_type);
                 $mainArr["customer_name"] = strval(@$customer_name);
                 $mainArr["customer_phone"] = strval(@$mobile_number);
@@ -2986,6 +3004,8 @@ class UserController extends Controller
                         'id' => $data->id,
                         'name' => $data->name,
                         'address' => $address,
+                        'latitude' => @$data->latitude ? strval($data->latitude) : '',
+                        'longitude' => @$data->longitude ? strval($data->longitude) : '',
                     ];
                 }
 
@@ -3084,6 +3104,8 @@ class UserController extends Controller
                     $addressList['region_id'] = strval(@$get_result->region_id);
                     $addressList['area_id'] = strval(@$get_result->area_id);
                     $addressList['customer_address'] = strval(@$full_address);
+                    $addressList['latitude'] = @$get_result->latitude ? strval($get_result->latitude) : '';
+                    $addressList['longitude'] = @$get_result->longitude ? strval($get_result->longitude) : '';
                     $addressArr[] = $addressList;
                 }
 
@@ -3106,6 +3128,8 @@ class UserController extends Controller
                     $billAddress['region_id'] = strval(@$bill_result->region_id);
                     $billAddress['area_id'] = strval(@$bill_result->area_id);
                     $billAddress['customer_address'] = strval(@$full_bill_address);
+                    $billAddress['latitude'] = @$bill_result->latitude ? strval($bill_result->latitude) : '';
+                    $billAddress['longitude'] = @$bill_result->longitude ? strval($bill_result->longitude) : '';
                     $billAddressArr[] = $billAddress;
                 }
 
@@ -3304,6 +3328,8 @@ class UserController extends Controller
                     if ($request->has('address')) $editAddress->address = $request->address;
                     if ($request->has('city')) $editAddress->city = $request->city;
                     if ($request->has('zip_code')) $editAddress->zip_code = $request->zip_code;
+                    if ($request->has('latitude')) $editAddress->latitude = $request->latitude;
+                    if ($request->has('longitude')) $editAddress->longitude = $request->longitude;
                     $editAddress->status = 1;
 
 
@@ -3368,6 +3394,8 @@ class UserController extends Controller
                 $add_address->region_id = $request->region_id;
                 $add_address->zip_code = $request->input('zip_code', '');
                 $add_address->city = $request->input('city', '');
+                $add_address->latitude = $request->input('latitude', null);
+                $add_address->longitude = $request->input('longitude', null);
                 $add_address->status = 1;
 
                 // added on 25 aug
@@ -3499,6 +3527,8 @@ class UserController extends Controller
                 if ($request->has('address')) $editAddress->address = $request->address;
                 if ($request->has('city')) $editAddress->city = $request->city;
                 if ($request->has('zip_code')) $editAddress->zip_code = $request->zip_code;
+                if ($request->has('latitude')) $editAddress->latitude = $request->latitude;
+                if ($request->has('longitude')) $editAddress->longitude = $request->longitude;
                 $editAddress->status = 1;
 
                 $editAddress->default = $default;
@@ -3559,6 +3589,8 @@ class UserController extends Controller
                 $add_address->region_id = $request->region_id;
                 $add_address->zip_code = $request->input('zip_code', '');
                 $add_address->city = $request->input('city', '');
+                $add_address->latitude = $request->input('latitude', null);
+                $add_address->longitude = $request->input('longitude', null);
                 $add_address->status = 1;
                 $add_address->default = $default;
 

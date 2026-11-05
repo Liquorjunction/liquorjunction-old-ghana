@@ -189,18 +189,29 @@
                                         
                                     @endphp
                                 </p> --}}
-                                        <p>
-                                            <?php
-                                            if (strpos($orderData->delivery_address, ',|') !== false) {
-                                                $delivery_address = explode(',| ', $orderData->delivery_address);
-                                                //removing first element from array, it means name.
-                                                $name = array_shift($delivery_address);
-                                            }
-                                            ?>
-                                            {{ @$name }}</p>
-                                        <p>
-                                            {{ $delivery_address ? implode(', ', $delivery_address) : '' }}
+                                        @php
+                                            $delInfo = Helper::formatOrderAddress($orderData->delivery_address, $orderData->customer_mobile ?? null);
+                                            $orderLat = $delInfo['lat'];
+                                            $orderLng = $delInfo['lng'];
+                                        @endphp
+                                        <p class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                                            <b class="text-truncate" style="max-width: 280px;" title="{{ @$delInfo['name'] }}">{{ @$delInfo['name'] }}</b>
+                                            @if(!empty($delInfo['phone']))
+                                                <b class="text-nowrap">({{ $delInfo['phone'] }})</b>
+                                            @endif
                                         </p>
+                                        <p>{{ $delInfo['address'] }}</p>
+                                        @if(!empty($orderLat) && !empty($orderLng))
+                                            <div class="mt-2" style="margin-top: 10px;">
+                                                <a href="javascript:void(0)" 
+                                                   class="btn btn-sm btn-primary" 
+                                                   data-toggle="modal" 
+                                                   data-target="#orderLocationMapModal"
+                                                   title="Click to view delivery location on map">
+                                                    <i class="fa fa-map-marker-alt"></i> View on Google Maps ({{ $orderLat }}, {{ $orderLng }})
+                                                </a>
+                                            </div>
+                                        @endif
                                     </td>
                                 </tr>
 
@@ -210,20 +221,31 @@
                                         <p><b>Billing Address</b></p>
                                     </td>
                                     <td colspan="4">
-                                        <p>
-                                            <?php
-                                            if (strpos($orderData->billing_address, ',|') !== false) {
-                                                $billing_address = explode(',| ', $orderData->billing_address);
-                                                $name = array_shift($billing_address);
-                                            }
-                                            ?>
-                                            {{ @$name }}</p>
-                                        <p>
-                                            {{ $billing_address ? implode(', ', $billing_address) : '' }}
+                                        @php
+                                            $billInfo = Helper::formatOrderAddress($orderData->billing_address, $orderData->customer_mobile ?? null);
+                                            $billLat = $billInfo['lat'];
+                                            $billLng = $billInfo['lng'];
+                                        @endphp
+                                        <p class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                                            <b class="text-truncate" style="max-width: 280px;" title="{{ @$billInfo['name'] }}">{{ @$billInfo['name'] }}</b>
+                                            @if(!empty($billInfo['phone']))
+                                                <b class="text-nowrap">({{ $billInfo['phone'] }})</b>
+                                            @endif
                                         </p>
+                                        <p>{{ $billInfo['address'] }}</p>
+                                        @if(!empty($billLat) && !empty($billLng))
+                                            <div class="mt-2" style="margin-top: 10px;">
+                                                <a href="javascript:void(0)" 
+                                                   class="btn btn-sm btn-primary" 
+                                                   data-toggle="modal" 
+                                                   data-target="#orderBillingLocationMapModal"
+                                                   title="Click to view billing location on map">
+                                                    <i class="fa fa-map-marker-alt"></i> View on Google Maps ({{ $billLat }}, {{ $billLng }})
+                                                </a>
+                                            </div>
+                                        @endif
                                     </td>
                                 </tr>
-
                                 @endif
                                 {{-- @if (!empty($orderData->delivery_options) || !empty($orderData->delivery_instructions)) --}}
                                 @if ($orderData->delivery_options || !empty($orderData->delivery_instructions))
@@ -645,6 +667,87 @@
         </div>
 
     </div>
+
+    @if(!empty($orderLat) && !empty($orderLng))
+    <div class="modal fade" id="orderLocationMapModal" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Delivery Location Map</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group row m-b-0">
+                        <div class="col-sm-12">
+                            <iframe 
+                                id="deliveryMapIframe"
+                                data-original-src="https://maps.google.com/maps?q={{ $orderLat }},{{ $orderLng }}&hl=en&z=16&output=embed"
+                                src="https://maps.google.com/maps?q={{ $orderLat }},{{ $orderLng }}&hl=en&z=16&output=embed"
+                                width="100%" 
+                                height="400" 
+                                frameborder="0" 
+                                style="border: 1px solid #ddd; border-radius: 4px; display: block;" 
+                                allowfullscreen="" 
+                                loading="lazy">
+                            </iframe>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default btn-reset-map" title="Reset map to selected location">
+                        <i class="fa fa-crosshairs"></i> Reset Location
+                    </button>
+                    <a href="https://www.google.com/maps?q={{ $orderLat }},{{ $orderLng }}" target="_blank" class="btn btn-primary">
+                        <i class="fa fa-map-marker-alt"></i> Open in Google Maps
+                    </a>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    @if(!empty($billLat) && !empty($billLng))
+    <div class="modal fade" id="orderBillingLocationMapModal" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Billing Location Map</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group row m-b-0">
+                        <div class="col-sm-12">
+                            <iframe 
+                                id="billingMapIframe"
+                                data-original-src="https://maps.google.com/maps?q={{ $billLat }},{{ $billLng }}&hl=en&z=16&output=embed"
+                                src="https://maps.google.com/maps?q={{ $billLat }},{{ $billLng }}&hl=en&z=16&output=embed"
+                                width="100%" 
+                                height="400" 
+                                frameborder="0" 
+                                style="border: 1px solid #ddd; border-radius: 4px; display: block;" 
+                                allowfullscreen="" 
+                                loading="lazy">
+                            </iframe>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default btn-reset-map" title="Reset map to selected location">
+                        <i class="fa fa-crosshairs"></i> Reset Location
+                    </button>
+                    <a href="https://www.google.com/maps?q={{ $billLat }},{{ $billLng }}" target="_blank" class="btn btn-primary">
+                        <i class="fa fa-map-marker-alt"></i> Open in Google Maps
+                    </a>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
 @endsection
 
 @push('after-scripts')
@@ -658,5 +761,32 @@
 
 
 
-    <script></script>
+    <script>
+        $(document).ready(function() {
+            // Reset map location whenever map modal is opened
+            $('#orderLocationMapModal, #orderBillingLocationMapModal').on('show.bs.modal', function () {
+                var $iframe = $(this).find('iframe');
+                var originalSrc = $iframe.attr('data-original-src') || $iframe.attr('src');
+                if (originalSrc) {
+                    $iframe.attr('src', '');
+                    setTimeout(function() {
+                        $iframe.attr('src', originalSrc);
+                    }, 50);
+                }
+            });
+
+            // Reset map location button click handler inside modal
+            $(document).on('click', '.btn-reset-map', function() {
+                var $modal = $(this).closest('.modal');
+                var $iframe = $modal.find('iframe');
+                var originalSrc = $iframe.attr('data-original-src') || $iframe.attr('src');
+                if (originalSrc) {
+                    $iframe.attr('src', '');
+                    setTimeout(function() {
+                        $iframe.attr('src', originalSrc);
+                    }, 50);
+                }
+            });
+        });
+    </script>
 @endpush

@@ -11,6 +11,46 @@
         </div>
     </div>
 
+    <style>
+        .account-address address {
+            max-width: 100% !important;
+        }
+        .btn-card-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .btn-card-edit {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            color: #495057;
+        }
+        .btn-card-edit:hover {
+            background: #fbb516;
+            border-color: #fbb516;
+            color: #ffffff;
+        }
+        .btn-card-remove {
+            background: #fff1f2;
+            border: 1px solid #fecdd3;
+            color: #dc3545;
+        }
+        .btn-card-remove:hover {
+            background: #dc3545;
+            border-color: #dc3545;
+            color: #ffffff;
+        }
+        .mark-default-wrap label:hover {
+            color: #fbb516 !important;
+        }
+    </style>
+
     <section class="address-listing pt-20 pb-60">
         <div class="container">
             {{-- Shipping Address --}}
@@ -21,8 +61,8 @@
                 <div class="col-lg-9 col-md-8">
                     <h2>Shipping Address</h2>
                     <div class="row address-row">
-                        <div class="col-lg-4 col-sm-6 address-column">
-                            <a href="{{ route('add-address') }}" class="common-card add-address">
+                        <div class="col-lg-4 col-sm-6 address-column mb-4">
+                            <a href="javascript:void(0)" class="common-card add-address open-address-modal" data-type="shipping" data-action="add" data-is-checkout="0" title="Add New Shipping Address">
                                 <svg width="60" height="60" viewBox="0 0 60 60" fill="none"
                                     xmlns="http://www.w3.org/2000/svg">
                                     <g id="icon_pluz">
@@ -35,30 +75,68 @@
                         </div>
                         
                         @foreach ($UserAddressData as $data)
-                        <div class="col-lg-4 col-sm-6 address-column">
+                        <div class="col-lg-4 col-sm-6 address-column mb-4">
                             <div class="common-card account-address">
-                                <h4 class="mb-3">{{ @Helper::language('default_billing_address') }} </h4>
-                                {{-- <p class="title-two">{{@$data->name}}</p> --}}
-                                <address class="title-two">
-                                    @php
-                                        (isset($data->name))? $address = $data->name : '';
-                                        (isset($data->address))? $address .= ', <br>'.$data->address: '';
-                                        (isset($data->area->title))? $address .= ', <br>'.$data->area->title : '';
-                                        (isset($data->region->title))? $address .= ', <br>'.$data->region->title : '';
-                                        (isset($data->country->name))? $address .= ',<br> '.$data->country->name : '';
-                                        echo $address;  
-                                        $phone_number = '('.$data->phonecode.') '.$data->phone;
-                                    @endphp
-                                </address>
-                                <a href="tel:+{{ @$phone_number }}" class="body-large"> + {{ @$phone_number }}</a>
-                                <div class="account-address-links flex-fill">
-                                    <a href="{{ route('edit-address', $data->id) }}"
-                                        class="red-text-link body-normal text-uppercase">{{ @Helper::language('edit_label') }}</a>
-                                    <a href="javascript:void(0)"
-                                        class="red-text-link body-normal text-uppercase data_id_address"
-                                        data-bs-toggle="modal" data-bs-target="#removeItemModal"
-                                        data-id={{ @$data->id }}>{{ @Helper::language('remove_btn') }}</a>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="radio-group mb-0 mark-default-wrap {{ ($data->is_selected_address_id == 1) ? 'd-none' : '' }}" id="mark_wrap_{{ $data->id }}">
+                                            <input type="radio" 
+                                                   id="default_shipping_{{ $data->id }}" 
+                                                   name="default_shipping_address" 
+                                                   value="{{ $data->id }}" 
+                                                   class="myaddress-default-radio">
+                                            <label for="default_shipping_{{ $data->id }}" class="text-muted small fw-semibold mb-0" style="font-size: 12.5px; cursor: pointer;">
+                                                Mark Default
+                                            </label>
+                                        </div>
+                                        <span class="badge bg-warning text-dark py-1 px-2 fw-bold active-default-badge {{ ($data->is_selected_address_id == 1) ? '' : 'd-none' }}" id="badge_default_{{ $data->id }}" style="font-size: 11px; border-radius: 6px;">
+                                            <i class="fa fa-check-circle me-1"></i>Active Default
+                                        </span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <a href="javascript:void(0)" 
+                                           class="open-address-modal btn-card-action btn-card-edit" 
+                                           data-type="shipping" 
+                                           data-action="edit" 
+                                           data-id="{{ $data->id }}" 
+                                           data-lat="{{ $data->latitude ?? '' }}" 
+                                           data-lng="{{ $data->longitude ?? '' }}" 
+                                           data-is-checkout="0" 
+                                           title="Edit Address">
+                                            <i class="fa fa-pen" style="font-size: 11px;"></i>
+                                        </a>
+                                        <a href="javascript:void(0)" 
+                                           class="data_id_address btn-card-action btn-card-remove" 
+                                           data-bs-toggle="modal" 
+                                           data-bs-target="#removeItemModal" 
+                                           data-id="{{ @$data->id }}" 
+                                           title="Remove Address">
+                                            <i class="fa fa-trash-alt" style="font-size: 11px;"></i>
+                                        </a>
+                                    </div>
                                 </div>
+                                <div class="d-flex align-items-center flex-wrap gap-2 my-2">
+                                    <span class="fw-bold text-dark text-truncate" style="max-width: 190px; font-size: 15.5px; font-weight: 700;" title="{{ @$data->name }}">{{ @$data->name }}</span>
+                                    <span class="fw-bold text-dark text-nowrap" style="font-size: 13.5px; font-weight: 700;"><i class="fa fa-phone small me-1 text-muted" style="font-size: 11px;"></i>(+{{ $data->phonecode }}) {{ $data->phone }}</span>
+                                </div>
+                                <address class="title-two mb-2" style="font-weight: 400; font-size: 13.5px; line-height: 1.5; color: #555; max-width: 100%;">
+                                    {!! Helper::formatUserAddress($data, true) !!}
+                                </address>
+
+                                @php
+                                    $hasMapLocation = (!empty($data->latitude) && !empty($data->longitude));
+                                @endphp
+
+                                @if(!$hasMapLocation)
+                                    <div class="alert alert-warning py-1 px-2 mt-auto mb-0 d-flex align-items-center justify-content-between" style="font-size: 11px; border-radius: 6px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
+                                        <span>
+                                            <i class="fa fa-exclamation-triangle text-danger me-1"></i> Location not set
+                                        </span>
+                                        <a href="javascript:void(0)" class="btn btn-xs py-0 px-2 fw-bold text-dark open-address-modal" data-type="shipping" data-action="edit" data-id="{{ $data->id }}" data-lat="{{ $data->latitude ?? '' }}" data-lng="{{ $data->longitude ?? '' }}" data-is-checkout="0" style="background: #fbb516; font-size: 10.5px; border-radius: 4px; white-space: nowrap;">
+                                            <i class="fa fa-map-marker-alt me-1"></i>Set on Map
+                                        </a>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                         @endforeach
@@ -67,7 +145,7 @@
             </div>
 
             {{-- Billing Address --}}
-            <div class="row">
+            <div class="row mt-4">
                 <div class="col-lg-3 col-md-4">
                         {{--  --}}
                 </div>
@@ -75,8 +153,8 @@
                     <h2>Billing Address</h2>
                     <div class="row address-row">
                         @if($UserBillAddressData->isEmpty())  
-                        <div class="col-lg-4 col-sm-6 address-column">
-                            <a href="{{ route('add-bill-address') }}" class="common-card add-address">
+                        <div class="col-lg-4 col-sm-6 address-column mb-4">
+                            <a href="javascript:void(0)" class="common-card add-address open-address-modal" data-type="billing" data-action="add" data-is-checkout="0" title="Add Billing Address">
                                 <svg width="60" height="60" viewBox="0 0 60 60" fill="none"
                                     xmlns="http://www.w3.org/2000/svg">
                                     <g id="icon_pluz">
@@ -90,30 +168,56 @@
                         @endif
                         
                         @foreach ($UserBillAddressData as $data)
-                        <div class="col-lg-4 col-sm-6 address-column">
+                        <div class="col-lg-4 col-sm-6 address-column mb-4">
                             <div class="common-card account-address">
-                                <h4 class="mb-3">{{ @Helper::language('default_billing_address') }} </h4>
-                                {{-- <p class="title-two">{{@$data->name}}</p> --}}
-                                <address class="title-two">
-                                    @php
-                                        (isset($data->name))? $address = $data->name : '';
-                                        (isset($data->address))? $address .= ', <br>'.$data->address: '';
-                                        (isset($data->area->title))? $address .= ', <br>'.$data->area->title : '';
-                                        (isset($data->region->title))? $address .= ', <br>'.$data->region->title : '';
-                                        (isset($data->country->name))? $address .= ',<br> '.$data->country->name : '';
-                                        echo $address;  
-                                        $phone_number = '('.$data->phonecode.') '.$data->phone;
-                                    @endphp
-                                </address>
-                                <a href="tel:+{{ @$phone_number }}" class="body-large"> + {{ @$phone_number }}</a>
-                                <div class="account-address-links flex-fill">
-                                    <a href="{{ route('edit-bill-address', $data->id) }}"
-                                        class="red-text-link body-normal text-uppercase">{{ @Helper::language('edit_label') }}</a>
-                                    <a href="javascript:void(0)"
-                                        class="red-text-link body-normal text-uppercase data_billId_address"
-                                        data-bs-toggle="modal" data-bs-target="#removeBillItemModal"
-                                        data-id={{ @$data->id }}>{{ @Helper::language('remove_btn') }}</a>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="badge bg-warning text-dark py-1 px-2 fw-bold" style="font-size: 11px; border-radius: 6px;">
+                                        <i class="fa fa-shield-alt me-1"></i>Default Billing
+                                    </span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <a href="javascript:void(0)" 
+                                           class="open-address-modal btn-card-action btn-card-edit" 
+                                           data-type="billing" 
+                                           data-action="edit" 
+                                           data-id="{{ $data->id }}" 
+                                           data-lat="{{ $data->latitude ?? '' }}" 
+                                           data-lng="{{ $data->longitude ?? '' }}" 
+                                           data-is-checkout="0" 
+                                           title="Edit Address">
+                                            <i class="fa fa-pen" style="font-size: 11px;"></i>
+                                        </a>
+                                        <a href="javascript:void(0)" 
+                                           class="data_billId_address btn-card-action btn-card-remove" 
+                                           data-bs-toggle="modal" 
+                                           data-bs-target="#removeBillItemModal" 
+                                           data-id="{{ @$data->id }}" 
+                                           title="Remove Address">
+                                            <i class="fa fa-trash-alt" style="font-size: 11px;"></i>
+                                        </a>
+                                    </div>
                                 </div>
+                                <div class="d-flex align-items-center flex-wrap gap-2 my-2">
+                                    <span class="fw-bold text-dark text-truncate" style="max-width: 190px; font-size: 15.5px; font-weight: 700;" title="{{ @$data->name }}">{{ @$data->name }}</span>
+                                    <span class="fw-bold text-dark text-nowrap" style="font-size: 13.5px; font-weight: 700;"><i class="fa fa-phone small me-1 text-muted" style="font-size: 11px;"></i>(+{{ $data->phonecode }}) {{ $data->phone }}</span>
+                                </div>
+                                <address class="title-two mb-2" style="font-weight: 400; font-size: 13.5px; line-height: 1.5; color: #555; max-width: 100%;">
+                                    {!! Helper::formatUserAddress($data, true) !!}
+                                </address>
+
+                                @php
+                                    $hasBillMapLocation = (!empty($data->latitude) && !empty($data->longitude));
+                                @endphp
+
+                                @if(!$hasBillMapLocation)
+                                    <div class="alert alert-warning py-1 px-2 mt-auto mb-0 d-flex align-items-center justify-content-between" style="font-size: 11px; border-radius: 6px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
+                                        <span>
+                                            <i class="fa fa-exclamation-triangle text-danger me-1"></i> Location not set
+                                        </span>
+                                        <a href="javascript:void(0)" class="btn btn-xs py-0 px-2 fw-bold text-dark open-address-modal" data-type="billing" data-action="edit" data-id="{{ $data->id }}" data-lat="{{ $data->latitude ?? '' }}" data-lng="{{ $data->longitude ?? '' }}" data-is-checkout="0" style="background: #fbb516; font-size: 10.5px; border-radius: 4px; white-space: nowrap;">
+                                            <i class="fa fa-map-marker-alt me-1"></i>Set on Map
+                                        </a>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                         @endforeach
@@ -123,8 +227,8 @@
         </div>
     </section>
     {{-- Ship address Modal --}}
-    <div class="modal fade remove-item-modal p-0 show" id="removeItemModal" tabindex="-1" aria-modal="true">
-        <div class="modal-dialog">
+    <div class="modal fade remove-item-modal p-0" id="removeItemModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"><i
@@ -146,8 +250,8 @@
         </div>
     </div>
     {{-- Bill Address Modal --}}
-    <div class="modal fade remove-item-modal p-0 show" id="removeBillItemModal" tabindex="-1" aria-modal="true">
-        <div class="modal-dialog">
+    <div class="modal fade remove-item-modal p-0" id="removeBillItemModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"><i
@@ -181,13 +285,53 @@
                 var id = $(this).data("id");
                 $("#bill_address_id").val(id);
             });
+
+            $(document).on('change', 'input[name="default_shipping_address"]', function() {
+                var addressId = $(this).val();
+                var csrf = "{{ csrf_token() }}";
+                
+                $.ajax({
+                    url: "{{ route('selected-address') }}",
+                    type: 'POST',
+                    data: {
+                        address_id: addressId
+                    },
+                    headers: {
+                        'X-CSRF-TOKEN': csrf
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        // Reset all addresses to show "Mark Default" and hide "Active Default"
+                        $('.active-default-badge').addClass('d-none');
+                        $('.mark-default-wrap').removeClass('d-none');
+                        $('input[name="default_shipping_address"]').prop('checked', false);
+
+                        // Set clicked address to show "Active Default" badge and hide "Mark Default"
+                        $('#mark_wrap_' + addressId).addClass('d-none');
+                        $('#badge_default_' + addressId).removeClass('d-none');
+                        $('#default_shipping_' + addressId).prop('checked', true);
+                    },
+                    error: function() {
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Unable to update default address. Please try again.'
+                            });
+                        }
+                    }
+                });
+            });
         });
 
         function removeAddress() {
             var address_id = $('#address_id').val();
-            // alert(product_id);
             action_url = "{{ route('addressremove') }}";
             var csrf = "{{ csrf_token() }}";
+
+            $('#removeItemModal').modal('hide');
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '');
 
             $.ajax({
                 url: action_url,
@@ -198,18 +342,19 @@
                     'X-CSRF-TOKEN': csrf
                 },
                 type: "POST",
-
                 beforeSend: function() {
                     $(".loader").fadeIn();
                     $('.loader').css("visibility", "visible");
                 },
                 success: function(response) {
-                    // return false;
                     var url = "{{ route('my-address') }}";
                     window.location.href = url;
-                    // location.reload();
                 },
+                error: function() {
+                    $(".loader").fadeOut();
+                }
             });
+            return false;
         }
 
         function removeBillAddress() {
@@ -217,6 +362,10 @@
             action_url = "{{ route('billaddressremove') }}";
             var csrf = "{{ csrf_token() }}";
 
+            $('#removeBillItemModal').modal('hide');
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '');
+
             $.ajax({
                 url: action_url,
                 data: {
@@ -226,7 +375,6 @@
                     'X-CSRF-TOKEN': csrf
                 },
                 type: "POST",
-
                 beforeSend: function() {
                     $(".loader").fadeIn();
                     $('.loader').css("visibility", "visible");
@@ -235,7 +383,12 @@
                     var url = "{{ route('my-address') }}";
                     window.location.href = url;
                 },
+                error: function() {
+                    $(".loader").fadeOut();
+                }
             });
+            return false;
         }
     </script>
+@include('frontend.components.address-modal')
 @endsection

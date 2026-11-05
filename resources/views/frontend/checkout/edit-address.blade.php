@@ -14,7 +14,7 @@
     <div class="input-group phone-number">
         <select class="numbers" id="phone" name="phonecode" value="{{@$UserAddressData->phonecode}}">
             @foreach($countryData as $value)
-            <option value="{{$value->phonecode}}" {{(@$UserAddressData->phonecode == $value->phonecode) ? 'selected' : ''}}>+ {{$value->phonecode.' ('.$value->shortname.')'}}</option>
+            <option value="{{$value->phonecode}}" {{(@$UserAddressData->phonecode == $value->phonecode) ? 'selected' : ''}}>+{{$value->phonecode}}</option>
             @endforeach
         </select>
         <input type="text" value="{{@$UserAddressData->phone}}" oninput="this.value = this.value.replace(/\D+/g, '')" placeholder="{{@Helper::language('enter_phone_number_place')}} " name="phone" maxlength="15" id="phone">

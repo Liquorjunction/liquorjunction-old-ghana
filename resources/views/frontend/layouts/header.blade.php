@@ -756,9 +756,12 @@ if ($user_id) {
                             }
                             </style>
                             <script>
-                             function renderSmallCartDropdown(items) {
+                            function renderSmallCartDropdown(items) {
+                                var container = document.querySelector('#small-cart-dropdown > div');
+                                if (!container) return;
+
                                 var html = '';
-                                if (items.length > 0) {
+                                if (items && items.length > 0) {
                                     items.forEach(function(item) {
                                         html += `<div class="cart-item d-flex align-items-center mb-2" style="border-bottom:1px solid #eee; padding-bottom:8px; position:relative;">
                                             <div style="width:50px; height:50px; flex-shrink:0;">
@@ -771,7 +774,6 @@ if ($user_id) {
                                             </div>
                                             <button class="delete-cart-item-btn" data-id="${item.id}" title="Remove"
         style="background:none; border:none; cursor:pointer; padding:5px;">
-
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <path d="M3 6H21" stroke="#ff4d4f" stroke-width="1.5" stroke-linecap="round"/>
             <path d="M8 6V4H16V6" stroke="#ff4d4f" stroke-width="1.5" stroke-linecap="round"/>
@@ -779,43 +781,35 @@ if ($user_id) {
             <path d="M10 11V17" stroke="#ff4d4f" stroke-width="1.5" stroke-linecap="round"/>
             <path d="M14 11V17" stroke="#ff4d4f" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
-
     </button>
                                         </div>`;
                                     });
-                                                            // Handle delete icon click
-                                                            document.addEventListener('click', function(e) {
-                                                                if (e.target.closest('.delete-cart-item-btn')) {
-                                                                    var btn = e.target.closest('.delete-cart-item-btn');
-                                                                    var id = btn.getAttribute('data-id');
-                                                                    fetch('/cart/item/' + id, {
-                                                                        method: 'DELETE',
-                                                                        headers: {
-                                                                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]'),
-                                                                            'Accept': 'application/json'
-                                                                        }
-                                                                    })
-                                                                    .then(res => res.json())
-                                                                    .then(data => {
-                                                                        if (data.success) {
-                                                                            updateCartUI();
-                                                                        }
-                                                                    });
-                                                                }
-                                                            });
                                 } else {
                                     html = '<div class="text-center py-4" style="color:#888;">Your cart is empty.</div>';
                                 }
-                                document.querySelector('#small-cart-dropdown > div').innerHTML = html;
+                                container.innerHTML = html;
                             }
 
                             function updateCartUI() {
-                                fetch('/cart/data')
-                                    .then(res => res.json())
+                                fetch("{{ route('cart.data') }}")
+                                    .then(res => {
+                                        if (!res.ok) {
+                                            throw new Error('HTTP error ' + res.status);
+                                        }
+                                        return res.json();
+                                    })
                                     .then(data => {
-                                        document.querySelector('.cart-item-total-count').textContent = data.count;
-                                        document.querySelector('.cart-item-total-count-floating').textContent = data.count;
-                                        renderSmallCartDropdown(data.items);
+                                        var count = (data && typeof data.count !== 'undefined') ? data.count : 0;
+                                        var countEl = document.querySelector('.cart-item-total-count');
+                                        if (countEl) countEl.textContent = count;
+
+                                        var floatingCountEl = document.querySelector('.cart-item-total-count-floating');
+                                        if (floatingCountEl) floatingCountEl.textContent = count;
+
+                                        renderSmallCartDropdown(data.items || []);
+                                    })
+                                    .catch(err => {
+                                        console.error('Error fetching cart data:', err);
                                     });
                             }
 
@@ -838,7 +832,36 @@ if ($user_id) {
                                         dropdown.style.display = 'none';
                                     });
                                 }
-                                // Optionally, update cart UI on page load
+
+                                // Handle delete cart item via event delegation
+                                document.addEventListener('click', function(e) {
+                                    var btn = e.target.closest('.delete-cart-item-btn');
+                                    if (btn) {
+                                        var id = btn.getAttribute('data-id');
+                                        var tokenMeta = document.querySelector('meta[name="csrf-token"]');
+                                        var token = tokenMeta ? tokenMeta.getAttribute('content') : '{{ csrf_token() }}';
+                                        var deleteUrl = "{{ url('cart/item') }}/" + encodeURIComponent(id);
+
+                                        fetch(deleteUrl, {
+                                            method: 'DELETE',
+                                            headers: {
+                                                'X-CSRF-TOKEN': token,
+                                                'Accept': 'application/json'
+                                            }
+                                        })
+                                        .then(res => res.json())
+                                        .then(data => {
+                                            if (data && data.success) {
+                                                updateCartUI();
+                                            }
+                                        })
+                                        .catch(err => {
+                                            console.error('Error removing cart item:', err);
+                                        });
+                                    }
+                                });
+
+                                // Update cart UI on page load
                                 updateCartUI();
                             });
                             // Call updateCartUI() after AJAX add-to-cart success
@@ -985,7 +1008,17 @@ if ($user_id) {
 <!-- Site Content -->
 <main class="site-content">
     @push('after-scripts')
-        <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCkUOdZ5y7hMm0yrcCQoCvLwzdM6M8s5qk"></script>
+        <script>
+            window.googleMapsAuthFailed = false;
+            window.gm_authFailure = function() {
+                console.warn("Google Maps API auth failure / domain restriction. Falling back to OpenStreetMap...");
+                window.googleMapsAuthFailed = true;
+                if (typeof window.switchToLeafletMap === 'function') {
+                    window.switchToLeafletMap();
+                }
+            };
+        </script>
+        <script async defer src="https://maps.googleapis.com/maps/api/js?key={{ env('GOOGLE_MAPS_API_KEY', 'AIzaSyBwrXHtZoJ6y048ZwDBPrzgoKH0nmHHJLI') }}&libraries=places"></script>
         <script>
             $('.notification_btn').click(function(e) {
                 // Add and Remove class from body 
