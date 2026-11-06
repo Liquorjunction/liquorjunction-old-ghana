@@ -140,23 +140,45 @@ class UserController extends Controller
 
         // User existence check
         $userExist = null;
+        $guestContact = null;
         if ($isGuest) {
-            $value = trim($request->email);
-            $email = null;
-            $phone = null;
-            if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                $email = $value;
-            } elseif (preg_match('/^[0-9]{8,15}$/', $value)) {
-                $phone = $value;
+            $guestContact = $this->parseGuestCheckoutContact($request->email, $request->phone_code);
+            logger()->info('API guest checkout contact parsed', [
+                'kind' => $guestContact['kind'],
+                'last4' => $guestContact['last4'],
+                'variant_count' => count($guestContact['phones']),
+            ]);
+
+            if ($guestContact['kind'] === 'invalid') {
+                logger()->warning('API guest checkout rejected invalid contact', [
+                    'last4' => $guestContact['last4'],
+                ]);
+                return response()->json([
+                    'email' => ['Enter a valid email or phone number.'],
+                ], 422);
             }
-            $userExist = MainUser::where(function ($query) use ($email, $phone) {
-                if ($email) {
-                    $query->where('email', $email);
-                }
-                if ($phone) {
-                    $query->orWhere('phone', $phone);
-                }
-            })->first();
+
+            if ($guestContact['kind'] === 'email') {
+                $userExist = MainUser::where('email', $guestContact['email'])
+                    ->orderBy('is_guest_user', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->first();
+            } else {
+                $userExist = MainUser::whereIn('phone', $guestContact['phones'])
+                    ->orderBy('is_guest_user', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->first();
+            }
+
+            logger()->info('API guest checkout lookup', [
+                'kind' => $guestContact['kind'],
+                'last4' => $guestContact['last4'],
+                'matched_user_id' => $userExist->id ?? null,
+                'matched_is_guest' => isset($userExist) ? $userExist->is_guest_user : null,
+                'branch' => $userExist
+                    ? ($userExist->is_guest_user == 1 ? 'existing_guest' : 'already_registered')
+                    : 'new_guest',
+            ]);
         } else {
             $userExist = MainUser::where(function ($query) use ($request) {
                 if ($request->email) {
@@ -241,12 +263,16 @@ class UserController extends Controller
                 // For non-guest or non-guest-user, show already exists error as before
                 $errors = [];
                 if ($isGuest) {
-                    if ($userExist->email === $request->email) {
+                    if ($guestContact && $guestContact['kind'] === 'email' && $userExist->email === $guestContact['email']) {
                         $errors['email'] = ['The email address is already registered.'];
-                    }
-                    if ($userExist->phone === $request->email) {
+                    } else {
                         $errors['email'] = ['The phone number is already registered.'];
                     }
+                    logger()->info('API guest checkout blocked registered account', [
+                        'kind' => $guestContact['kind'] ?? null,
+                        'last4' => $guestContact['last4'] ?? '',
+                        'matched_user_id' => $userExist->id,
+                    ]);
                 } else {
                     if ($userExist->email === $request->email) {
                         $errors['email'] = ['The email address is already registered.'];
@@ -266,20 +292,10 @@ class UserController extends Controller
             $user->label_type = 1;
             $user->first_name = $request->name ?? '';
             $user->last_name  = $request->last_name ?? '';
-            $value = $request->email;
-            $email = null;
-            $phone = null;
-            if (!empty($value)) {
-                if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                    $email = $value;
-                } elseif (preg_match('/^[0-9]{8,15}$/', $value)) {
-                    $phone = $value;
-                }
-            }
-            $user->email = $email;
-            $user->phone = $phone;
+            $user->email = ($guestContact && $guestContact['kind'] === 'email') ? $guestContact['email'] : null;
+            $user->phone = ($guestContact && $guestContact['kind'] === 'phone') ? $guestContact['store_phone'] : null;
             $user->age = $request->age ?? '';
-            $user->phone_code = $request->phone_code ?? '';
+            $user->phone_code = $request->phone_code ?: (($guestContact['store_code'] ?? '') ?: '');
             $user->otp = null;
             $user->otp_expire_time = null;
             $user->is_otp_verify = 1; // Mark as verified
@@ -289,6 +305,11 @@ class UserController extends Controller
             $user->is_verify_user = 1;
             $user->remember_token = $token;
             $user->save();
+            logger()->info('API guest checkout created guest', [
+                'user_id' => $user->id,
+                'kind' => $guestContact['kind'] ?? null,
+                'last4' => $guestContact['last4'] ?? '',
+            ]);
             Helper::afterLoginAddUserCartItemData();
             $productVariants = json_decode($request->product_variants, true);
             if (!empty($productVariants)) {
@@ -3736,5 +3757,72 @@ class UserController extends Controller
 
     // }
 
+
+    /**
+     * Guest checkout sends the email or phone in the email field.
+     * +233 numbers are the same account as 0XXXXXXXXX and the 9-digit local number.
+     * Returns no phone list when the value cannot be read, so the caller must not query.
+     */
+    private function parseGuestCheckoutContact($value, $phoneCode = null)
+    {
+        $raw = trim((string) $value);
+        $parsed = [
+            'kind' => 'invalid',
+            'email' => null,
+            'phones' => [],
+            'store_phone' => null,
+            'store_code' => null,
+            'last4' => $raw === '' ? '' : substr(preg_replace('/\s+/', '', $raw), -4),
+        ];
+
+        if ($raw === '') {
+            return $parsed;
+        }
+
+        if (filter_var($raw, FILTER_VALIDATE_EMAIL)) {
+            $parsed['kind'] = 'email';
+            $parsed['email'] = $raw;
+            $parsed['last4'] = substr($raw, -4);
+            return $parsed;
+        }
+
+        $digits = preg_replace('/\D+/', '', $raw);
+        if (!is_string($digits) || !preg_match('/^[0-9]{8,15}$/', $digits)) {
+            return $parsed;
+        }
+
+        $codeDigits = preg_replace('/\D+/', '', (string) $phoneCode);
+        $national = null;
+
+        if (strpos($digits, '00233') === 0 && strlen($digits) === 14) {
+            $national = substr($digits, 5);
+        } elseif (strpos($digits, '233') === 0 && strlen($digits) === 12) {
+            $national = substr($digits, 3);
+        } elseif (strpos($digits, '0') === 0 && strlen($digits) === 10 && ($codeDigits === '' || $codeDigits === '233')) {
+            $national = substr($digits, 1);
+        } elseif (strlen($digits) === 9 && $codeDigits === '233') {
+            $national = $digits;
+        }
+
+        $phones = [$digits];
+        if ($national !== null && preg_match('/^[0-9]{9}$/', $national)) {
+            $phones[] = $national;
+            $phones[] = '0' . $national;
+            $phones[] = '233' . $national;
+            $phones[] = '+233' . $national;
+            $parsed['store_phone'] = $national;
+            $parsed['store_code'] = '233';
+        } else {
+            $phones[] = '+' . $digits;
+            $parsed['store_phone'] = $digits;
+            $parsed['store_code'] = $codeDigits !== '' ? $codeDigits : null;
+        }
+
+        $parsed['kind'] = 'phone';
+        $parsed['phones'] = array_values(array_unique($phones));
+        $parsed['last4'] = substr($digits, -4);
+
+        return $parsed;
+    }
 
 }
