@@ -292,8 +292,12 @@ class UserController extends Controller
             $user->label_type = 1;
             $user->first_name = $request->name ?? '';
             $user->last_name  = $request->last_name ?? '';
-            $user->email = ($guestContact && $guestContact['kind'] === 'email') ? $guestContact['email'] : null;
-            $user->phone = ($guestContact && $guestContact['kind'] === 'phone') ? $guestContact['store_phone'] : null;
+            $isPhoneGuest = $guestContact && $guestContact['kind'] === 'phone';
+            $user->email = ($guestContact && $guestContact['kind'] === 'email') ? $guestContact['email'] : ($isPhoneGuest ? '' : null);
+            $user->phone = $isPhoneGuest ? $guestContact['store_phone'] : null;
+            if ($isPhoneGuest) {
+                $user->password = '';
+            }
             $user->age = $request->age ?? '';
             $user->phone_code = $request->phone_code ?: (($guestContact['store_code'] ?? '') ?: '');
             $user->otp = null;
