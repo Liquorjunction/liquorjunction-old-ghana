@@ -3,10 +3,9 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use Auth;
-use Alert;
-use DB;
-use App\Models\MainUser;
+use Illuminate\Support\Facades\Auth;
+use RealRashid\SweetAlert\Facades\Alert;
+use Illuminate\Support\Facades\DB;
 
 class userAuth
 {
@@ -19,25 +18,45 @@ class userAuth
      */
     public function handle($request, Closure $next)
     {
-        $user_id =  isset(auth()->guard('user')->user()->id) ? auth()->guard('user')->user()->id : '';
-
-        $userData = DB::table('main_users')->where('id',$user_id)->first();
-        if (!empty($user_id)) {
-            if ($userData->status != 1) {           
-                Alert::warning('Warning',__('backend.your_account_is_inactive'));
-                // return route('user-logout'); 
-                // return redirect()->route('user-logout');
-                Auth::guard('user')->logout();
-                // return route('frontend.home');
-                return redirect()->route('frontend.home');
-            }else{
-                return $next($request);
+        // Check if user is authenticated under 'user' guard
+        // dd(isset(auth()->guard('user')->user()->id));
+        if (!Auth::guard('user')->check()) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please login to continue.',
+                    'redirect' => route('websitelogin')
+                ], 401);
             }
+
+            // Save intended URL for redirecting back after login (if GET request)
+            if ($request->isMethod('get')) {
+                session()->put('url.intended', $request->fullUrl());
+            }
+
+            Alert::warning('Login Required', 'Please login to access this page.');
+            return redirect()->route('websitelogin');
         }
-        // else{
-        //     return redirect()->route('frontend.home');
-        // }
+
+        $user = Auth::guard('user')->user();
+
+        // Check if user status is active (status 1 = active)
+        if ($user->status != 1) {
+            Auth::guard('user')->logout();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('backend.your_account_is_inactive'),
+                    'redirect' => route('websitelogin')
+                ], 403);
+            }
+
+            Alert::warning('Warning', __('backend.your_account_is_inactive'));
+            return redirect()->route('websitelogin');
+        }
+
         return $next($request);
     }
-
 }
+

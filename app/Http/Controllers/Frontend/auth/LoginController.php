@@ -222,7 +222,6 @@ class LoginController extends Controller
         Auth::logout();
         /*\Cookie::queue(\Cookie::forget('admin_email'));
         \Cookie::queue(\Cookie::forget('admin_password'));*/
-        Session::flush();
         return redirect('/admin/login');
     }
 

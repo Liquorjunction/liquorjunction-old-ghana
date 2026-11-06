@@ -36,11 +36,7 @@ class HomeController extends Controller
 {
 
     public function __construct()
-    {  //Session::flush();
-        // Session::forget('test1');
-        // $test = Helper::getCartQuantity(2);
-        ///dd(Session::all());
-        //$car_old_array = Session::all();
+    {  
         $this->setting = Setting::find(1);
         $this->user_id = isset(auth()->guard('user')->user()->id) ? auth()->guard('user')->user()->id : '';
     }
