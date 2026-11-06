@@ -3025,6 +3025,8 @@ class UserController extends Controller
                         'id' => $data->id,
                         'name' => $data->name,
                         'address' => $address,
+                        'latitude' => @$data->latitude ? strval($data->latitude) : '',
+                        'longitude' => @$data->longitude ? strval($data->longitude) : '',
                     ];
                 }
 
@@ -3123,6 +3125,8 @@ class UserController extends Controller
                     $addressList['region_id'] = strval(@$get_result->region_id);
                     $addressList['area_id'] = strval(@$get_result->area_id);
                     $addressList['customer_address'] = strval(@$full_address);
+                    $addressList['latitude'] = @$get_result->latitude ? strval($get_result->latitude) : '';
+                    $addressList['longitude'] = @$get_result->longitude ? strval($get_result->longitude) : '';
                     $addressArr[] = $addressList;
                 }
 
@@ -3145,6 +3149,8 @@ class UserController extends Controller
                     $billAddress['region_id'] = strval(@$bill_result->region_id);
                     $billAddress['area_id'] = strval(@$bill_result->area_id);
                     $billAddress['customer_address'] = strval(@$full_bill_address);
+                    $billAddress['latitude'] = @$bill_result->latitude ? strval($bill_result->latitude) : '';
+                    $billAddress['longitude'] = @$bill_result->longitude ? strval($bill_result->longitude) : '';
                     $billAddressArr[] = $billAddress;
                 }
 
@@ -3343,6 +3349,8 @@ class UserController extends Controller
                     if ($request->has('address')) $editAddress->address = $request->address;
                     if ($request->has('city')) $editAddress->city = $request->city;
                     if ($request->has('zip_code')) $editAddress->zip_code = $request->zip_code;
+                    if ($request->has('latitude')) $editAddress->latitude = $request->latitude;
+                    if ($request->has('longitude')) $editAddress->longitude = $request->longitude;
                     $editAddress->status = 1;
 
 
@@ -3407,6 +3415,8 @@ class UserController extends Controller
                 $add_address->region_id = $request->region_id;
                 $add_address->zip_code = $request->input('zip_code', '');
                 $add_address->city = $request->input('city', '');
+                $add_address->latitude = $request->input('latitude', null);
+                $add_address->longitude = $request->input('longitude', null);
                 $add_address->status = 1;
 
                 // added on 25 aug
@@ -3538,6 +3548,8 @@ class UserController extends Controller
                 if ($request->has('address')) $editAddress->address = $request->address;
                 if ($request->has('city')) $editAddress->city = $request->city;
                 if ($request->has('zip_code')) $editAddress->zip_code = $request->zip_code;
+                if ($request->has('latitude')) $editAddress->latitude = $request->latitude;
+                if ($request->has('longitude')) $editAddress->longitude = $request->longitude;
                 $editAddress->status = 1;
 
                 $editAddress->default = $default;
@@ -3598,6 +3610,8 @@ class UserController extends Controller
                 $add_address->region_id = $request->region_id;
                 $add_address->zip_code = $request->input('zip_code', '');
                 $add_address->city = $request->input('city', '');
+                $add_address->latitude = $request->input('latitude', null);
+                $add_address->longitude = $request->input('longitude', null);
                 $add_address->status = 1;
                 $add_address->default = $default;
 

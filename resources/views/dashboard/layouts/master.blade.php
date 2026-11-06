@@ -165,7 +165,7 @@
 </script>
 
 <body>
-    <audio id="orderSound" src="/sounds/buzzer.mp3" preload="auto"></audio>
+    <audio id="orderSound" src="{{ asset('sounds/buzzer.mp3') }}" preload="auto"></audio>
     <div id="toastContainer"
         style="position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px;"></div>
 

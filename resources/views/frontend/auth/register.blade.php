@@ -66,7 +66,7 @@
                                             $countryData = $countryData->values();
                                         ?>
                                         @foreach($phonecode as $value)
-                                            <option value="{{$value->phonecode}}">+{{$value->phonecode.' ('.$value->shortname.')' }}</option>
+                                            <option value="{{$value->phonecode}}">+{{$value->phonecode}}</option>
                                         @endforeach
                                     </select>
                                     <input type="tel" id="phone" name="phone" placeholder="{{@Helper::language('enter_phone_number_place')}}" >

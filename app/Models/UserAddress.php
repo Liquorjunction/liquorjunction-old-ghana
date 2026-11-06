@@ -22,6 +22,8 @@ class UserAddress extends Model
         'state',
         'city',
         'zip_code',
+        'latitude',
+        'longitude',
         'billing_address',
         'status', 
         'created_at', 

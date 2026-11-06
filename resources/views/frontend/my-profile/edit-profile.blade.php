@@ -62,7 +62,7 @@
                                     <!-- <span class="numbers body-normal text-black d-inline-block">+61</span> -->
                                     <select class="numbers" name="phone_code" >
                                         @foreach($countryData as $value)
-                                        <option value="{{$value->phonecode}}" {{(@$myProfile->phone_code == $value->phonecode) ? 'selected' : ''}} > + {{$value->phonecode.' ('.$value->shortname.')'}}</option>
+                                        <option value="{{$value->phonecode}}" {{(@$myProfile->phone_code == $value->phonecode) ? 'selected' : ''}} >+{{$value->phonecode}}</option>
                                         
                                         @endforeach
                                     </select>

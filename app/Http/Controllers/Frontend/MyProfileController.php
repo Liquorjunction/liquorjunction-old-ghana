@@ -23,6 +23,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use RealRashid\SweetAlert\Facades\Alert;
 use Illuminate\Validation\Rule;
+use App\Models\Country;
 use App\Models\Region;
 use App\Models\Area;
 use App\Models\Categories;
@@ -35,6 +36,7 @@ use App\Models\LoyaltyPoints;
 use App\Models\Offers;
 use App\Models\Bogo;
 use Carbon\Carbon;
+use App\Services\AddressValidationService;
 
 
 class MyProfileController extends Controller
@@ -359,7 +361,7 @@ class MyProfileController extends Controller
             $query->where('status', 1);
         })->withWhereHas('area', function ($query){
             $query->where('status', 1);
-        })->where([['user_id', $user_id], ['status', 1]])->get();
+        })->where([['user_id', $user_id], ['status', 1]])->orderBy('is_selected_address_id', 'desc')->orderBy('id', 'desc')->get();
 
         $UserBillAddressData = UserBillAddress::withWhereHas('country', function ($query){
             $query->where('status', 1);
@@ -370,7 +372,15 @@ class MyProfileController extends Controller
         // })->where([['user_id', $user_id], ['status', 1]])->get();
         })->where([['user_id', $user_id], ['status', 1],['default',1]])->get();
 
-        return view('frontend.my-profile.myaddress', compact('UserAddressData','UserBillAddressData'));
+        $countryData = Country::where('status', 1)
+            ->orderBy('name', 'ASC')
+            ->get(['id', 'name', 'phonecode']);
+
+        return view('frontend.my-profile.myaddress', compact(
+            'UserAddressData',
+            'UserBillAddressData',
+            'countryData'
+        ));
     }
 
     public function editAddress($id)
@@ -435,42 +445,54 @@ class MyProfileController extends Controller
         $area = Area::where('status',1)->orderby('title','ASC')->get();
     }
 
+    /**
+     * Validate and authorize address payload against tampering, invalid geo data, and hacking
+     */
+    private function validateAndAuthorizeAddressData(Request $request, $isBilling = false)
+    {
+        return AddressValidationService::validateAddressData($request->all(), $isBilling);
+    }
+
     public function storeAddress(Request $request)
     {
         $user_id = $this->user_id;
         $checkout_page = @$request->checkout_page;
+
+        $check = $this->validateAndAuthorizeAddressData($request, false);
+        if (!$check['valid']) {
+            return response()->json(['success' => false, 'message' => $check['message']], 422);
+        }
+        $d = $check['data'];
+
         $add_address = new UserAddress();
-
-        $add_address->name = $request->name;
-        // $add_address->last_name = $request->last_name;
         $add_address->user_id = $user_id;
-        $add_address->phonecode = $request->phonecode;
-        $add_address->phone = $request->phone;
-        // $add_address->state = $request->states;
-        $add_address->zip_code = $request->zip_code;
-        $add_address->city = $request->city;
-        $add_address->address = $request->address;
-        $add_address->country_id = $request->country_id;
-        $add_address->region_id = $request->region_id;
-        $add_address->area_id = $request->area_id;
-
-        if ($checkout_page == 0) {
+        $add_address->name = $d['name'];
+        $add_address->phonecode = $d['phonecode'];
+        $add_address->phone = $d['phone'];
+        $add_address->zip_code = $d['zip_code'];
+        $add_address->city = $d['city'];
+        $add_address->address = $d['address'];
+        $add_address->country_id = $d['country_id'];
+        $add_address->region_id = $d['region_id'];
+        $add_address->area_id = $d['area_id'];
+        $add_address->latitude = $d['latitude'];
+        $add_address->longitude = $d['longitude'];
+        $is_default_shipping = $request->input('is_default_shipping', $request->input('isDefaultShipping', ($checkout_page == 0 ? 1 : 0)));
+        if ($is_default_shipping == 1) {
+            UserAddress::where('user_id', $user_id)->update(['is_selected_address_id' => 0]);
             $add_address->is_selected_address_id = 1;
         } else {
-            $add_address->is_selected_address_id = 0;
+            $hasExisting = UserAddress::where('user_id', $user_id)->where('status', 1)->exists();
+            $add_address->is_selected_address_id = $hasExisting ? 0 : 1;
         }
         $add_address->status = 1;
         $add_address->billing_address = isset($request->billing_address) ? $request->billing_address : '0';
 
-        // Delivery Options
-        if($request->delivery_options)
-        {
-            $add_address->delivery_options=$request->delivery_options;
+        if ($request->delivery_options) {
+            $add_address->delivery_options = $request->delivery_options;
         }
-
-        if($request->instruction)
-        {
-            $add_address->delivery_instructions=$request->instruction;
+        if ($request->instruction) {
+            $add_address->delivery_instructions = $request->instruction;
         }
 
         $add_address->save();
@@ -481,40 +503,46 @@ class MyProfileController extends Controller
     public function storeBillAddress(Request $request)
     {
         $user_id = $this->user_id;
-        $default = $request->isDefault;
-        $add_address = new UserBillAddress();
-        
+
+        $check = $this->validateAndAuthorizeAddressData($request, true);
+        if (!$check['valid']) {
+            return response()->json(['success' => false, 'message' => $check['message']], 422);
+        }
+        $d = $check['data'];
+
+        $default = $request->input('isDefault', 1);
+        if ($default === null || $default === '') {
+            $default = 1;
+        }
         $existing_default_address = UserBillAddress::where('user_id', $user_id)
-        ->where('default', 1)
-        ->first();
+            ->where('default', 1)
+            ->first();
 
         if ($default == 1) {
-            // If there's an existing default address, set it to non-default first
             if ($existing_default_address) {
                 $existing_default_address->default = 0;
                 $existing_default_address->save();
             }
         } else {
-            // If no address is being marked as default, check if we need to mark the new address as default
             if (!$existing_default_address) {
-                // If no default address exists, set the new address as default
                 $default = 1;
             }
         }
 
-        $add_address->name = $request->bill_name;
+        $add_address = new UserBillAddress();
         $add_address->user_id = $user_id;
-        $add_address->phonecode = $request->bill_phonecode;
-        $add_address->phone = $request->bill_phone;
-        $add_address->zip_code = $request->bill_zip_code;
-        $add_address->city = $request->bill_city;
-        $add_address->address = $request->bill_address;
-        $add_address->country_id = $request->bill_country_id;
-        $add_address->region_id = $request->bill_region_id;
-        $add_address->area_id = $request->bill_area_id;
-
+        $add_address->name = $d['name'];
+        $add_address->phonecode = $d['phonecode'];
+        $add_address->phone = $d['phone'];
+        $add_address->zip_code = $d['zip_code'];
+        $add_address->city = $d['city'];
+        $add_address->address = $d['address'];
+        $add_address->country_id = $d['country_id'];
+        $add_address->region_id = $d['region_id'];
+        $add_address->area_id = $d['area_id'];
+        $add_address->latitude = $d['latitude'];
+        $add_address->longitude = $d['longitude'];
         $add_address->default = $default;
-      
         $add_address->status = 1;
 
         $add_address->save();
@@ -522,40 +550,45 @@ class MyProfileController extends Controller
         return response()->json(['success' => 'true']);
     }
 
-
     public function updateAddress(Request $request)
     {   
         $user_id = $this->user_id;
-        $edit_address = UserAddress::find($request->edit_address_id);
-        $edit_address->user_id = $user_id;
-        $edit_address->name = $request->name;
-        // $edit_address->last_name = $request->last_name;
-        $edit_address->phonecode = $request->phonecode;
-        $edit_address->phone = $request->phone;
-        // $edit_address->state = $request->states;
-        $edit_address->zip_code = $request->zip_code;
-         $edit_address->city = $request->city;
-        $edit_address->address = $request->address;
-        $edit_address->country_id = $request->country_id;
-        $edit_address->region_id = $request->region_id;
-        $edit_address->area_id = $request->area_id;
 
+        $check = $this->validateAndAuthorizeAddressData($request, false);
+        if (!$check['valid']) {
+            return response()->json(['success' => false, 'message' => $check['message']], 422);
+        }
+        $d = $check['data'];
+
+        // Strict ownership check (prevent IDOR tampering)
+        $edit_address = UserAddress::where('user_id', $user_id)->where('id', $request->edit_address_id)->first();
+        if (!$edit_address) {
+            return response()->json(['success' => false, 'message' => 'Address not found or unauthorized.'], 403);
+        }
+
+        $edit_address->name = $d['name'];
+        $edit_address->phonecode = $d['phonecode'];
+        $edit_address->phone = $d['phone'];
+        $edit_address->zip_code = $d['zip_code'];
+        $edit_address->city = $d['city'];
+        $edit_address->address = $d['address'];
+        $edit_address->country_id = $d['country_id'];
+        $edit_address->region_id = $d['region_id'];
+        $edit_address->area_id = $d['area_id'];
+        $edit_address->latitude = $d['latitude'];
+        $edit_address->longitude = $d['longitude'];
+        $is_default_shipping = $request->input('is_default_shipping', $request->input('isDefaultShipping'));
+        if ($is_default_shipping !== null && $is_default_shipping == 1) {
+            UserAddress::where('user_id', $user_id)->update(['is_selected_address_id' => 0]);
+            $edit_address->is_selected_address_id = 1;
+        }
         $edit_address->status = 1;
-         $edit_address->billing_address = isset($request->billing_address) ? $request->billing_address : '0';
+        $edit_address->billing_address = isset($request->billing_address) ? $request->billing_address : '0';
 
-         if($request->delivery_options)
-         {
-             $edit_address->delivery_options=$request->delivery_options;
-         }
- 
-         if($request->instruction)
-         {
-            $edit_address->delivery_instructions=$request->instruction;
-         }
-         else
-         {
-            $edit_address->delivery_instructions=null;
-         }
+        if ($request->delivery_options) {
+            $edit_address->delivery_options = $request->delivery_options;
+        }
+        $edit_address->delivery_instructions = $request->instruction ?: null;
 
         $edit_address->save();
 
@@ -566,42 +599,92 @@ class MyProfileController extends Controller
     public function updateBillAddress(Request $request)
     {   
         $user_id = $this->user_id;
-        $edit_address = UserBillAddress::find($request->edit_bill_address_id);
-        $default = $request->isDefault;
 
+        $check = $this->validateAndAuthorizeAddressData($request, true);
+        if (!$check['valid']) {
+            return response()->json(['success' => false, 'message' => $check['message']], 422);
+        }
+        $d = $check['data'];
+
+        // Strict ownership check (prevent IDOR tampering)
+        $edit_address = UserBillAddress::where('user_id', $user_id)->where('id', $request->edit_bill_address_id)->first();
+        if (!$edit_address) {
+            return response()->json(['success' => false, 'message' => 'Billing address not found or unauthorized.'], 403);
+        }
+
+        $default = $request->input('isDefault', 1);
+        if ($default === null || $default === '') {
+            $default = 1;
+        }
         $existing_default_address = UserBillAddress::where('user_id', $user_id)
-        ->where('default', 1)
-        ->where('id', '!=', $request->edit_bill_address_id)
-        ->first();
+            ->where('default', 1)
+            ->where('id', '!=', $request->edit_bill_address_id)
+            ->first();
 
-        // Case 1: If no other address exists with default = 1 and $request->bill_default == 0, then keep this one as default.
         if (!$existing_default_address && $default == 0) {
             $default = 1;  
         }
 
-        // Case 2: If an existing default address exists and $request->bill_default == 1, then set that one to non-default
         if ($default == 1 && $existing_default_address) {
             $existing_default_address->default = 0;
             $existing_default_address->save();
         }
 
-        $edit_address->user_id = $user_id;
-        $edit_address->name = $request->bill_name;
-        $edit_address->phonecode = $request->bill_phonecode;
-        $edit_address->phone = $request->bill_phone;
-        $edit_address->zip_code = $request->bill_zip_code;
-        $edit_address->city = $request->bill_city;
-        $edit_address->address = $request->bill_address;
-        $edit_address->country_id = $request->bill_country_id;
-        $edit_address->region_id = $request->bill_region_id;
-        $edit_address->area_id = $request->bill_area_id;
+        $edit_address->name = $d['name'];
+        $edit_address->phonecode = $d['phonecode'];
+        $edit_address->phone = $d['phone'];
+        $edit_address->zip_code = $d['zip_code'];
+        $edit_address->city = $d['city'];
+        $edit_address->address = $d['address'];
+        $edit_address->country_id = $d['country_id'];
+        $edit_address->region_id = $d['region_id'];
+        $edit_address->area_id = $d['area_id'];
+        $edit_address->latitude = $d['latitude'];
+        $edit_address->longitude = $d['longitude'];
         $edit_address->status = 1;
-        
         $edit_address->default = $default;
+
         $edit_address->save();
 
         Alert::success(\Helper::language('success'), __('backend.user_address_update_successfully'));
         return response()->json(['success' => 'true']);
+    }
+
+    public function getAddressDetails($type, $id)
+    {
+        $user_id = $this->user_id;
+        if ($type == 'bill' || $type == 'billing') {
+            $address = UserBillAddress::with(['country', 'region', 'area'])
+                ->where('user_id', $user_id)
+                ->where('id', $id)
+                ->first();
+        } else {
+            $address = UserAddress::with(['country', 'region', 'area'])
+                ->where('user_id', $user_id)
+                ->where('id', $id)
+                ->first();
+        }
+
+        if (!$address) {
+            return response()->json(['success' => false, 'message' => 'Address not found'], 404);
+        }
+
+        $regions = [];
+        if ($address->country_id) {
+            $regions = Region::where('country_id', $address->country_id)->where('status', 1)->orderby('title', 'ASC')->get(['id', 'title']);
+        }
+
+        $areas = [];
+        if ($address->region_id) {
+            $areas = Area::where('region_id', $address->region_id)->where('status', 1)->orderby('title', 'ASC')->get(['id', 'title']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $address,
+            'regions' => $regions,
+            'areas' => $areas,
+        ]);
     }
 
     public function addressRemove(Request $request)

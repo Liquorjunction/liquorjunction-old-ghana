@@ -204,63 +204,33 @@
               <div class="section-title">BILLING ADDRESS</div>
               <?php
                   $address_to_use = !empty($orderData->delivery_address) ? $orderData->delivery_address : $orderData->billing_address;
-      
-                  if (strpos($address_to_use, ',|') !== false) {
-                      $address_parts = explode(',| ', $address_to_use);
-                      $name = array_shift($address_parts);
-      
-                      $row1 = array_slice($address_parts, 0, 2);
-                      $row2 = array_slice($address_parts, 2, 2); 
-                      $row3 = array_slice($address_parts, 4);    
-                  }
+                  $invAddr = Helper::formatOrderAddress($address_to_use, $orderData->customer_mobile ?? null);
               ?>
               <p>
-                  <strong>Name</strong> - {{ $name ?? '' }}<br />
-                  <strong>Address</strong> - {{ $row1 ? implode(', ', $row1) . ',' : '' }} <br/>
-                  {{ $row2 ? implode(', ', $row2) . ',' : '' }} <br/>
-                  {{ $row3 ? implode(', ', $row3) : '' }}
+                  <strong>Name</strong> - {{ $invAddr['name'] }}@if(!empty($invAddr['phone'])) ({{ $invAddr['phone'] }})@endif<br />
+                  <strong>Address</strong> - {{ $invAddr['address'] }}
               </p>
             @else
-                  @if (!empty($orderData->billing_address))
+              @if (!empty($orderData->billing_address))
                   <div class="section-title">BILLING ADDRESS</div>
                   <?php
-                      if (strpos($orderData->billing_address, ',|') !== false) {
-                          $billing_parts = explode(',| ', $orderData->billing_address);
-                          $billing_name = array_shift($billing_parts);
-          
-                          $billing_row1 = array_slice($billing_parts, 0, 2);
-                          $billing_row2 = array_slice($billing_parts, 2, 2); 
-                          $billing_row3 = array_slice($billing_parts, 4);    
-                      }
+                      $invBill = Helper::formatOrderAddress($orderData->billing_address, $orderData->customer_mobile ?? null);
                   ?>
                   <p>
-                      <strong>Name</strong> - {{ $billing_name ?? '' }}<br />
-                      <strong>Address</strong> - {{ !empty($billing_row1) ? implode(', ', $billing_row1) . ',' : '' }} <br/>
-                      {{ !empty($billing_row2) ? implode(', ', $billing_row2) . ',' : '' }} <br/>
-                      {{ !empty($billing_row3) ? implode(', ', $billing_row3) : '' }}
+                      <strong>Name</strong> - {{ $invBill['name'] }}@if(!empty($invBill['phone'])) ({{ $invBill['phone'] }})@endif<br />
+                      <strong>Address</strong> - {{ $invBill['address'] }}
                   </p>
               @endif
 
               <div class="section-title">DELIVERY ADDRESS</div>
               <?php
-                  if (strpos($orderData->delivery_address, ',|') !== false) {
-                      $delivery_parts = explode(',| ', $orderData->delivery_address);
-                      $delivery_name = array_shift($delivery_parts);
-      
-                      $delivery_row1 = array_slice($delivery_parts, 0, 2);
-                      $delivery_row2 = array_slice($delivery_parts, 2, 2); 
-                      $delivery_row3 = array_slice($delivery_parts, 4);    
-                  }
+                  $invDel = Helper::formatOrderAddress($orderData->delivery_address, $orderData->customer_mobile ?? null);
               ?>
               <p>
-                  <strong>Name</strong> - {{ $delivery_name ?? '' }}<br />
-                  <strong>Address</strong> - {{ $delivery_row1 ? implode(', ', $delivery_row1) . ',' : '' }} <br/>
-                  {{ $delivery_row2 ? implode(', ', $delivery_row2) . ',' : '' }} <br/>
-                  {{ $delivery_row3 ? implode(', ', $delivery_row3) : '' }}
+                  <strong>Name</strong> - {{ $invDel['name'] }}@if(!empty($invDel['phone'])) ({{ $invDel['phone'] }})@endif<br />
+                  <strong>Address</strong> - {{ $invDel['address'] }}
               </p>
-
-          @endif
-
+            @endif
           @endif
           @if ($orderData->order_type == 2)
                 <div class="section-title">STORE ADDRESS</div>

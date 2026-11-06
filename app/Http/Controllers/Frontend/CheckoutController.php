@@ -45,6 +45,7 @@ use File;
 use Helper;
 use Redirect;
 use App\Services\MojoPay;
+use App\Services\AddressValidationService;
 use App\Models\Area;
 use App\Models\Country;
 use App\Models\Region;
@@ -157,7 +158,7 @@ class CheckoutController extends Controller
             $query->where('status', 1);
         })->withWhereHas('area', function ($query) {
             $query->where('status', 1);
-        })->where([['user_id', $user_id], ['status', 1]])->get();
+        })->where([['user_id', $user_id], ['status', 1]])->orderBy('is_selected_address_id', 'desc')->orderBy('id', 'desc')->get();
 
         $UserBillAddressData = UserBillAddress::withWhereHas('country', function ($query) {
             $query->where('status', 1);
@@ -912,9 +913,9 @@ class CheckoutController extends Controller
             'is_selected_address_id' => 1,
         ));
 
-        Alert::success(\Helper::language('success'), __('backend.address_change_successfully'));
+
         return response()
-            ->json(['success' => 'true']);
+            ->json(['success' => true]);
     }
 
     public function storeSessionLat(Request $request)
@@ -1332,21 +1333,48 @@ class CheckoutController extends Controller
         }
 
         $delivery_address = '';
+        $billing_address = '';
         $user_address_data = null;
+        $user_bill_address_data = null;
 
-        if (!empty($user_address_id) && $purchase_type == 1) {
-            $user_address_data = UserAddress::with(['country', 'region', 'area'])->where([['user_id', $user_id], ['status', 1], ['id', $user_address_id]])->first();
+        if ($purchase_type == 1) {
+            // 1. Strict Server-Side Validation of Shipping Address
+            if (empty($user_address_id)) {
+                return response()->json([
+                    'error' => true,
+                    'message' => 'Please select a delivery address.',
+                    'type' => 'address'
+                ]);
+            }
 
-            $status = $user_address_data->area->status;
+            $user_address_data = UserAddress::with(['country', 'region', 'area'])
+                ->where([['user_id', $user_id], ['status', 1], ['id', $user_address_id]])
+                ->first();
+
+            if (!$user_address_data) {
+                return response()->json([
+                    'error' => true,
+                    'message' => 'Selected delivery address is invalid or not found.',
+                    'type' => 'address'
+                ]);
+            }
+
+            // Verify coordinates, active status & allowed service area boundaries
+            $shippingGeoCheck = AddressValidationService::verifyAddressModel($user_address_data, 'Delivery address');
+            if (!$shippingGeoCheck['valid']) {
+                return response()->json([
+                    'error' => true,
+                    'message' => $shippingGeoCheck['message'],
+                    'type' => 'address'
+                ]);
+            }
+
+            $status = $user_address_data->area ? $user_address_data->area->status : 0;
             if ($status == 1) {
-                // if ($user_address_data->area->rate != $delivery_charge) {
-                //     return response()->json(['error' => true, 'message' => @Helper::language('something_went_wrong_in_delivery_fee'), 'type' => 'address']);
-                // }
                 $deliveryAmount = @Helper::numberFormat($user_address_data->area->delivery_amount);
                 $deliveryFee = @Helper::numberFormat($user_address_data->area->delivery_fee);
 
                 $currentTotal = floatval($currentTotal);
-                // $expectedRate = floatval($user_address_data->area->rate);
                 $givenRate = floatval($delivery_charge);
 
                 if ($currentTotal > $deliveryAmount && $givenRate == 0) {
@@ -1359,33 +1387,79 @@ class CheckoutController extends Controller
                     ]);
                 }
             } else {
-                return response()->json(['error' => true, 'message' => @Helper::language('Something_went_wrong_in_the_delivery_address'), 'type' => 'address']);
+                return response()->json([
+                    'error' => true,
+                    'message' => @Helper::language('Something_went_wrong_in_the_delivery_address'),
+                    'type' => 'address'
+                ]);
             }
+
             $delivery_address = "";
             ($user_address_data->name) ? $delivery_address .= $user_address_data->name : '';
             ($user_address_data->address) ? $delivery_address .= ',| ' . $user_address_data->address : '';
-            ($user_address_data->country->name) ? $delivery_address .= ',| ' . $user_address_data->country->name : '';
-            ($user_address_data->region->title) ? $delivery_address .= ',| ' . $user_address_data->region->title : '';
-            ($user_address_data->area->title) ? $delivery_address .= ',| ' . $user_address_data->area->title : '';
+            ($user_address_data->country ? $user_address_data->country->name : '') ? $delivery_address .= ',| ' . $user_address_data->country->name : '';
+            ($user_address_data->region ? $user_address_data->region->title : '') ? $delivery_address .= ',| ' . $user_address_data->region->title : '';
+            ($user_address_data->area ? $user_address_data->area->title : '') ? $delivery_address .= ',| ' . $user_address_data->area->title : '';
             ($user_address_data->phone) ? $delivery_address .= ',| +' . @$user_address_data->phonecode . ' ' . @$user_address_data->phone : '';
-            ($user_address_data->city) ? $delivery_address .= ',| ' . @$user_address_data->city . ' ' . @$user_address_data->city : '';
-            ($user_address_data->zip_code) ? $delivery_address .= ',| ' . @$user_address_data->zip_code . ' ' . @$user_address_data->zip_code : '';
-        }
+            ($user_address_data->city) ? $delivery_address .= ',| ' . @$user_address_data->city : '';
+            ($user_address_data->zip_code) ? $delivery_address .= ',| ' . @$user_address_data->zip_code : '';
+            if (!empty($user_address_data->latitude)) {
+                $delivery_address .= ',| ' . $user_address_data->latitude;
+            }
+            if (!empty($user_address_data->longitude)) {
+                $delivery_address .= ',| ' . $user_address_data->longitude;
+            }
 
-        // Billing Address
-        $billing_address = '';
-        if (!empty($user_bill_address_id) && $purchase_type == 1) {
-            $user_bill_address_data = UserBillAddress::with(['country', 'region', 'area'])->where([['user_id', $user_id], ['status', 1], ['id', $user_bill_address_id]])->first();
+            // 2. Strict Server-Side Validation of Billing Address
+            if (!$isSameAddress) {
+                if (empty($user_bill_address_id)) {
+                    return response()->json([
+                        'error' => true,
+                        'message' => UserBillAddress::where([['user_id', $user_id], ['status', 1]])->exists() ? 'Please select your billing address or check "Same as shipping address".' : 'Please add a billing address or check "Same as shipping address" to continue.',
+                        'type' => 'billing_address'
+                    ]);
+                }
 
-            $billing_address = '';
-            ($user_bill_address_data->name) ? $billing_address .= $user_bill_address_data->name : '';
-            ($user_bill_address_data->address) ? $billing_address .= ',| ' . $user_bill_address_data->address : '';
-            ($user_bill_address_data->country->name) ? $billing_address .= ',| ' . $user_bill_address_data->country->name : '';
-            ($user_bill_address_data->region->title) ? $billing_address .= ',| ' . $user_bill_address_data->region->title : '';
-            ($user_bill_address_data->area->title) ? $billing_address .= ',| ' . $user_bill_address_data->area->title : '';
-            ($user_bill_address_data->phone) ? $billing_address .= ',| +' . @$user_bill_address_data->phonecode . ' ' . @$user_bill_address_data->phone : '';
-            ($user_bill_address_data->city) ? $billing_address .= ',| ' . @$user_bill_address_data->city . ' ' . @$user_bill_address_data->city : '';
-            ($user_bill_address_data->zip_code) ? $billing_address .= ',| ' . @$user_bill_address_data->zip_code . ' ' . @$user_bill_address_data->zip_code : '';
+                $user_bill_address_data = UserBillAddress::with(['country', 'region', 'area'])
+                    ->where([['user_id', $user_id], ['status', 1], ['id', $user_bill_address_id]])
+                    ->first();
+
+                if (!$user_bill_address_data) {
+                    return response()->json([
+                        'error' => true,
+                        'message' => 'Selected billing address is invalid or not found.',
+                        'type' => 'billing_address'
+                    ]);
+                }
+
+                // Verify coordinates, active status & allowed service area boundaries for Billing
+                $billingGeoCheck = AddressValidationService::verifyAddressModel($user_bill_address_data, 'Billing address');
+                if (!$billingGeoCheck['valid']) {
+                    return response()->json([
+                        'error' => true,
+                        'message' => $billingGeoCheck['message'],
+                        'type' => 'billing_address'
+                    ]);
+                }
+
+                $billing_address = "";
+                ($user_bill_address_data->name) ? $billing_address .= $user_bill_address_data->name : '';
+                ($user_bill_address_data->address) ? $billing_address .= ',| ' . $user_bill_address_data->address : '';
+                ($user_bill_address_data->country ? $user_bill_address_data->country->name : '') ? $billing_address .= ',| ' . $user_bill_address_data->country->name : '';
+                ($user_bill_address_data->region ? $user_bill_address_data->region->title : '') ? $billing_address .= ',| ' . $user_bill_address_data->region->title : '';
+                ($user_bill_address_data->area ? $user_bill_address_data->area->title : '') ? $billing_address .= ',| ' . $user_bill_address_data->area->title : '';
+                ($user_bill_address_data->phone) ? $billing_address .= ',| +' . @$user_bill_address_data->phonecode . ' ' . @$user_bill_address_data->phone : '';
+                ($user_bill_address_data->city) ? $billing_address .= ',| ' . @$user_bill_address_data->city : '';
+                ($user_bill_address_data->zip_code) ? $billing_address .= ',| ' . @$user_bill_address_data->zip_code : '';
+                if (!empty($user_bill_address_data->latitude)) {
+                    $billing_address .= ',| ' . $user_bill_address_data->latitude;
+                }
+                if (!empty($user_bill_address_data->longitude)) {
+                    $billing_address .= ',| ' . $user_bill_address_data->longitude;
+                }
+            } else {
+                $billing_address = $delivery_address;
+            }
         }
 
         //tax

@@ -252,5 +252,86 @@
 
     //jq loader
 
+    // Sitewide Input Restrictions & Phone Code Formatter
+    $(document).ready(function() {
+        // 1. Phone Code Dropdown: strip "(GH)" etc. so only "+233" is displayed
+        function cleanSitewidePhoneCodeOptions() {
+            $('select[name="phonecode"], select[name="phone_code"], select[name="bill_phonecode"], #modal_phonecode, select.numbers').find('option').each(function() {
+                var t = $(this).text().trim();
+                var m = t.match(/\+?\d+/);
+                if (m) {
+                    var cleanCode = '+' + m[0].replace('+', '');
+                    if (t !== cleanCode) {
+                        $(this).text(cleanCode);
+                    }
+                }
+            });
+        }
+        cleanSitewidePhoneCodeOptions();
+        $(document).ajaxComplete(function() {
+            cleanSitewidePhoneCodeOptions();
+        });
+
+        // 2. Name inputs: only letters (A-Z, a-z) and spaces allowed
+        $(document).on('keypress', '#modal_name, input[name="name"], input[name="bill_name"], #name, #bill_name', function(e) {
+            if (e.which === 0 || e.which === 8 || e.which === 9 || e.which === 13 || e.which === 27) return true;
+            var char = String.fromCharCode(e.which);
+            if (!/^[a-zA-Z\s]$/.test(char)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+        $(document).on('input paste', '#modal_name, input[name="name"], input[name="bill_name"], #name, #bill_name', function() {
+            var $el = $(this);
+            setTimeout(function() {
+                var val = $el.val();
+                var clean = val.replace(/[^a-zA-Z\s]/g, '');
+                if (val !== clean) {
+                    $el.val(clean);
+                }
+            }, 0);
+        });
+
+        // 3. Mobile / Phone inputs: only digits (0-9) allowed
+        $(document).on('keypress', '#modal_phone, input[type="tel"], input[name="phone"], input[name="bill_phone"], input[name="phone_number"], input[name="mobile"], #phone, #bill_phone, .phone-number input', function(e) {
+            if (e.which === 0 || e.which === 8 || e.which === 9 || e.which === 13 || e.which === 27) return true;
+            var char = String.fromCharCode(e.which);
+            if (!/^[0-9]$/.test(char)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+        $(document).on('input paste', '#modal_phone, input[type="tel"], input[name="phone"], input[name="bill_phone"], input[name="phone_number"], input[name="mobile"], #phone, #bill_phone, .phone-number input', function() {
+            var $el = $(this);
+            setTimeout(function() {
+                var val = $el.val();
+                var clean = val.replace(/[^0-9]/g, '');
+                if (val !== clean) {
+                    $el.val(clean);
+                }
+            }, 0);
+        });
+
+        // 4. Zip code inputs: only uppercase characters (A-Z, 0-9) allowed
+        $(document).on('keypress', '#modal_zip_code, input[name="zip_code"], input[name="bill_zip_code"], #zip_code, #bill_zip_code', function(e) {
+            if (e.which === 0 || e.which === 8 || e.which === 9 || e.which === 13 || e.which === 27) return true;
+            var char = String.fromCharCode(e.which);
+            if (!/^[a-zA-Z0-9]$/.test(char)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+        $(document).on('input paste', '#modal_zip_code, input[name="zip_code"], input[name="bill_zip_code"], #zip_code, #bill_zip_code', function() {
+            var $el = $(this);
+            setTimeout(function() {
+                var val = $el.val();
+                var clean = val.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (val !== clean) {
+                    $el.val(clean);
+                }
+            }, 0);
+        });
+    });
+
 </script>
 @endpush

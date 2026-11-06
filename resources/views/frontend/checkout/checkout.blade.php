@@ -536,6 +536,103 @@
         align-items: center;
     }
 
+    /* Scrollable container for shipping addresses */
+    .shipping-address-scroll-container {
+        transition: max-height 0.4s ease;
+    }
+
+    .shipping-address-scroll-container.shipping-address-scrollable {
+        max-height: 360px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 6px;
+        padding-left: 2px;
+        padding-top: 2px;
+        padding-bottom: 14px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #dddddd;
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: #d4d4d8 #f5f5f5;
+    }
+
+    .shipping-address-scroll-container.shipping-address-scrollable::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .shipping-address-scroll-container.shipping-address-scrollable::-webkit-scrollbar-track {
+        background: #f5f5f5;
+        border-radius: 6px;
+    }
+
+    .shipping-address-scroll-container.shipping-address-scrollable::-webkit-scrollbar-thumb {
+        background: #d4d4d8;
+        border-radius: 6px;
+    }
+
+    .shipping-address-scroll-container.shipping-address-scrollable::-webkit-scrollbar-thumb:hover {
+        background: #fbb516;
+    }
+
+    /* Smooth animated entrance for extra addresses */
+    .extra-shipping-address.address-animated {
+        animation: addressFadeSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes addressFadeSlideDown {
+        0% {
+            opacity: 0;
+            transform: translateY(-12px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Subtle highlight pulse when focusing an invalid address */
+    .address-group.address-highlight-pulse {
+        animation: addressPulseGlow 1.2s ease-in-out;
+        border-color: #fbb516 !important;
+    }
+
+    @keyframes addressPulseGlow {
+        0% {
+            box-shadow: 0 0 0 0 rgba(251, 181, 22, 0.7);
+            border-color: #fbb516;
+        }
+        50% {
+            box-shadow: 0 0 0 6px rgba(251, 181, 22, 0.25);
+            border-color: #fbb516;
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(251, 181, 22, 0);
+        }
+    }
+
+    .btn-card-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .btn-card-edit {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        color: #495057;
+    }
+    .btn-card-edit:hover {
+        background: #fbb516;
+        border-color: #fbb516;
+        color: #ffffff;
+    }
+
 </style>
 <div class="loader" id="loader"></div>
 <div class="bread-crumb-block">
@@ -592,65 +689,204 @@
 
                     <!-- End Before Login Form -->
                     <!-- After Login Form -->
-                    <h5 class="mb-2">Shipping Address</h5>
-                    @foreach($UserAddressData as $key=>$data)
+                    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                        <h5 class="mb-0">Shipping Address</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <a href="{{ route('my-address') }}" class="border-button me-2" style="font-size: 13px; text-transform: none; font-weight: 600;">Manage</a>
+                            <a href="javascript:void(0)" class="add_new_address_div open-address-modal btn btn-sm btn-outline-dark d-inline-flex align-items-center gap-2 py-1 px-3" data-type="shipping" data-action="add" data-is-checkout="1" style="font-size: 12.5px; font-weight: 600; border-radius: 20px;">
+                                <i class="fa fa-plus-circle text-warning" style="font-size: 14px;"></i>
+                                <span>Add New</span>
+                            </a>
+                        </div>
+                    </div>
+                    
                     <form class="checkout-form">
-                        <div class="address-group radio-group">
-                            <div class="radio-btn">
-                                <input id="radioAddress{{$data->id}}" {{ ($key == 0) ? 'checked' : "" }} type="radio" value="{{$data->id}}" name="address_radio" class="addressRadioCurrent" />
+                        <div id="shippingAddressScrollContainer" class="shipping-address-scroll-container">
+                            @foreach($UserAddressData as $key=>$data)
+                        <div class="address-group radio-group {{ $key >= 3 ? 'extra-shipping-address d-none' : '' }}">
+                            <div class="radio-btn w-100" style="min-width: 0;">
+                                <input id="radioAddress{{$data->id}}" {{ ($data->is_selected_address_id == 1 || ($loop->first && !$UserAddressData->contains('is_selected_address_id', 1))) ? 'checked' : "" }} type="radio" value="{{$data->id}}" name="address_radio" class="addressRadioCurrent" data-has-location="{{ (!empty($data->latitude) && !empty($data->longitude)) ? '1' : '0' }}" />
                                 <label onclick="checkDeliveryAddressByArea('{{$data->id}}')" for="radioAddress{{$data->id}}"></label>
-                                <div class="detail">
-                                    <h5>{{@Helper::language('default_billing_address')}}</h5>
-                                    <p class="black-text">
-                                        @php
-                                        ($data->name)? $address = $data->name : '';
-                                        ($data->address)? $address .= ', <br>'.$data->address: '';
-                                        ($data->area->title)? $address .= ', <br>'.$data->area->title : '';
-                                        ($data->region->title)? $address .= ', <br>'.$data->region->title : '';
-                                        ($data->country->name)? $address .= ',<br> '.$data->country->name : '';
+                                <div class="detail w-100" style="min-width: 0;">
+                                    @php
+                                        $fullAddress = Helper::formatUserAddress($data, false);
+                                        $phoneNumber = '(+' . $data->phonecode . ') ' . $data->phone;
+                                        $hasMapLocation = (!empty($data->latitude) && !empty($data->longitude));
+                                    @endphp
+                                    <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                                        <span class="fw-bold text-dark text-truncate" style="max-width: 240px; font-weight: 700;" title="{{ $data->name }}">{{ $data->name }}</span>
+                                        <span class="fw-bold text-dark text-nowrap" style="font-weight: 700;"><i class="fa fa-phone small me-1 text-muted" style="font-size: 11px;"></i>{{ $phoneNumber }}</span>
+                                        @if($data->is_selected_address_id == 1)
+                                            <span class="badge bg-warning text-dark py-1 px-2" style="font-size: 10px; font-weight: 600;">Default</span>
+                                        @endif
 
-                                        $phone_number = '(+'.$data->phonecode.') '.$data->phone;
-                                        ($phone_number)?$address .= ',<br> '.$phone_number : '';
-                                        echo $address ;
-                                        @endphp
-                                    </p>
-                                    <div class="mt-2">
+                                    </div>
+
+                                    <div class="text-secondary text-truncate small mb-1" style="max-width: 500px;" title="{{ $fullAddress }}">
+                                        <i class="fa fa-map-marker-alt text-warning me-1"></i>{{ \Illuminate\Support\Str::limit($fullAddress, 70, '...') }}
+                                    </div>
+
+                                    @if(!$hasMapLocation)
+                                        <div class="alert alert-warning py-1 px-2 my-1 d-inline-flex align-items-center gap-2" style="font-size: 11px; border-radius: 4px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
+                                            <span>
+                                                <i class="fa fa-exclamation-triangle text-danger me-1"></i>
+                                                <strong>Location not set on map!</strong>
+                                            </span>
+                                            <a href="javascript:void(0)" class="btn btn-xs py-0 px-2 fw-bold text-dark open-address-modal" data-type="shipping" data-action="edit" data-id="{{@$data->id}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" style="background: #fbb516; font-size: 10.5px; border-radius: 4px; white-space: nowrap;">
+                                                <i class="fa fa-map-marker-alt me-1"></i>Set on Map
+                                            </a>
+                                        </div>
+                                    @endif
+
+                                    <div class="mt-1">
                                         <input type="hidden" name="checkout_page" id="checkout_page" value="1">
                                         <input type="hidden" name="checkout_address" id="checkout_address" value="1">
                                         <input type="hidden" name="address_id" id="address_id" value="{{@$data->id}}">
-                                        <input type="hidden" class="user_address_id" name="user_address_id" value="{{@$data->id}}"> <input type="hidden" name="checkout_page" id="checkout_page" value="1">
-                                        <input type="hidden" name="checkout_address" id="checkout_address" value="1">
-                                        <input type="hidden" name="address_id" id="address_id" value="{{@$data->id}}">
                                         <input type="hidden" class="user_address_id" name="user_address_id" value="{{@$data->id}}">
-                                        <a href="javascript:void(0)" class="EditAddress"><u>Add Delivery Instructions.</u></a>
                                     </div>
                                 </div>
                             </div>
                             
-                            <input type="hidden" name="checkout_page" id="checkout_page" value="1">
-                            <input type="hidden" name="checkout_address" id="checkout_address" value="1">
-                            <input type="hidden" name="address_id" id="address_id" value="{{@$data->id}}">
-                            <input type="hidden" class="user_address_id" name="user_address_id" value="{{@$data->id}}"> <input type="hidden" name="checkout_page" id="checkout_page" value="1">
-                            <input type="hidden" name="checkout_address" id="checkout_address" value="1">
-                            <input type="hidden" name="address_id" id="address_id" value="{{@$data->id}}">
-                            <input type="hidden" class="user_address_id" name="user_address_id" value="{{@$data->id}}">
-                            <a href="javascript:void(0)" class="border-button EditAddress">{{@Helper::language('edit_label')}}</a>
+                            <a href="javascript:void(0)" class="btn-card-action btn-card-edit open-address-modal EditAddress" data-type="shipping" data-action="edit" data-id="{{@$data->id}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" title="Edit Address">
+                                <i class="fa fa-pen" style="font-size: 11px;"></i>
+                            </a>
                         </div>
-                        @endforeach
+                            @endforeach
+                        </div>
                     </form>
 
-                    <form class="checkout-form" id="addressNewForm">
-                        <div class="address-group radio-group">
-                            <div class="radio-btn">
-                                <label class="custom-checkbox-label">
-                                  <input id="radioAddressSix" type="checkbox" name="address_radio" class="addressRadioCurrent" data-class="add-new-address" />
-                                  <span class="checkmark"></span>
-                                  <span class="detail">
-                                    <p class="black-text add_new_address_div">{{@Helper::language('add_new_address_label')}}</p>
-                                  </span>
-                                </label>
-                              </div>                              
+                    @if($UserAddressData->count() > 3)
+                        <div class="text-center my-3" id="shippingMoreAddressesWrapper">
+                            <button type="button" 
+                                    id="toggleMoreAddressesBtn" 
+                                    onclick="showMoreShippingAddresses()" 
+                                    class="btn btn-sm btn-outline-dark px-3 py-1 d-inline-flex align-items-center gap-2" 
+                                    style="font-size: 12.5px; font-weight: 600; border-radius: 20px; transition: all 0.2s ease;">
+                                <span id="toggleMoreAddressesText"><i class="fa fa-chevron-down me-1"></i> Show More</span>
+                            </button>
                         </div>
+                    @endif
+
+                    <script>
+                        function showMoreShippingAddresses(animate = true) {
+                            var wrapperEl = document.getElementById('shippingMoreAddressesWrapper');
+                            if (wrapperEl) {
+                                if (animate && window.jQuery) {
+                                    $(wrapperEl).fadeOut(250);
+                                } else {
+                                    wrapperEl.style.display = 'none';
+                                }
+                            }
+
+                            var scrollContainer = document.getElementById('shippingAddressScrollContainer');
+                            if (scrollContainer) {
+                                scrollContainer.classList.add('shipping-address-scrollable');
+                            }
+
+                            var extraItems = document.querySelectorAll('.extra-shipping-address');
+                            extraItems.forEach(function(item, index) {
+                                item.classList.remove('d-none');
+                                if (animate) {
+                                    item.style.animationDelay = (index * 60) + 'ms';
+                                    item.classList.add('address-animated');
+                                }
+                            });
+                        }
+
+                        function scrollAddressIntoView(targetElement, scrollWindow = false) {
+                            var targetEl = null;
+                            if (targetElement) {
+                                if (window.jQuery && targetElement instanceof window.jQuery) {
+                                    targetEl = targetElement[0];
+                                } else if (targetElement instanceof HTMLElement) {
+                                    targetEl = targetElement;
+                                } else if (typeof targetElement === 'string') {
+                                    targetEl = document.querySelector(targetElement);
+                                }
+                            }
+                            if (!targetEl) {
+                                var checkedRadio = document.querySelector('input[name="address_radio"]:checked');
+                                if (checkedRadio) {
+                                    targetEl = checkedRadio.closest('.address-group');
+                                }
+                            }
+                            if (!targetEl) return;
+
+                            var container = document.getElementById('shippingAddressScrollContainer');
+                            if (!container) return;
+
+                            var wasHidden = false;
+                            if (targetEl.classList.contains('extra-shipping-address') && targetEl.classList.contains('d-none')) {
+                                wasHidden = true;
+                                showMoreShippingAddresses(false);
+                            } else if (!container.classList.contains('shipping-address-scrollable') && document.querySelectorAll('.extra-shipping-address').length > 0) {
+                                container.classList.add('shipping-address-scrollable');
+                            }
+
+                            var doScroll = function() {
+                                var containerRect = container.getBoundingClientRect();
+                                var targetRect = targetEl.getBoundingClientRect();
+
+                                var relativeTop = targetRect.top - containerRect.top;
+                                var targetScrollTop = container.scrollTop + relativeTop - (container.clientHeight / 2) + (targetRect.height / 2);
+                                var maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+                                targetScrollTop = Math.max(0, Math.min(targetScrollTop, maxScroll));
+
+                                if (typeof container.scrollTo === 'function') {
+                                    container.scrollTo({
+                                        top: targetScrollTop,
+                                        behavior: 'smooth'
+                                    });
+                                } else {
+                                    container.scrollTop = targetScrollTop;
+                                }
+
+                                if (scrollWindow) {
+                                    var containerTopDoc = 0;
+                                    if (window.jQuery) {
+                                        containerTopDoc = $(container).offset().top - 120;
+                                        $('html, body').stop().animate({
+                                            scrollTop: Math.max(0, containerTopDoc)
+                                        }, 450);
+                                    } else {
+                                        containerTopDoc = container.getBoundingClientRect().top + window.pageYOffset - 120;
+                                        window.scrollTo({
+                                            top: Math.max(0, containerTopDoc),
+                                            behavior: 'smooth'
+                                        });
+                                    }
+                                }
+
+                                targetEl.classList.add('address-highlight-pulse');
+                                setTimeout(function() {
+                                    targetEl.classList.remove('address-highlight-pulse');
+                                }, 1400);
+                            };
+
+                            if (wasHidden) {
+                                setTimeout(doScroll, 60);
+                            } else {
+                                doScroll();
+                            }
+                        }
+
+                        document.addEventListener('DOMContentLoaded', function() {
+                            var checkedRadio = document.querySelector('.extra-shipping-address input[type="radio"]:checked');
+                            if (checkedRadio) {
+                                showMoreShippingAddresses(false);
+                                setTimeout(function() {
+                                    var targetItem = checkedRadio.closest('.address-group');
+                                    if (targetItem) {
+                                        scrollAddressIntoView(targetItem, false);
+                                    }
+                                }, 100);
+                            }
+                        });
+                    </script>
+
+                    <p class="mt-2 mb-1"><span class="error red-text" id="user_address_error"></span></p>
+
+                    <form class="checkout-form" id="addressNewForm">
                         <div class="add-new-address addressRadioCurrentShow d-none">
                             <div class="checkout-heading-flex-group">
                                 <h5 class="mb-0">{{@Helper::language('add_address')}}</h5>
@@ -668,7 +904,7 @@
                                             $countryData = $countryData->values();
                                         ?>
                                         @foreach($countryData as $value)
-                                        <option value="{{$value->phonecode}}">+{{$value->phonecode.' ('.$value->shortname.')' }}</option>
+                                        <option value="{{$value->phonecode}}">+{{$value->phonecode}}</option>
                                         @endforeach
                                     </select>
                                     <input type="tel" value="{{old('phone')}}" placeholder="{{@Helper::language('enter_phone_number_place')}} " maxlength="15" name="phone" id="phone">
@@ -747,7 +983,6 @@
 
                         </div>
                     </form>
-                    <span class="error red-text" id="user_address_error"></span>
                     <!-- End After Login Form -->
 
 
@@ -763,17 +998,24 @@
                     @endphp
 
                     @if($user && !$user->is_guest_user == 1)
-                    <h5 class="mb-2 mt-5">Billing Address</h5>
+                    <div class="d-flex align-items-center justify-content-between mb-2 mt-5 flex-wrap gap-2">
+                        <h5 class="mb-0">Billing Address</h5>
+                        @if($UserBillAddressData->isEmpty())
+                        <a href="javascript:void(0)" class="add_new_bill_address_div open-address-modal btn btn-sm btn-outline-dark d-inline-flex align-items-center gap-2 py-1 px-3" data-type="billing" data-action="add" data-is-checkout="1" style="font-size: 12.5px; font-weight: 600; border-radius: 20px;">
+                            <i class="fa fa-plus-circle text-warning" style="font-size: 14px;"></i>
+                            <span>Add New</span>
+                        </a>
+                        @endif
+                    </div>
                     {{-- 🟢 Logged-in real user --}}
-                    <div style="margin-top:20px;margin-bottom:20px;">
+                    <div style="margin-top:15px;margin-bottom:20px;">
                         <div class="check-group">
                             <input 
                                 class="form-check-input" 
                                 type="checkbox" 
                                 name="same_address"
                                 value="1"
-                                id="sameAddress"
-                                style="transform: scale(1.3); margin-right: 10px; border: 1px solid #858584;"
+                                id="sameAddress" style="transform: scale(1.3); margin-right: 10px; border: 1px solid #858584;"
                             >
                             <label class="form-check-label">
                                 <span style="color: #858584; font-size:20px;">
@@ -793,41 +1035,54 @@
                     
                     <div id="billingAddressContainer">
                         @if($UserBillAddressData->isEmpty() && !$user->is_guest_user == 1)
-                            <div class="mt-20">
-                                <a href="{{ route('add-bill-address') }}" ><u>Add New Billing Address.</u></a>
+                            <div class="py-3 px-3 text-center border rounded bg-light mb-3" style="border-radius: 8px;">
+                                <p class="text-muted small mb-2"><i class="fa fa-info-circle text-warning me-1"></i> No separate billing address saved yet.</p>
                             </div>
                         @else
                             @foreach($UserBillAddressData as $key=>$data)
                             <form class="checkout-form">
                                 <div class="address-group">
-                                        <div class="detail">
-                                            <h5>Default Billing address</h5>
-                                            <p class="black-text">
-                                                @php
-                                                ($data->name)? $address = $data->name : '';
-                                                ($data->address)? $address .= ', <br>'.$data->address: '';
-                                                ($data->area->title)? $address .= ', <br>'.$data->area->title : '';
-                                                ($data->region->title)? $address .= ', <br>'.$data->region->title : '';
-                                                ($data->country->name)? $address .= ',<br> '.$data->country->name : '';
+                                    <div class="detail w-100" style="min-width: 0;">
+                                        @php
+                                            $fullBillAddress = Helper::formatUserAddress($data, false);
+                                            $phoneBillNumber = '(+' . $data->phonecode . ') ' . $data->phone;
+                                            $hasBillMapLocation = (!empty($data->latitude) && !empty($data->longitude));
+                                        @endphp
+                                        <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                                            <span class="fw-bold text-dark text-truncate" style="max-width: 240px; font-weight: 700;" title="{{ $data->name }}">{{ $data->name }}</span>
+                                        <span class="fw-bold text-dark text-nowrap" style="font-weight: 700;"><i class="fa fa-phone small me-1 text-muted" style="font-size: 11px;"></i>{{ $phoneBillNumber }}</span>
+                                            <span class="badge bg-warning text-dark py-1 px-2" style="font-size: 10px; font-weight: 600;">Default Billing</span>
 
-                                                $phone_number = '(+'.$data->phonecode.') '.$data->phone;
-                                                ($phone_number)?$address .= ',<br> '.$phone_number : '';
-                                                echo $address ;
-                                                @endphp
-                                            </p>
                                         </div>
+
+                                        <div class="text-secondary text-truncate small mb-1" style="max-width: 500px;" title="{{ $fullBillAddress }}">
+                                            <i class="fa fa-map-marker-alt text-warning me-1"></i>{{ \Illuminate\Support\Str::limit($fullBillAddress, 70, '...') }}
+                                        </div>
+
+                                        @if(!$hasBillMapLocation)
+                                            <div class="alert alert-warning py-1 px-2 my-1 d-inline-flex align-items-center gap-2" style="font-size: 11px; border-radius: 4px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
+                                                <span>
+                                                    <i class="fa fa-exclamation-triangle text-danger me-1"></i>
+                                                    <strong>Billing location not set on map!</strong>
+                                                </span>
+                                                <a href="javascript:void(0)" class="btn btn-xs py-0 px-2 fw-bold text-dark open-address-modal" data-type="billing" data-action="edit" data-id="{{@$data->id}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" style="background: #fbb516; font-size: 10.5px; border-radius: 4px; white-space: nowrap;">
+                                                    <i class="fa fa-map-marker-alt me-1"></i>Set on Map
+                                                </a>
+                                            </div>
+                                        @endif
+                                    </div>
                                
                                     <input type="hidden" name="bill_address_id" id="bill_address_id" value="{{@$data->id}}">
-                                    <input type="hidden" class="user_bill_address_id" name="user_bill_address_id" id="user_bill_address_id" value="{{@$data->id}}"> 
-                                    <a href="javascript:void(0)" class="border-button EditBillAddress">{{@Helper::language('edit_label')}}</a>
+                                    <input type="hidden" class="user_bill_address_id" name="user_bill_address_id" id="user_bill_address_id" value="{{@$data->id}}" data-has-location="{{ $hasBillMapLocation ? '1' : '0' }}"> 
+                                    <a href="javascript:void(0)" class="btn-card-action btn-card-edit open-address-modal EditBillAddress" data-type="billing" data-action="edit" data-id="{{@$data->id}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" title="Edit Address">
+                                        <i class="fa fa-pen" style="font-size: 11px;"></i>
+                                    </a>
                                 </div>
                                 @endforeach
                             </form>
                         @endif
                     </div>
-               
-
-                    {{-- Edit Bill address --}}
+                    <p class="mt-2 mb-1"><span class="error red-text" id="billing_address_error"></span></p>
                     <form class="checkout-form billAddressEditform d-none" id="billAddressEditForm">
                     </form>
 
@@ -1425,44 +1680,20 @@
     });
 
     var scrolled = 0;
-    $('.EditAddress').click(function() {
-
-        $('#addressEditForm').addClass('d-none');
-        $(document).find("#addressNewForm").html('');
-        $(document).find("#billAddressEditForm").html('');
-        var middleOfPage = $(document).height() / 2;
-
-        // Scroll to the middle of the page with animation
-        $('html, body').animate({
-            scrollTop: middleOfPage
-        }, 1000);
-
+    $('.EditAddress').click(function(e) {
+        e.preventDefault();
+        var id = $(this).siblings(".user_address_id").val() || $(this).data("id");
+        openAddressModal('shipping', 'edit', id);
     });
 
     // Bill Address
-    $('.EditBillAddress').click(function() {
-
-        $('#billAddressEditForm').addClass('d-none');
-        $(document).find("#addressNewForm").html('');
-        $(document).find("#addressEditForm").html('');
-        var middleOfPage = $(document).height() / 2;
-
-        // Scroll to the middle of the page with animation
-        $('html, body').animate({
-            scrollTop: middleOfPage
-        }, 1000);
-
+    $('.EditBillAddress').click(function(e) {
+        e.preventDefault();
+        var id = $(this).siblings(".user_bill_address_id").val() || $(this).data("id");
+        openAddressModal('billing', 'edit', id);
     });
 
-    $('#radioAddressSix').on('change', function () {
-        if ($(this).is(':checked')) {
-            $('.add-new-address').removeClass('d-none');
-            $('.addressNewform').removeClass('d-none');
-            $('#addressEditForm').html('');
-        } else {
-            $('.add-new-address').addClass('d-none');
-        }
-    });
+
 
     var validation_name_required = "{{ \Helper::language('name_field_is_required'); }}";
     var validation_name_max_required = "{{ \Helper::language('the_name_may_not_be_greater_than_40_characters'); }}";
@@ -1545,36 +1776,8 @@
         }
     });
 
-    $('.EditAddress').click(function(e) {
-        e.preventDefault()
-        var user_address_id = $(this).siblings(".user_address_id").val();
-
-        var csrf = "{{ csrf_token() }}";
-
-        $.ajax({
-            url: "{{ url('/checkoutedit-address') }}" + "/" + user_address_id,
-            data: {
-                'user_address_id': user_address_id
-            },
-            headers: {
-                'X-CSRF-TOKEN': csrf
-            },
-            type: "GET",
-
-            beforeSend: function() {
-                $(".loader").fadeIn();
-                $('.loader').css("visibility", "visible");
-            },
-            success: function(response) {
-                $('.loader').css("visibility", "hidden");
-                $('.addressNewform').addClass('d-none');
-                $('.billAddressEditform').addClass('d-none');
-                $('.editAddressForm').addClass('d-none');
-                $('.addressEditform').removeClass('d-none');
-                $(document).find("#addressEditForm").html(response.html);
-            },
-        });
-    })
+    // Handled by unified openAddressModal
+    /* $('.EditAddress') moved to modal */
 
     // Bill Adddress
     var test2=$("#billAddressEditForm").validate({
@@ -1646,35 +1849,8 @@
 
 
 
-    $('.EditBillAddress').click(function(e) {
-        e.preventDefault()
-        var user_address_id = $(this).siblings(".user_bill_address_id").val();
-
-        var csrf = "{{ csrf_token() }}";
-
-        $.ajax({
-            url: "{{ url('/checkoutedit-bill-address') }}" + "/" + user_address_id,
-            data: {
-                'user_address_id': user_address_id
-            },
-            headers: {
-                'X-CSRF-TOKEN': csrf
-            },
-            type: "GET",
-
-            beforeSend: function() {
-                $(".loader").fadeIn();
-                $('.loader').css("visibility", "visible");
-            },
-            success: function(response) {
-                $('.loader').css("visibility", "hidden");
-                $('.addressNewform').addClass('d-none');
-                $('.addressEditform').addClass('d-none');
-                $('.billAddressEditform').removeClass('d-none');
-                $(document).find("#billAddressEditForm").html(response.html);
-            },
-        });
-    })
+    // Handled by unified openAddressModal
+    /* $('.EditBillAddress') moved to modal */
 
     function getSubCatList(thisitem) {
 
@@ -1906,7 +2082,7 @@
         var payment_method = $("input[name='payment-method']");
         var user_address_id = $("input[name='address_radio']");
         var store_location_radio = $("input[name='store_location_radio']");
-        $("#user_address_error,#payment_method_error,#terms_conditions_error,#store_location_radio_error").text('');
+        $("#user_address_error,#billing_address_error,#payment_method_error,#terms_conditions_error,#store_location_radio_error").text('').html('');
         var coupon_code_id = $("#coupon_code_id").val();
         var coupon_percentage = $("#coupon_percentage").val();
 
@@ -1970,29 +2146,81 @@
         // Bill address Id
         var user_bill_address_id=$("#user_bill_address_id").val();
 
-        //Online payment
+        var error = 0;
+        var firstErrorElement = null;
+
+        // 1. Delivery / Shipping Address Validation
         if (purchase_val == 1) {
-            var error = 0;
             if (!user_address_id.is(":checked")) {
                 $("#user_address_error").text(checkout_user_address);
+                if (!firstErrorElement) firstErrorElement = $('#user_address_error');
                 error++;
+            } else {
+                var checkedRadio = $('input[name="address_radio"]:checked');
+                var hasLoc = checkedRadio.attr('data-has-location');
+                if (hasLoc === '0' || hasLoc === 0) {
+                    $("#user_address_error").text('Delivery location is not set on map for the selected address. Please click "Set on Map" or "Edit" to pin location.');
+                    if (!firstErrorElement) firstErrorElement = checkedRadio.closest('.address-group');
+                    error++;
+                }
             }
         } else {
-            var error = 0;
             if (!store_location_radio.is(":checked")) {
                 $("#store_location_radio_error").text(checkout_store_address);
+                if (!firstErrorElement) firstErrorElement = $('#store_location_radio_error');
                 error++;
             }
         }
+
+        // 2. Billing Address Validation (if distinct billing address is selected)
+        if (purchase_val == 1 && !isSameAddress && $('#billingAddressContainer').length > 0 && !$('#billingAddressContainer').hasClass('d-none')) {
+            var billInput = $('#user_bill_address_id');
+            if (!billInput.length || !billInput.val()) {
+                $("#billing_address_error").text('Please add a billing address, or check "Same as shipping address" to continue.');
+                if (!firstErrorElement) {
+                    firstErrorElement = ($('#billingAddressContainer').length ? $('#billingAddressContainer') : $('#sameAddress').closest('.check-group'));
+                }
+                error++;
+            } else {
+                var billHasLoc = billInput.attr('data-has-location');
+                if (billHasLoc === '0' || billHasLoc === 0) {
+                    $("#billing_address_error").text('Selected billing address does not have a location set on the map. Please click "Set on Map" or "Edit" on your billing address before placing order.');
+                    if (!firstErrorElement) firstErrorElement = $('#billingAddressContainer');
+                    error++;
+                }
+            }
+        }
+
+        // 3. Payment Method Validation
         if (!payment_method.is(":checked")) {
             $("#payment_method_error").text(checkout_payment_error);
-            error++
+            if (!firstErrorElement) firstErrorElement = $('#payment_method_error');
+            error++;
         }
+
+        // 4. Terms and Conditions Validation
         if (!$("#terms_conditions").is(":checked")) {
             $("#terms_conditions_error").text(checkout_terms_conditions);
-            error++
+            if (!firstErrorElement) firstErrorElement = $('#terms_conditions_error');
+            error++;
         }
+
         if (error != 0) {
+            if (firstErrorElement && firstErrorElement.length) {
+                if (firstErrorElement.closest('#shippingAddressScrollContainer').length) {
+                    if (typeof scrollAddressIntoView === 'function') {
+                        scrollAddressIntoView(firstErrorElement, true);
+                    } else {
+                        $('html, body').animate({
+                            scrollTop: firstErrorElement.offset().top - 120
+                        }, 500);
+                    }
+                } else {
+                    $('html, body').animate({
+                        scrollTop: firstErrorElement.offset().top - 120
+                    }, 500);
+                }
+            }
             return false;
         }
 
@@ -2079,11 +2307,33 @@
             success: function(response) {
                 $('.loader').css("visibility", "hidden");
                 if (response.error == true) {
+                    if (response.type === 'billing_address') {
+                        $("#billing_address_error").text(response.message);
+                        var scrollTarget = $('#billingAddressContainer').length ? $('#billingAddressContainer') : $('#sameAddress').closest('.check-group');
+                        if (scrollTarget.length) {
+                            $('html, body').animate({
+                                scrollTop: scrollTarget.offset().top - 120
+                            }, 500);
+                        }
+                        return false;
+                    }
                     Swal.fire({
-                        title: "",
+                        icon: response.type === 'address' ? "warning" : "error",
+                        title: response.type === 'address' ? "Delivery Address Required" : "",
                         text: response.message,
                     }).then((result) => {
-                        if (result.isConfirmed) {
+                        if (response.type === 'address') {
+                            var $addr = $('input[name="address_radio"]:checked').closest('.address-group');
+                            if ($addr.length) {
+                                if (typeof scrollAddressIntoView === 'function') {
+                                    scrollAddressIntoView($addr, true);
+                                } else {
+                                    $('html, body').animate({
+                                        scrollTop: $addr.offset().top - 120
+                                    }, 500);
+                                }
+                            }
+                        } else if (result.isConfirmed) {
                             var redirectUrl = 'cart/';
                             window.location.href = redirectUrl;
                         }
@@ -2104,8 +2354,9 @@
 
     }
     $(document).ready(function() {
-        if ($("input[name='address_radio']:checked")) {
-            var user_address_id = $("input[name='address_radio']").val();
+        var checkedRadio = $("input[name='address_radio']:checked");
+        if (checkedRadio.length) {
+            var user_address_id = checkedRadio.val();
             checkDeliveryAddressByArea(user_address_id);
         }
     });
@@ -2115,8 +2366,20 @@
         }
 
     function checkDeliveryAddressByArea(user_address_id) {
-        var purchase_type = $("input[name='purchase_radio']").val()
+        var purchase_type = $("input[name='purchase_radio']:checked").val() || $("input[name='purchase_radio']").val();
         var previousDeliveryFee = parseFloat($("#inp-delivery-fee").val()) || 0;
+
+        // Check if selected address has map location
+        var radioEl = $("#radioAddress" + user_address_id);
+        var hasLoc = radioEl.attr('data-has-location');
+        if (hasLoc === '0' || hasLoc === 0) {
+            $("#user_address_error").text('Delivery location is not set on map for the selected address. Please click "Set on Map" or "Edit" to pin location.');
+            if (typeof scrollAddressIntoView === 'function') {
+                scrollAddressIntoView(radioEl.closest('.address-group'), false);
+            }
+        } else {
+            $("#user_address_error").text('');
+        }
 
         if (purchase_type == 1) {
 
@@ -2125,7 +2388,9 @@
             if(!checked){
                 $("input[name='address_radio']").removeAttr("checked");
                 $("#radioAddress"+user_address_id).attr("checked", true);
-            } 
+            }
+
+
 
             var coupon_code_id = $("#coupon_code_id").val();
             var is_buy_now = $('#buy-now').val();
@@ -2440,15 +2705,26 @@
      document.addEventListener("DOMContentLoaded", function () {
         const sameAddressCheckbox = document.getElementById('sameAddress');
         const billingContainer = document.getElementById('billingAddressContainer');
+        const addBillBtn = document.querySelector('.add_new_bill_address_div');
 
-        sameAddressCheckbox.addEventListener('change', function () {
-            if (this.checked) {
-                billingContainer.style.display = 'none';
-                $('#billAddressEditForm').addClass('d-none');
-            } else {
-                billingContainer.style.display = 'block';
+        if (sameAddressCheckbox) {
+            if (sameAddressCheckbox.checked) {
+                if (billingContainer) billingContainer.style.display = 'none';
+                if (addBillBtn) addBillBtn.style.display = 'none';
             }
-        });
+
+            sameAddressCheckbox.addEventListener('change', function () {
+                if (this.checked) {
+                    if (billingContainer) billingContainer.style.display = 'none';
+                    if (addBillBtn) addBillBtn.style.display = 'none';
+                    $('#billAddressEditForm').addClass('d-none');
+                    $('#billing_address_error').empty();
+                } else {
+                    if (billingContainer) billingContainer.style.display = 'block';
+                    if (addBillBtn) addBillBtn.style.display = 'inline-flex';
+                }
+            });
+        }
     });
 </script>
 
@@ -2760,10 +3036,10 @@
 </script>
 
 <script>
-    const navEntry = performance.getEntriesByType("navigation")[0];
-    if (navEntry?.type === "reload") {
-        document.getElementById('page_reload_flag').value = '1';
-    }
+    // const navEntry = performance.getEntriesByType("navigation")[0];
+    // if (navEntry?.type === "reload") {
+    //     document.getElementById('page_reload_flag').value = '1';
+    // }
 </script>
 
 <script>
@@ -3011,4 +3287,5 @@
 
 </script>
 
+@include('frontend.components.address-modal')
 @endsection

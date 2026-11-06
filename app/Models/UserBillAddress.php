@@ -21,6 +21,8 @@ class UserBillAddress extends Model
         'area_id',
         'city',
         'zip_code',
+        'latitude',
+        'longitude',
         'status', 
         'created_at', 
         'updated_at' 

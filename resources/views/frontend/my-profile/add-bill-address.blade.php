@@ -43,7 +43,7 @@
                                 <div class="input-group phone-number">
                                     <select class="numbers" name="bill_phonecode" id="bill_phonecode">
                                         @foreach($countryData as $value)
-                                        <option value="{{$value->phonecode}}">+{{$value->phonecode.' ('.$value->shortname.')' }}</option>
+                                        <option value="{{$value->phonecode}}">+{{$value->phonecode}}</option>
                                         @endforeach
                                     </select>
                                     <input type="tel" value="{{old('bill_phone')}}" placeholder="{{@Helper::language('enter_phone_number_place')}} " name="bill_phone" id="bill_phone">

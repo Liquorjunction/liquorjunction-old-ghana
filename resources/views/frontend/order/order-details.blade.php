@@ -182,21 +182,14 @@
                                                     {{-- <h5>{{ Helper::language('delivery_address') }}</h5> --}}
                                                     <h5>Shipping Address</h5>
                                                     <?php
-                                                    if ( strpos($orderInformation->delivery_address, ',|' ) !== false ) {
-                                                        $order_delivery_address  = explode(',| ', $orderInformation->delivery_address);   
-                                                         //removing first element from array, it means name.         
-                                                        $name = array_shift($order_delivery_address);    
-                                                        //removing last element from array, it means mobile number.                                                         
-                                                        $number = array_pop($order_delivery_address);                                                     
+                                                    $delInfo = Helper::formatOrderAddress($orderInformation->delivery_address, $orderInformation->customer_mobile ?? null);
                                                 ?>
-                                                    <p class="title-two">{{ @$name ?: '' }}</p>
+                                                    <div class="d-flex align-items-center flex-wrap gap-2 mb-2"><b class="text-truncate" style="max-width: 250px; font-size: 16px; font-weight: 700;" title="{{ @$delInfo['name'] }}">{{ @$delInfo['name'] ?: '' }}</b>@if(!empty($delInfo['phone']))<b class="text-nowrap" style="font-size: 15px; font-weight: 700;">({{ @$delInfo['phone'] }})</b>@endif</div>
                                                     <address class="body-large title-two">
-                                                        <?php
-                                                        echo implode(', ', $order_delivery_address);
-                                                        ?>
+                                                        {{ $delInfo['address'] }}
                                                     </address>
-                                                    <a tel="{{ @$number ?: '' }}"
-                                                        class="body-large">{{ @$number ?: '' }}</a>
+
+
 
                                                     <div class="mt-3">
                                                         @if($orderData->delivery_options)
@@ -223,9 +216,6 @@
                                                          </div>
                                                          @endif
                                                     </div>
-                                                    <?php                    
-                                                    }
-                                                ?>
                                                 @elseif($orderInformation->order_type == 2)
                                                     <h5>{{ Helper::language('pickup_order') }}</h5>
                                                     <?php

@@ -45,7 +45,7 @@
                                 <div class="input-group phone-number">
                                     <select class="numbers" name="phonecode" value="{{@$UserAddressData->phonecode}}">
                                         @foreach($countryData as $value)
-                                        <option value="{{$value->phonecode}}" {{(@$UserAddressData->phonecode == $value->phonecode) ? 'selected' : ''}}>+ {{$value->phonecode.' ('.$value->shortname.')'}}</option>
+                                        <option value="{{$value->phonecode}}" {{(@$UserAddressData->phonecode == $value->phonecode) ? 'selected' : ''}}>+{{$value->phonecode}}</option>
 
                                         @endforeach
                                     </select>

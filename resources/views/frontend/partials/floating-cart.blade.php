@@ -9,21 +9,26 @@
     </svg>
 
     <!-- 🔴 Item Count -->
-    <span class="cart-item-total-count-floating" id="cartCount"></span>
+    <span class="cart-item-total-count-floating" id="cartCount">{{ \Helper::getUserCartCount() }}</span>
 
 </div>
 </a>
 <style>
+/* Floating Cart Pulse Button:
+   Visible and pulsing across pages.
+   z-index: 990 ensures it sits nicely above standard content,
+   but naturally sits UNDER/BEHIND the modal backdrop (1050) and dialog (1060) when a modal opens.
+*/
 .floating-cart {
     position: fixed;
     right: 80px;
     bottom: 30px;
-    z-index: 9999;
+    z-index: 990 !important;
 
     height: 70px;
     width: 70px;
 
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
 
@@ -41,6 +46,12 @@
     cursor: pointer;
 
     transition: all 0.3s ease;
+}
+
+/* When modal is open: stays behind modal backdrop and prevents click interception */
+body.modal-open .floating-cart {
+    z-index: 990 !important;
+    pointer-events: none !important;
 }
 
 /* 🟢 Hover effect */
@@ -100,7 +111,7 @@
     }
 }
 
-/* 🔥 Shake (your existing improved) */
+/* 🔥 Shake */
 .floating-cart.shake {
     animation: shake 0.4s ease-in-out;
 }
@@ -108,11 +119,9 @@
 <script>
 function shakeFloatingCart() {
     const cart = document.getElementById("floatingCart");
-
+    if (!cart) return;
     cart.classList.remove("shake");
     void cart.offsetWidth; // reset animation
     cart.classList.add("shake");
 }
-// Optionally, update cart count here as well
-// Example: window.updateFloatingCartCount = function(count) { ... }
 </script>
