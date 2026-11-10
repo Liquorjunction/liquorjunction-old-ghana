@@ -338,7 +338,6 @@ class ProductController extends Controller
         }
     }
     // public function productCartAdd(Request $request){
-    //     //  Session::flush();
     //     $product_id = base64_decode($request->product_id);
     //     $quantity = $request->quantity;
     //     $variant_id = $request->variantId;
@@ -349,7 +348,6 @@ class ProductController extends Controller
 
     // }
     // public function productCartAddBKKKKUP(Request $request){
-    //     //  Session::flush();
     //     $product_id = base64_decode($request->product_id);
     //     $quantity = $request->quantity;
     //     $variant_id = $request->variantId;        

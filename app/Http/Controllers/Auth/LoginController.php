@@ -509,28 +509,14 @@ class LoginController extends Controller
 
     public function logoutMainUser()
     {
-        /* dd();*/
-
-        Auth::logout();
-        /*\Cookie::queue(\Cookie::forget('admin_email'));
-        \Cookie::queue(\Cookie::forget('admin_password'));*/
-        Session::flush();
-        // return redirect('/wholesaler');
+        Auth::guard('web')->logout();
         return redirect('/admin/login');
     }
 
     public function logoutMainWholesaler()
     {
-        /* dd();*/
-
-        // Auth::logout();
         auth()->guard('main_user')->logout();
-        // Auth::guard('main_user')->user()->logout();
-        // \Cookie::queue(\Cookie::forget('wholesaler_email'));
-        // \Cookie::queue(\Cookie::forget('wholesaler_password'));
-        Session::flush();
         return redirect('/wholesaler');
-        // return redirect('/admin/login');
     }
 
     public function validateRequest()

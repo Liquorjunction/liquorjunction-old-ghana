@@ -97,7 +97,7 @@ class OrderController extends Controller
             ->leftjoin('countries', 'countries.id', '=', 'order_info.country_id')
             ->rightjoin('transactions', 'transactions.order_id', '=', 'order.id')
             ->join('order_detail', 'order_detail.order_id', '=', 'order.id')
-            ->select('order.*', 'order_info.customer_name as customer_name', 'order_info.customer_email', 'order_info.delivery_fee as delivery_fee','order_info.reward_amount', 'order_info.order_from', 'order_info.customer_mobile as customer_mobile', 'countries.name as country_name', 'transactions.payment_type', 'transactions.trans_no', 'transactions.payment_status as payment_status', 'order_status.name as delivery_status', 'order_detail.variant_size', 'order_detail.variant_unit','order_detail.is_bogo', 'order_info.promocode_name', 'order_info.store_pickup_address', 'order_info.delivery_fee')->where('order.id', $id)->first();
+            ->select('order.*', 'order_info.customer_name as customer_name', 'order_info.customer_email', 'order_info.delivery_fee as delivery_fee','order_info.reward_amount', 'order_info.order_from', 'order_info.customer_mobile as customer_mobile', 'countries.name as country_name', 'transactions.payment_type', 'transactions.trans_no', 'transactions.payment_status as payment_status', 'order_status.name as delivery_status', 'order_detail.variant_size', 'order_detail.variant_unit','order_detail.is_bogo', 'order_info.promocode_name', 'order_info.store_pickup_address', 'order_info.delivery_fee', 'main_users.first_name', 'main_users.last_name', 'main_users.email', 'main_users.phone', 'main_users.phone_code')->where('order.id', $id)->first();
 
             // Cancellation Detail
             $userName='';
@@ -145,9 +145,22 @@ class OrderController extends Controller
 
             $totalAmount += $display_qty * $unit_price;
         }
-        return view('dashboard.order.show', compact('orderData', 'orderDetails', 'settings','userName','totalAmount','bogoDiscount'));
-    }
+        // Tax calculation matching print invoice
+        $taxes = DB::table('tax_masters')->get();
+        $discountAmount = $orderData->discount_amount ?? 0;
+        $cartDiscount = $orderData->cart_discount ?? 0;
+        $rewardAmount = $orderData->reward_amount ?? 0;
 
+        $totalDiscount = $discountAmount + $cartDiscount + $rewardAmount + $bogoDiscount;
+
+        $subTotal = ($totalAmount - $totalDiscount) * 0.83333;
+
+        $nhil = isset($taxes[1]) ? ($taxes[1]->tax_value / 100) * ($subTotal) : 0;
+        $getFund = isset($taxes[2]) ? ($taxes[2]->tax_value / 100) * ($subTotal) : 0;
+        $vat = isset($taxes[3]) ? ($taxes[3]->tax_value / 100) * ($subTotal) : 0;
+
+        return view('dashboard.order.show', compact('orderData', 'orderDetails', 'settings', 'userName', 'totalAmount', 'bogoDiscount', 'taxes', 'totalDiscount', 'subTotal', 'nhil', 'getFund', 'vat'));
+    }
 
     public function print($id)
     {

@@ -115,56 +115,74 @@ Route::Group(['prefix' => env('BACKEND_PATH')], function () {
 // });
 
 Route::middleware(['PreventBackHistory'])->group(function () {
+    /*--------------------------------------------------------------------------
+    | Public Product, Catalog & Store Browsing Routes (Guest Accessible)
+    |--------------------------------------------------------------------------*/
+    Route::get('/product-list/{id?}/', [ProductController::class, 'list'])->name('productlist');
+    Route::post('/product-list/{id?}/', [ProductController::class, 'list'])->name('productFillterlist');
+    Route::get('/filter-prodcut', [ProductController::class, 'filterData'])->name('productFilterData');
+    Route::get('/prodcut-sortby', [ProductController::class, 'sortByList'])->name('productSortByList');
+    Route::get('/variant-price', [ProductController::class, 'productVariantPrice'])->name('productVariantPrice');
+    Route::get('/filter-product-list', [ProductController::class, 'filterproductlist'])->name('filterproductlist');
+    Route::get('/load-product-list', [ProductController::class, 'loadfilterproductlist'])->name('loadfilterproductlist');
+    Route::get('/brand-list', [ProductController::class, 'filterbrandlist'])->name('filterbrandlist');
+    Route::get('/load-brand-list', [ProductController::class, 'loadbrandlist'])->name('loadbrandlist');
+
+    Route::get('/products-list/{id?}/', [ProductController::class, 'productListview'])->name('productlistview');
+    Route::post('/product-filter', [ProductController::class, 'productFilterCategory'])->name('productfilter');
+    Route::post('/product-mostviewfilter', [ProductController::class, 'productFilterMostView'])->name('mostviewfilter');
+
+    Route::post('/productresponse-filter', [ProductController::class, 'productResponseFilterCategory'])->name('productresponsefilter');
+    Route::post('/productresponse-pricefilter', [ProductController::class, 'productResponsepriceFilterCategory'])->name('productresponsepricefilter');
+    Route::post('/productresponse-mostview', [ProductController::class, 'productResponsepriceFilterMostView'])->name('productresponsemostview');
+    Route::post('/productresponse-mostviewremove', [ProductController::class, 'productResponsepriceFilterMostViewRemove'])->name('productresponsemostviewremove');
+
+    Route::get('/product-details/{id}', [ProductController::class, 'productDetails'])->name('productdetails');
+
+    Route::get('/store-listing/store', [StoreController::class, 'listingOnline'])->name('store.listing-online');
+    Route::get('/store-listing/in-store', [StoreController::class, 'listingInStore'])->name('store.listing-offline');
+    Route::get('/store-listing/filter', [StoreController::class, 'listingFilter'])->name('store.filter');
+
+    Route::get('/store-map', [StoreMapController::class, 'StoreMap'])->name('storemap');
+    Route::post('/store-map/detail', [StoreMapController::class, 'storeMapDetail'])->name('storemap-detail');
+    Route::post('/session-latitude', [CheckoutController::class, 'storeSessionLat'])->name('sessionlatitude');
+
+    Route::post('/product-pdfview', [ProductController::class, 'productPdfView'])->name('productpdfview');
+
+    Route::get('/dashboard-category/{id}', [HomeController::class, 'dashboardFilterCategory'])->name('dashboard-category');
+    Route::get('/promoted-product', [HomeController::class, 'UserPromotedProduct'])->name('userpromoted-product');
+
+    /*--------------------------------------------------------------------------
+    | Public Cart Routes (Guests use session cart, logged-in use DB cart)
+    |--------------------------------------------------------------------------*/
+    Route::post('/product-addtocart', [ProductController::class, 'productCartAdd'])->name('productcartadd');
+    Route::get('/check-qty', [ProductController::class, 'checkProductQty'])->name('checkQty');
+    Route::get('/cart', [CartController::class, 'Cart'])->name('cart');
+    Route::post('/cart-increment', [CartController::class, 'productCartIncrement'])->name('cartincrement');
+    Route::post('/cart-remove', [CartController::class, 'productCartRemove'])->name('cartremove');
+    Route::post('/cart-ordertype', [CartController::class, 'productCartOrderType'])->name('cartordertype');
+    Route::post('/buy-now', [CartController::class, 'productBuyNow'])->name('buy-now');
+    Route::post('/buy-now-session', [CartController::class, 'buyNowSession'])->name('buyNowSession');
+
+    Route::get('cart/data', [CartApiController::class, 'getCartData'])->name('cart.data');
+    Route::delete('cart/item/{id}', [CartApiController::class, 'deleteCartItem'])->name('cart.item.delete');
+
+    /*--------------------------------------------------------------------------
+    | Public Information & Callback Routes
+    |--------------------------------------------------------------------------*/
+    Route::get('/request-quote', [MyProfileController::class, 'requestQuote'])->name('request-quote');
+    Route::get('/how-it`s-works', [MyProfileController::class, 'howItWorks'])->name('how-it-works');
+    Route::post('/quote', [HomeController::class, 'storeQuote'])->name('store-quote');
+    Route::get('/callBackUrl', [CheckoutController::class, 'callBackUrl'])->name('callBackUrl');
+    Route::get('/thankyou/{id}/{earnedpoints}', [CheckoutController::class, 'orderSuccess'])->name('orderSuccess');
+    Route::get('/thankyou-card/{userid}/{orderid}/{amount}/{earnedpoints}', [CheckoutController::class, 'orderSuccessCard'])->name('orderSuccessCard');
+
+    /*--------------------------------------------------------------------------
+    | Strictly Protected Routes (Active Authenticated User or OTP-Verified Guest)
+    |--------------------------------------------------------------------------*/
     Route::middleware(['userAuth'])->group(function () {
-        /*---- New code divyanshu ----*/
-        Route::get('/product-list/{id?}/', [ProductController::class, 'list'])->name('productlist');
-        Route::post('/product-list/{id?}/', [ProductController::class, 'list'])->name('productFillterlist');
-        Route::get('/filter-prodcut', [ProductController::class, 'filterData'])->name('productFilterData');
-        Route::get('/prodcut-sortby', [ProductController::class, 'sortByList'])->name('productSortByList');
-        Route::get('/variant-price', [ProductController::class, 'productVariantPrice'])->name('productVariantPrice');
-        Route::get('/filter-product-list', [ProductController::class, 'filterproductlist'])->name('filterproductlist');
-        Route::get('/load-product-list', [ProductController::class, 'loadfilterproductlist'])->name('loadfilterproductlist');
-        Route::get('/brand-list', [ProductController::class, 'filterbrandlist'])->name('filterbrandlist');
-        Route::get('/load-brand-list', [ProductController::class, 'loadbrandlist'])->name('loadbrandlist');
-
-        Route::get('/products-list/{id?}/', [ProductController::class, 'productListview'])->name('productlistview');
-        Route::post('/product-filter', [ProductController::class, 'productFilterCategory'])->name('productfilter');
-        Route::post('/product-mostviewfilter', [ProductController::class, 'productFilterMostView'])->name('mostviewfilter');
-        Route::post('/product-fav', [ProductController::class, 'productFavourite'])->name('productfav');
-
-        Route::post('/productresponse-filter', [ProductController::class, 'productResponseFilterCategory'])->name('productresponsefilter');
-        Route::post('/productresponse-pricefilter', [ProductController::class, 'productResponsepriceFilterCategory'])->name('productresponsepricefilter');
-        Route::post('/productresponse-mostview', [ProductController::class, 'productResponsepriceFilterMostView'])->name('productresponsemostview');
-        Route::post('/productresponse-mostviewremove', [ProductController::class, 'productResponsepriceFilterMostViewRemove'])->name('productresponsemostviewremove');
-
-        Route::get('/product-details/{id}', [ProductController::class, 'productDetails'])->name('productdetails');
-
-        Route::get('/store-listing/store', [StoreController::class, 'listingOnline'])->name('store.listing-online');
-        Route::get('/store-listing/in-store', [StoreController::class, 'listingInStore'])->name('store.listing-offline');
-
-        Route::get('/store-listing/filter', [StoreController::class, 'listingFilter'])->name('store.filter');
-
-        Route::post('/product-pdfview', [ProductController::class, 'productPdfView'])->name('productpdfview');
-
-        Route::post('/product-addtocart', [ProductController::class, 'productCartAdd'])->name('productcartadd');
-
-        Route::get('/check-qty', [ProductController::class, 'checkProductQty'])->name('checkQty');
-
-        Route::get('/cart', [CartController::class, 'Cart'])->name('cart');
-        Route::post('/cart-increment', [CartController::class, 'productCartIncrement'])->name('cartincrement');
-        Route::post('/cart-remove', [CartController::class, 'productCartRemove'])->name('cartremove');
-        Route::post('/cart-ordertype', [CartController::class, 'productCartOrderType'])->name('cartordertype');
-        Route::post('/buy-now', [CartController::class, 'productBuyNow'])->name('buy-now');
-        Route::post('/buy-now-session', [CartController::class, 'buyNowSession'])->name('buyNowSession');
-
-        // Cart data for AJAX cart updates (web route)
-        Route::get('cart/data', [CartApiController::class, 'getCartData'])->name('cart.data');
-        Route::delete('cart/item/{id}', [CartApiController::class, 'deleteCartItem'])->name('cart.item.delete');
-
-
+        // Checkout & Order Placement
         Route::get('/checkout-cancel.', [CheckoutController::class, 'Checkout'])->name('checkout.cancel');
-
-
         Route::get('/checkout', [CheckoutController::class, 'Checkout'])->name('checkout');
         Route::post('/checkout', [CheckoutController::class, 'Checkout'])->name('checkout');
         Route::post('/move-buy-now-to-cart', [CheckoutController::class, 'moveBuyNowToCart'])->name('moveBuyNowToCart');
@@ -175,67 +193,46 @@ Route::middleware(['PreventBackHistory'])->group(function () {
         Route::post('/apply-coupon', [CheckoutController::class, 'applyCoupon'])->name('applyCoupon');
         Route::post('/apply-reward', [CheckoutController::class, 'applyReward'])->name('applyReward');
         Route::post('/user-area-tax', [CheckoutController::class, 'getUserAreaTax'])->name('userAreaTax');
-        Route::get('/thankyou/{id}/{earnedpoints}', [CheckoutController::class, 'orderSuccess'])->name('orderSuccess');
-        Route::get('/thankyou-card/{userid}/{orderid}/{amount}/{earnedpoints}', [CheckoutController::class, 'orderSuccessCard'])->name('orderSuccessCard');
-
-        Route::post('/getsubcatlist', [CheckoutController::class, 'getSubcatlist'])->name('getsubcatlist');
-        Route::post('/getarealist', [CheckoutController::class, 'getArealist'])->name('getarealist');
-        Route::post('/add-address', [CheckoutController::class, 'add_address'])->name('addAddress');
-        Route::get('/store-map', [CheckoutController::class, 'StoreMap'])->name('storemap');
-        Route::post('/store-map/detail', [CheckoutController::class, 'storeMapDetail'])->name('storemap-detail');
-        Route::post('/session-latitude', [CheckoutController::class, 'storeSessionLat'])->name('sessionlatitude');
-
-
         Route::post('/selected-address', [CheckoutController::class, 'SelectedAddress'])->name('selected-address');
+        Route::post('/add-address', [CheckoutController::class, 'add_address'])->name('addAddress');
 
-        Route::get('/callBackUrl', [CheckoutController::class, 'callBackUrl'])->name('callBackUrl');
-
-
+        // Profile & Account Settings
         Route::get('/my-account', [MyProfileController::class, 'index'])->name('my-account');
-        Route::get('/my-address', [MyProfileController::class, 'myaddress'])->name('my-address');
         Route::get('/edit-profile', [MyProfileController::class, 'edit'])->name('edit-profile');
         Route::post('/upadte-profile', [MyProfileController::class, 'update'])->name('upadte-profile');
+        Route::post('/product-fav', [ProductController::class, 'productFavourite'])->name('productfav');
         Route::get('/favorite-list', [MyProfileController::class, 'favorite'])->name('favorite-list');
-        Route::get('/reward-points', [MyProfileController::class, 'points'])->name('reward-points');
         Route::post('/favorite/status', [MyProfileController::class, 'statusUpdate'])->name('favorite-status');
-        Route::get('/edit-address/{id}', [MyProfileController::class, 'editAddress'])->name('edit-address');
-        Route::get('/edit-bill-address/{id}', [MyProfileController::class, 'editBillAddress'])->name('edit-bill-address');
+        Route::get('/reward-points', [MyProfileController::class, 'points'])->name('reward-points');
+        Route::get('/change-password', [MyProfileController::class, 'changePassword'])->name('userchange-password');
+        Route::post('/update-password', [MyProfileController::class, 'updatePassword'])->name('update-password');
+        Route::post('/user-logout', [MyProfileController::class, 'logoutUser'])->name('user-logout');
+        Route::get('/community', [MyProfileController::class, 'community'])->name('community');
+        Route::post('/read-notification', [MyProfileController::class, 'readNotification'])->name('read-notification');
+
+        // Address Management
+        Route::get('/my-address', [MyProfileController::class, 'myaddress'])->name('my-address');
         Route::get('/add-address', [MyProfileController::class, 'addAddress'])->name('add-address');
         Route::get('/add-bill-address', [MyProfileController::class, 'addBillAddress'])->name('add-bill-address');
         Route::post('/store-address', [MyProfileController::class, 'storeAddress'])->name('store-address');
         Route::post('/store-bill-address', [MyProfileController::class, 'storeBillAddress'])->name('store-bill-address');
+        Route::get('/edit-address/{id}', [MyProfileController::class, 'editAddress'])->name('edit-address');
+        Route::get('/edit-bill-address/{id}', [MyProfileController::class, 'editBillAddress'])->name('edit-bill-address');
         Route::post('/upadte-address', [MyProfileController::class, 'updateAddress'])->name('upadte-address');
         Route::post('/update-bill-address', [MyProfileController::class, 'updateBillAddress'])->name('update-bill-address');
         Route::post('/address-remove', [MyProfileController::class, 'addressRemove'])->name('addressremove');
         Route::post('/billaddressremove', [MyProfileController::class, 'billaddressremove'])->name('billaddressremove');
         Route::get('/get-address-details/{type}/{id}', [MyProfileController::class, 'getAddressDetails'])->name('get-address-details');
-        Route::get('/change-password', [MyProfileController::class, 'changePassword'])->name('userchange-password');
-        Route::post('/update-password', [MyProfileController::class, 'updatePassword'])->name('update-password');
-        Route::post('/user-logout', [MyProfileController::class, 'logoutUser'])->name('user-logout');
-
-
-        Route::get('/request-quote', [MyProfileController::class, 'requestQuote'])->name('request-quote');
-        Route::get('/how-it`s-works', [MyProfileController::class, 'howItWorks'])->name('how-it-works');
         Route::post('/getsubcatlist', [MyProfileController::class, 'getSubcatlist'])->name('getsubcatlist');
         Route::post('/getarealist', [MyProfileController::class, 'getArealist'])->name('getarealist');
 
-
-        Route::post('/quote', [HomeController::class, 'storeQuote'])->name('store-quote');
-        Route::get('/promoted-product', [HomeController::class, 'UserPromotedProduct'])->name('userpromoted-product');
-
+        // Orders Management
         Route::get('/my-order', [OrderController::class, 'index'])->name('myOrder');
         Route::get('/order-detail/{id}', [OrderController::class, 'myOrderDetails'])->name('order-detail');
         Route::get('/print-order/{id}', [OrderController::class, 'printMyOrder'])->name('printMyOrder');
         Route::get('/cancel-order/{id}', [OrderController::class, 'cancelMyorder'])->name('cancelMyorder');
-
         Route::post('/re-order', [MyProfileController::class, 'reOrder'])->name('re-order');
         Route::post('/add-rating', [MyProfileController::class, 'addRating'])->name('addRating');
-
-        // Route::post('/dashboard-filter', [HomeController::class, 'dashboardFilterCategory'])->name('dashboardfilter');
-        Route::get('/dashboard-category/{id}', [HomeController::class, 'dashboardFilterCategory'])->name('dashboard-category');
-
-        Route::get('/community', [MyProfileController::class, 'community'])->name('community');
-        Route::post('/read-notification', [MyProfileController::class, 'readNotification'])->name('read-notification');
     });
 });
 

@@ -789,10 +789,8 @@ class MyProfileController extends Controller
         if (!empty($cartdata) && count($cartdata) > 0) {
             //$ismail = $this->attachment_remind_order($userdata->email, $userdata->name);
             Auth::guard('user')->logout();
-            Session::flush();
         } else {
             Auth::guard('user')->logout();
-            Session::flush();
         }
         if($userdata->is_guest_user != 1){
                     if($userdata->remember_token == null){

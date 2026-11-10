@@ -1928,7 +1928,6 @@ class CheckoutController extends Controller
 
         if ($payment_method == 1) {
             if ($userData && $userData->is_guest_user == 1) {
-                Session::flush();
                 Auth::guard('user')->logout();
             }
 
@@ -2007,7 +2006,6 @@ class CheckoutController extends Controller
         Session::forget('checkout_in_progress');
         Session::forget('checkout_page_load_time');
         if ($userData && $userData->is_guest_user == 1) {
-            Session::flush();
             Auth::guard('user')->logout();
         }
 

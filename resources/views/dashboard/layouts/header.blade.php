@@ -290,6 +290,61 @@ h4, .heading-four {
   box-sizing: border-box;
   -webkit-box-sizing: border-box;
 }
+/* Scoped Notification Offcanvas Styles */
+.offcanvas-body .notification-block {
+    max-height: 600px;
+    overflow-y: auto;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+.offcanvas-body .notification-block li {
+    padding: 10px 12px;
+    display: flex;
+    align-items: flex-start;
+    border-bottom: 1px solid #f0f0f0;
+}
+.offcanvas-body .notification-block .preview-img {
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+.offcanvas-body .notification-block .preview-img span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+}
+.offcanvas-body .notification-block a {
+    font-weight: 500;
+    font-size: 14px;
+    color: #2b2b2b;
+    text-decoration: none;
+    transition: 0.3s;
+}
+.offcanvas-body .notification-block a:hover {
+    color: #fbb516;
+}
+.offcanvas-body .notification-block p {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 400;
+    color: #555;
+    margin-bottom: 0;
+}
+.offcanvas-body .notification-block .fa-check:before {
+    content: "\f00c";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    color: #28a745;
+}
+.offcanvas-body .notification-block .fa-image:before {
+    content: "\f03e";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    color: #007bff;
+}
     </style>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -321,6 +376,12 @@ h4, .heading-four {
             // Add and Remove class from body 
             $('body').addClass('scrollidisable');
             e.stopPropagation();
+        });
+
+        $(document).on('click', '.offcanvasNotification .btn-close', function(e) {
+            $(".offcanvasNotification").removeClass('show');
+            $(".offcanvasNotification").css('visibility', 'hidden');
+            $('body').removeClass('scrollidisable');
         });
 
 //         function readNotification() {
