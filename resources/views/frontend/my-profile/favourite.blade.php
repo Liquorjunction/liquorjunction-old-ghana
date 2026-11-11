@@ -130,13 +130,7 @@
                     <div class="col-xl-4 col-sm-6 product-listing-col custom">
                         @php
                         $product_title='';
-                        if(session::get('language')==2){                            
-                            $product_title = ($result->product_name_fr)?$result->product_name_fr:$result->product_name;
-                            $image_not_found = 'Image non disponible';
-                        }else{
-                            $product_title = $result->product_name;
-                            $image_not_found = 'Image not available';
-                        }
+                        $product_title = $result->product_name; $image_not_found = 'Image not available';
                         $product_image = $result->get_product_images->first();
                         $product_variant = $result->get_product_variants->first();
                         $product_unit = Helper::getUnitById($product_variant->variant_uof);
@@ -290,17 +284,47 @@
 <script src="{{ asset('assets/frontend/js/jquery.min.js') }}"></script>
 <script type="text/javascript">
     function favorite_btn(id, user_id) {
+        var $btn = $(window.event ? window.event.target : this);
+        var $card = $btn.closest('.col-lg-3, .col-md-4, .col-sm-6');
         $.ajax({
             type: "POST",
             dataType: "json",
             url: "{{ route('favorite-status')}}",
             data: {
                 'id': id,
-                'user_id': user_id
+                'user_id': user_id,
+                '_token': "{{ csrf_token() }}"
             },
             success: function(data) {
-                window.location.reload();
-                if (data.success == true) {}
+                if (data.success) {
+                    var count = data.count !== undefined ? data.count : 0;
+                    var $favBadge = $('.fav_list .favorite-no');
+                    if ($favBadge.length) {
+                        $favBadge.text(count);
+                        if (count > 0) {
+                            $favBadge.show();
+                        } else {
+                            $favBadge.hide();
+                        }
+                    }
+                    if (count > 0) {
+                        $('#icon_wishlist .wishlist-filled').show();
+                        $('#icon_wishlist .wishlist-outlined').hide();
+                    } else {
+                        $('#icon_wishlist .wishlist-filled').hide();
+                        $('#icon_wishlist .wishlist-outlined').show();
+                    }
+                    if ($card.length) {
+                        $card.fadeOut(300, function() {
+                            $(this).remove();
+                            if ($('.bs-box').length === 0) {
+                                window.location.reload();
+                            }
+                        });
+                    } else {
+                        window.location.reload();
+                    }
+                }
             }
         });
     };

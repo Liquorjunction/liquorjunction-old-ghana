@@ -333,5 +333,116 @@
         });
     });
 
+    // Global Favorite Toggle without page refresh
+    function toggleProductFav(product_id, status, targetEl) {
+        var user_id = $("#user_id").val();
+        if (!user_id) {
+            window.location.href = "{{ route('websitelogin') }}";
+            return false;
+        }
+
+        var $target = targetEl ? $(targetEl) : null;
+        if ($target && $target.is('label') && $target.attr('for')) {
+            $target = $('#' + $target.attr('for'));
+        }
+        if (!$target || !$target.length) {
+            if (window.event && window.event.target) {
+                var $evtTarget = $(window.event.target);
+                if ($evtTarget.is('label') && $evtTarget.attr('for')) {
+                    $target = $('#' + $evtTarget.attr('for'));
+                } else if ($evtTarget.is('input[type="checkbox"]')) {
+                    $target = $evtTarget;
+                }
+            }
+        }
+
+        var $allCheckboxes = $('input[type="checkbox"]').filter(function() {
+            var oc = $(this).attr('onclick') || '';
+            return oc.indexOf('productFav(' + product_id + ',') !== -1 ||
+                   oc.indexOf('productFavTest(' + product_id + ',') !== -1 ||
+                   oc.indexOf('productFav(' + product_id + ')') !== -1;
+        });
+        if ($target && $target.length) {
+            $allCheckboxes = $allCheckboxes.add($target);
+        }
+
+        var sendStatus = status;
+        if ($target && $target.length) {
+            if ($target.data('fav-status') !== undefined) {
+                sendStatus = $target.data('fav-status');
+            } else if ($target.attr('value') !== undefined) {
+                sendStatus = $target.val();
+            }
+        }
+
+        $.ajax({
+            url: "{{ route('productfav') }}",
+            type: "POST",
+            data: {
+                'user_id': user_id,
+                'product_id': product_id,
+                'status': sendStatus
+            },
+            headers: {
+                'X-CSRF-TOKEN': "{{ csrf_token() }}"
+            },
+            beforeSend: function() {
+                $(".loader").fadeIn();
+                $('.loader').css("visibility", "visible");
+            },
+            success: function(response) {
+                $(".loader").fadeOut();
+                $('.loader').css("visibility", "hidden");
+
+                if (response && response.success) {
+                    var newStatus = (response.status !== undefined) ? response.status : (sendStatus == 0 ? 1 : 0);
+                    var count = response.count;
+
+                    // 1. Update Header Counter
+                    var $favBadge = $('.fav_list .favorite-no');
+                    if ($favBadge.length) {
+                        $favBadge.text(count);
+                        if (count > 0) {
+                            $favBadge.show();
+                        } else {
+                            $favBadge.hide();
+                        }
+                    }
+
+                    // 2. Update Header Heart Icon
+                    if (count > 0) {
+                        $('#icon_wishlist .wishlist-filled').show();
+                        $('#icon_wishlist .wishlist-outlined').hide();
+                    } else {
+                        $('#icon_wishlist .wishlist-filled').hide();
+                        $('#icon_wishlist .wishlist-outlined').show();
+                    }
+
+                    // 3. Update Checkboxes for this product
+                    $allCheckboxes.each(function() {
+                        var $cb = $(this);
+                        $cb.prop('checked', newStatus == 1);
+                        $cb.val(newStatus);
+                        $cb.data('fav-status', newStatus);
+                        var oc = $cb.attr('onclick') || '';
+                        if (oc.indexOf('productFavTest') !== -1) {
+                            $cb.attr('onclick', 'return productFavTest(' + product_id + ',' + newStatus + ')');
+                        } else {
+                            $cb.attr('onclick', 'return productFav(' + product_id + ',' + newStatus + ')');
+                        }
+                    });
+                }
+            },
+            error: function() {
+                $(".loader").fadeOut();
+                $('.loader').css("visibility", "hidden");
+            }
+        });
+        return false;
+    }
+    window.toggleProductFav = toggleProductFav;
+    window.productFav = toggleProductFav;
+    window.productFavTest = toggleProductFav;
+
 </script>
 @endpush

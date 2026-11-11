@@ -50,22 +50,16 @@
                     </div>
 
                     <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">Page Name [EN]</label>
+                        <label class="col-sm-2 form-control-label">Page Name</label>
                         <div class="col-sm-10">
                             <input type="text" readonly name="page_name" id="page_name" class="form-control"
                                 placeholder="Name" value="{{ $cms->page_name }}">
 
                         </div>
                     </div>
+                    
                     <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">Page Name [FR]</label>
-                        <div class="col-sm-10">
-                            <input type="text" readonly name="page_name_fr" id="page_name_fr" class="form-control"
-                                placeholder="Name" value="{{ $cms->page_name_fr }}">
-                        </div>
-                    </div>
-                    <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">Page Content [EN]</label>
+                        <label class="col-sm-2 form-control-label">Page Content</label>
                         <div class="col-sm-10">
                             <div class="d-flex flex-wrap mb-4">
                                 <textarea readonly class="form-control" id="page_content" name="page_content" autofocus disabled>{!! urldecode($cms->page_content) !!}</textarea>
@@ -73,16 +67,10 @@
                             </div>
                         </div>
                     </div>
-                    <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">Page Content [FR]</label>
-                        <div class="col-sm-10">
-                            <div class="d-flex flex-wrap mb-4">
-                                <textarea readonly class="form-control" id="page_content" name="page_content_fr" autofocus disabled>{!! urldecode($cms->page_content_fr) !!}</textarea>
-                            </div>
-                        </div>
+                    
                     </div>
                     <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">Mobile Page Content [EN]</label>
+                        <label class="col-sm-2 form-control-label">Mobile Page Content</label>
                         <div class="col-sm-10">
                             <div class="d-flex flex-wrap mb-4">
                                 <textarea readonly class="form-control" id="page_content" name="mobile_page_content" autofocus disabled>{!! urldecode($cms->mobile_page_content) !!}</textarea>
@@ -90,13 +78,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">Mobile Page Content [FR]</label>
-                        <div class="col-sm-10">
-                            <div class="d-flex flex-wrap mb-4">
-                                <textarea readonly class="form-control" id="page_content" name="mobile_page_content_fr" autofocus disabled>{!! urldecode($cms->mobile_page_content_fr) !!}</textarea>
-                            </div>
-                        </div>
+                    
                     </div>
                 </div>
 
@@ -235,18 +217,6 @@
                 }
             }
         });
-        CKEDITOR.replace('page_content_fr', {
-            on: {
-                focus: onFocus,
-                blur: onBlur,
-                pluginsLoaded: function(evt) {
-                    var doc = CKEDITOR.document,
-                        ed = evt.editor;
-                    if (!ed.getCommand('bold')) doc.getById('exec-bold').hide();
-                    if (!ed.getCommand('link')) doc.getById('exec-link').hide();
-                }
-            }
-        });
         CKEDITOR.replace('mobile_page_content', {
             on: {
                 focus: onFocus,
@@ -259,19 +229,7 @@
                 }
             }
         });
-        CKEDITOR.replace('mobile_page_content_fr', {
-            on: {
-                focus: onFocus,
-                blur: onBlur,
-                pluginsLoaded: function(evt) {
-                    var doc = CKEDITOR.document,
-                        ed = evt.editor;
-                    if (!ed.getCommand('bold')) doc.getById('exec-bold').hide();
-                    if (!ed.getCommand('link')) doc.getById('exec-link').hide();
-                }
-            }
-        });
-    </script>
+        </script>
     <script type="text/javascript">
         CKEDITOR.config.height = '400px';
     </script>

@@ -107,34 +107,22 @@ $title_var2 = "title_" . env('DEFAULT_LANGUAGE');
                 <input type="hidden"  id="user_id" value="{{$banner->id}}">
                 <div class="personal_informations">
                     <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">Title [EN]</label>
+                        <label class="col-sm-2 form-control-label">Title</label>
                         <div class="col-sm-10">
-                            <input type="text" name="title" id="title" class="form-control" placeholder="Title [EN]" value="{{ isset($banner->title)?$banner->title:old('title') }}">
+                            <input type="text" name="title" id="title" class="form-control" placeholder="Title" value="{{ isset($banner->title)?$banner->title:old('title') }}">
                            
                         </div>
                         
                     </div>
+                      
                     <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">Title [FR]</label>
-                        <div class="col-sm-10">
-                            <input type="text" name="title_fr" id="title_fr" class="form-control" placeholder="Title [FR]" value="{{ isset($banner->title_fr)?$banner->title_fr:old('title_fr')}}">
-                          
-                        </div>
-                    </div>  
-                    <div class="form-group row">
-                        <label class="col-sm-2 form-control-cms">Description [EN]</label>
+                        <label class="col-sm-2 form-control-cms">Description</label>
                         <div class="col-sm-10">
                             <textarea class="form-control" id="description" name="description"  rows="5" autofocus >{{ isset($banner->description)?$banner->description:old('description') }}</textarea>
                             
                         </div>
                     </div>   
-                    <div class="form-group row">
-                        <label class="col-sm-2 form-control-cms">Description [FR]</label>
-                        <div class="col-sm-10">
-                            <textarea class="form-control" id="description_fr" name="description_fr" rows="5" placeholder="Description [FR]">{{ isset($banner->description_fr)?$banner->description_fr:old('description_fr') }}</textarea>
-                          
-                        </div>
-                    </div> -->
+                     -->
                     <div class="box-body">
                         {{ Form::open(['route' => ['banner.update', $banner->id], 'method' => 'POST', 'files' => true, 'enctype' => 'multipart/form-data', 'id' => 'delivery_chargeForm']) }}
                         <input type="hidden" id="user_id" value="{{ $banner->id }}">
@@ -147,9 +135,9 @@ $title_var2 = "title_" . env('DEFAULT_LANGUAGE');
                             </div>
                             </div> -->
                             <div class="form-group row">
-                                <label class="col-sm-2 form-control-label">Title [EN]</label>
+                                <label class="col-sm-2 form-control-label">Title</label>
                                 <div class="col-sm-8">
-                                    <input type="text" name="title" id="title" class="form-control" placeholder="Title [EN]" value="{{ isset($banner->title) ? $banner->title : old('title') }}">
+                                    <input type="text" name="title" id="title" class="form-control" placeholder="Title" value="{{ isset($banner->title) ? $banner->title : old('title') }}">
                                     </div>
                                 <div class="col-sm-2">
                                     <div class="text-color-picker-container">
@@ -160,26 +148,16 @@ $title_var2 = "title_" . env('DEFAULT_LANGUAGE');
                                 </div>
                             </div>
                             
-                            <div class="form-group row">
-                                <label class="col-sm-2 form-control-label">Title [FR]</label>
-                                <div class="col-sm-8">
-                                    <input type="text" name="title_fr" id="title_fr" class="form-control" placeholder="Title [FR]" value="{{ isset($banner->title_fr) ? $banner->title_fr : old('title_fr') }}">
-                                </div>
-                            </div>
+                            
                             
                             <div class="form-group row">
-                                <label class="col-sm-2 form-control-cms">Description [EN]</label>
+                                <label class="col-sm-2 form-control-cms">Description</label>
                                 <div class="col-sm-10">
                                     <textarea class="form-control" id="description" name="description" rows="5">{{ isset($banner->description) ? $banner->description : old('description') }}</textarea>
                                 </div>
                             </div>
                             
-                            <div class="form-group row">
-                                <label class="col-sm-2 form-control-cms">Description [FR]</label>
-                                <div class="col-sm-10">
-                                    <textarea class="form-control" id="description_fr" name="description_fr" rows="5" placeholder="Description [FR]">{{ isset($banner->description_fr) ? $banner->description_fr : old('description_fr') }}</textarea>
-                                </div>
-                            </div>
+                            
                         </div>
                     <div class="form-group row">
                     <label class="col-sm-2 form-control-cms">Type<span class="valid_field">*</span></label>
@@ -251,7 +229,7 @@ $title_var2 = "title_" . env('DEFAULT_LANGUAGE');
                     <div class="form-group row url">
                         <label class="col-sm-2 form-control-cms">URL<span class="valid_field">*</span></label>
                         <div class="col-sm-10">
-                            <input type="text" name="banner_url" id="banner_url" class="form-control" placeholder="Title [FR]" value="{{ isset($banner->banner_url)?$banner->banner_url:old('banner_url')}}">
+                            <input type="text" name="banner_url" id="banner_url" class="form-control" placeholder="URL" value="{{ isset($banner->banner_url)?$banner->banner_url:old('banner_url')}}">
                             @if ($errors->has('banner_url'))
                             <span class="help-block">
                                 <span  style="color: red;" class='validate'>{{ $errors->first('banner_url') }}</span>
@@ -481,18 +459,14 @@ $title_var2 = "title_" . env('DEFAULT_LANGUAGE');
         var colorPicker = document.getElementById('textColorPicker');
         var textColorInput = document.getElementById('textColorInput');
         var title = document.getElementById('title');
-        var titleFr = document.getElementById('title_fr');
         var description = document.getElementById('description');
-        var descriptionFr = document.getElementById('description_fr');
 
         // Update the text color when the color picker changes
         colorPicker.addEventListener('input', function() {
             var color = colorPicker.value;
             textColorInput.value = color;
             title.style.color = color;
-            titleFr.style.color = color;
             description.style.color = color;
-            descriptionFr.style.color = color;
         });
 
         // Set initial colors

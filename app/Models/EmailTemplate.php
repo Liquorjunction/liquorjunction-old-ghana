@@ -10,15 +10,9 @@ class EmailTemplate extends Model
     protected $table = 'emailtemplates';
 
     protected $fillable = [
-        'language_id',
         'title',
         'subject', 
         'content', 
         'status' 
     ];
-
-    public function EmailTemplateLanguage()
-    {
-      return $this->hasOne('App\Models\Language','id','language_id');
-    }
 }

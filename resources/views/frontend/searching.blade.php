@@ -3,11 +3,7 @@ $html = '<div class="suggestion-grid">';
     $i = 0;
     foreach($productDataFilter as $result){
         $productroute = route('productdetails',['id'=>Helper::encodeUrl($result->id)]);
-        if(\Session::get('language')==1) {
-            $product_name = $result->product_name;
-        }else{
-            $product_name = ($result->product_name_fr) ? $result->product_name_fr : $product_name;
-        }
+        $product_name = $result->product_name;
         $html .= '<div class="suggestion-item" data-index="'.$i.'">
                     <a href="'.$productroute.'">
                         <div class="suggestion-title">'.ucwords($product_name).'</div>
@@ -25,14 +21,7 @@ $i = 0;
 foreach($productDataFilter as $result){
     $productroute = route('productdetails',['id'=>Helper::encodeUrl($result->id)]);
     
-    if(\Session::get('language')==1) {
-        $product_name = $result->product_name;
-        $image_not_found = 'Image not available';
-    } else {
-        $product_name = ($result->product_name_fr) ? $result->product_name_fr : $product_name;
-        $image_not_found = 'Image non disponible';
-
-    }
+    $product_name = $result->product_name; $image_not_found = 'Image not available';
 
 
     $image = asset('uploads/product/default.png'); // Default

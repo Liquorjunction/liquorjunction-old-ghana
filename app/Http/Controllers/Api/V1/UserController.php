@@ -604,7 +604,6 @@ class UserController extends Controller
     //         $result['result'][]   =   $validator->messages();
     //         $mainResult[]       =   $result;
     //         return response()->json($mainResult);  
-    //     }
 
     //     //register without verification
 
@@ -627,11 +626,8 @@ class UserController extends Controller
     //         $update['social_type'] = strval(@$request->social_register_type);
     //         if($request->social_register_type == 1){
     //             $update['google_id'] = strval(@$request->social_register_id);
-    //         }elseif($request->social_register_type == 2){
     //             $update['facebook_id'] = strval(@$request->social_register_id);
-    //         }else{
     //             $update['apple_id'] = strval(@$request->social_register_id);
-    //         }
 
     //         $update['country_code'] = isset($request->country_code) ? $request->country_code : '971';
     //         $update['otp'] = $otp;
@@ -652,7 +648,6 @@ class UserController extends Controller
     //                 $authenticatedUserId = $update->id; 
 
     //                 // Update the cart records where the device ID matches the provided device ID
-    //             }
 
     //             $finalArr['user_id'] = isset($update->id) ? strval($update->id) : '';
 
@@ -673,15 +668,12 @@ class UserController extends Controller
     //             $mainResult[]       =   $result;
     //             return response()->json($mainResult);
 
-    //         } else {
 
     //             $result['code']     =    strval(-5);
     //             $result['message']  =   'something_went_wrong';
     //             $result['result']   =  [];
     //             $mainResult[]       =   $result;
     //             return response()->json($mainResult);
-    //         }
-    //     } else {
     //         // dd(2);
     //         $email_check =  $this->check_email($request->email);
     //         $mobile_check =  $this->check_mobile($request->mobile);
@@ -700,11 +692,8 @@ class UserController extends Controller
     //             $update['social_type'] = strval(@$request->social_register_type);
     //             if($request->social_register_type == 1){
     //                 $update['google_id'] = strval(@$request->social_register_id);
-    //             }elseif($request->social_register_type == 2){
     //                 $update['facebook_id'] = strval(@$request->social_register_id);
-    //             }else{
     //                 $update['apple_id'] = strval(@$request->social_register_id);
-    //             }
     //             $update['country_code'] = isset($request->country_code) ? $request->country_code : '971';
 
     //             $update['otp'] = $otp;
@@ -723,7 +712,6 @@ class UserController extends Controller
     //                     $authenticatedUserId = $update->id; 
 
     //                     // Update the cart records where the device ID matches the provided device ID
-    //                 }
 
     //                 $finalArr['user_id'] = isset($update->id) ? strval($update->id) : '';
 
@@ -744,17 +732,13 @@ class UserController extends Controller
     //                 $mainResult[]       =   $result;
     //                 return response()->json($mainResult);
 
-    //             } else {
 
     //                 $result['code']     =    strval(-5);
     //                 $result['message']  =   'something_went_wrong';
     //                 $result['result']   =  [];
     //                 $mainResult[]       =   $result;
     //                 return response()->json($mainResult);
-    //             }
-    //         }
 
-    //     }
 
     //     $post = $request->all();
 
@@ -769,11 +753,8 @@ class UserController extends Controller
     //         $post['social_type'] = strval(@$request->social_register_type);
     //         if($request->social_register_type == 1){
     //             $post['google_id'] = strval(@$request->social_register_id);
-    //         }elseif($request->social_register_type == 2){
     //             $post['facebook_id'] = strval(@$request->social_register_id);
-    //         }else{
     //             $post['apple_id'] = strval(@$request->social_register_id);
-    //         }
 
     //         $post['is_otp_verify'] = strval(0);
     //         $post['otp'] = $otp;
@@ -798,7 +779,6 @@ class UserController extends Controller
     //                 $authenticatedUserId = $FrontUser->id; 
 
     //                 // Update the cart records where the device ID matches the provided device ID
-    //             }
 
     //             $finalArr['user_id'] = isset($FrontUser->id) ?  strval($FrontUser->id) : '';
     //             $finalArr['token'] = isset($FrontUser->device_token) ?  strval($FrontUser->device_token) : '';
@@ -820,23 +800,18 @@ class UserController extends Controller
     //             $mainResult[]       =   $result;
     //             return response()->json($mainResult);
 
-    //         } else {
 
     //             $result['code']     =    strval(-5);
     //             $result['message']  =   'something_went_wrong';
     //             $result['result']   =  [];
     //             $mainResult[]       =   $result;
     //             return response()->json($mainResult);
-    //         }
-    //     } else {
 
     //         $result['code']     =    strval(-5);
     //         $result['message']  =   'something_went_wrong';
     //         $result['result']   =  [];
     //         $mainResult[]       =   $result;
     //         return response()->json($mainResult);
-    //     }
-    // }
 
     public function login(Request $request)
     {
@@ -1559,7 +1534,6 @@ class UserController extends Controller
         //         'error'=>"New password and confirm password doesn't match",
         //         'data' => null
         //     ], 200);
-        // }
 
         if (strcmp($request->old_password, $request->new_password) == 0) {
             $result['code'] = strval(0);
@@ -2037,9 +2011,7 @@ class UserController extends Controller
                     // $product_image = $product_info->get_product_images->first();
                     // if (file_exists(public_path() . '/uploads/product/' . $product_image->image)) {
                     //     $image_path = asset('uploads/product/' . $product_image->image);
-                    // } else {
                     //     $image_path = asset('assets/frontend/images/image-not-avilable.png');
-                    // }
 
                     if ($product_info && $product_info->get_product_images && $product_info->get_product_images->first()) {
                         $product_image = $product_info->get_product_images->first();
@@ -2061,13 +2033,8 @@ class UserController extends Controller
                     //$delivery_date = date("d F Y", strtotime($date1));
                     $delivery_date = \Helper::dateTz($date1);
 
-                    if ($request->language == 1) {
-                        $title = ($product_info->product_name_fr) ? $product_info->product_name_fr : $product_info->product_name;
-                        $status = ($order_status->name_fr) ? $order_status->name_fr : $order_status->name;
-                    } else {
                         $title = $product_info->product_name ?? '';
                         $status = $order_status->name ?? '';
-                    }
 
                     if (@$data->transcations->payment_type == 1) {
                         $payment_type = 'Card(Debit/Credit)';
@@ -2142,15 +2109,13 @@ class UserController extends Controller
     //             'error' => $validator->messages(),
     //             'data' => null
     //         ], 200);
-    //     }
 
     //     $post = $request->all();
     //     // $response = \App\Helpers\ResponseHelper::userCheckStatus($request->uniqid, $request->token);
     //     // if ($response['code'] != 1) {
     //     //     $mainResult = $response;
     //     //     return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-    //     // }
-
+    //
     //     if ($post) {
     //         $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
     //         if ($request->check_status == 1) {
@@ -2164,9 +2129,7 @@ class UserController extends Controller
     //                     'error' => $validator->messages(),
     //                     'data' => null
     //                 ], 200);
-    //             }
     //             $orderInformation = Order::with('order_details', 'orderInfo', 'transcations')->where('order_id', $request->order_number)->where('user_id', $userData->id)->first();
-    //         } else {
     //             $validator = \Validator::make($request->all(), [
     //                 'order_id' => 'required',
     //             ]);
@@ -2176,9 +2139,7 @@ class UserController extends Controller
     //                     'error' => $validator->messages(),
     //                     'data' => null
     //                 ], 200);
-    //             }
     //             $orderInformation = Order::with('order_details', 'orderInfo', 'transcations')->where('id', $request->order_id)->where('user_id', $userData->id)->first();
-    //         }
 
     //         // Get Invoice Details
     //         $print_order_id = $request->order_id;
@@ -2190,7 +2151,6 @@ class UserController extends Controller
 
     //         if (file_exists($filePath)) {
     //             unlink($filePath);  
-    //         }
 
     //         if (!file_exists($filePath)) {
     //             $orderData = Order::join('main_users', 'main_users.id', '=', 'order.user_id')
@@ -2207,7 +2167,6 @@ class UserController extends Controller
     //                     'message' => 'Order not found',
     //                     'data' => null
     //                 ], 404);
-    //             }
 
 
     //             $settings = Setting::find(1);
@@ -2234,8 +2193,6 @@ class UserController extends Controller
     //                         : $data->product_original_amount;
 
     //                     $bogoDiscount += $display_qty * $unit_price;
-    //                 }
-    //             }
 
     //             foreach ($orderDetails as $data) {
     //                 $display_qty =  $data->quantity;
@@ -2245,7 +2202,6 @@ class UserController extends Controller
     //                     : $data->product_original_amount;
 
     //                 $totalAmount += $display_qty * $unit_price;
-    //             }
 
     //             // Tax calculation
     //             $discountAmount = $orderData->discount_amount ?? 0;
@@ -2267,12 +2223,10 @@ class UserController extends Controller
     //             // Make directory if not exists
     //             if (!is_dir($directory)) {
     //                 mkdir($directory, 0777, true);
-    //             }
 
     //             file_put_contents($filePath, $pdf->output());
 
     //             $publicUrl = asset('uploads/invoices/' . $fileName);
-    //         }
 
 
     //         if (!empty($orderInformation)) {
@@ -2291,11 +2245,8 @@ class UserController extends Controller
     //             $delivery_date = \Helper::dateTz($date1);
 
     //             $order_status = DB::table('order_status')->where('id', $orderInformation->order_status)->first();
-    //             if ($request->language == 1) {
-    //                 $status = ($order_status->name_fr) ? $order_status->name_fr : $order_status->name;
-    //             } else {
+    //                 $status = $order_status->name;
     //                 $status = $order_status->name ?? '';
-    //             }
 
     //             $order_type = "";
     //             $customer_name = "";
@@ -2309,8 +2260,6 @@ class UserController extends Controller
     //                     $customer_name = array_shift($order_delivery_address);
     //                     $mobile_number = array_pop($order_delivery_address);
     //                     $delivery_address = implode(', ', $order_delivery_address);
-    //                 }
-    //             } else {
 
     //                 $order_type = 'Pickup Order';
     //                 // dd($orderInformation->orderInfo->store_pickup_address);
@@ -2319,19 +2268,13 @@ class UserController extends Controller
     //                     //removing first element from array, it means name.         
     //                     $customer_name = array_shift($order_pickup_address);
     //                     $delivery_address = implode('', $order_pickup_address);
-    //                 }
 
-    //             }
 
     //             if (@$orderInformation->transcations->payment_type == 1) {
     //                 $payment_type = 'Card(Debit/Credit)';
-    //             } elseif (@$orderInformation->transcations->payment_type == 2) {
     //                 $payment_type = 'Cart';
-    //             } elseif (@$orderInformation->transcations->payment_type == 3) {
     //                 $payment_type = 'Cash On Delivery';
-    //             } else {
     //                 $payment_type = '-';
-    //             }
     //             $mainArr["id"] = strval(@$orderInformation->id);
     //             $mainArr["invoice_url"] = $publicUrl;
     //             $mainArr["order_number"] = strval(@$orderInformation->order_id);
@@ -2359,28 +2302,21 @@ class UserController extends Controller
     //                 $product_image = $product_info->get_product_images->first();
     //                 if (file_exists(public_path() . '/uploads/product/' . $product_image->image)) {
     //                     $image_path = asset('uploads/product/' . $product_image->image);
-    //                 } else {
     //                     $image_path = asset('assets/frontend/images/image-not-avilable.png');
-    //                 }
 
-    //                 if ($request->language == 1) {
-    //                     $title = ($product_info->product_name_fr) ? $product_info->product_name_fr : $product_info->product_name;
-    //                 } else {
+    //                     $title = $product_info->product_name;
     //                     $title = $product_info->product_name ?? '';
-    //                 }
 
     //                 $product_original_amount += $data->product_original_amount * $data->quantity;
     //                 if ($data->product_total_amount != 0) {
     //                     $disc_price = ($data->product_original_amount - $data->product_total_amount);
     //                     $product_discount_amount += $disc_price * $data->quantity;
-    //                 }
 
     //                 $ratingData = Helper::getProductsRatingOrderId($userData->id, $data->product_id, $orderInformation->id);
 
     //                 if ($orderInformation->order_status == 3) {
     //                     $rating = (@$ratingData->ratings) ? @$ratingData->ratings : '';
     //                     $review = (@$ratingData->review) ? @$ratingData->review : '';
-    //                 }
 
     //                 $orderArr[] = [
     //                     "product_id" => strval(@$data->product_id),
@@ -2393,7 +2329,6 @@ class UserController extends Controller
     //                     "product_rating" => strval(@$rating),
     //                     "product_review" => strval(@$review),
     //                 ];
-    //             }
     //             $variant_original_price = $product_original_amount;
     //             $discount_price = $product_discount_amount;
 
@@ -2413,24 +2348,19 @@ class UserController extends Controller
 
     //             $mainResult = $result;
     //             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-    //         } else {
     //             $result['code'] = strval(0);
     //             $result['message'] = 'no_data_found';
     //             $result['result'] = [];
 
     //             $mainResult = $result;
     //             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-    //         }
 
-    //     } else {
     //         $result['code'] = strval(0);
     //         $result['message'] = 'something_went_wrong';
     //         $result['result'] = [];
 
     //         $mainResult = $result;
     //         return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-    //     }
-    // }
 
     // 2nd sept
     public function orderDetail(Request $request)
@@ -2599,11 +2529,7 @@ class UserController extends Controller
                 $delivery_date = \Helper::dateTz($date1);
 
                 $order_status = DB::table('order_status')->where('id', $orderInformation->order_status)->first();
-                if ($request->language == 1) {
-                    $status = ($order_status->name_fr) ? $order_status->name_fr : $order_status->name;
-                } else {
                     $status = $order_status->name ?? '';
-                }
 
                 $order_type = "";
                 $customer_name = "";
@@ -2672,11 +2598,7 @@ class UserController extends Controller
                         $image_path = asset('assets/frontend/images/image-not-avilable.png');
                     }
 
-                    if ($request->language == 1) {
-                        $title = ($product_info->product_name_fr) ? $product_info->product_name_fr : $product_info->product_name;
-                    } else {
                         $title = $product_info->product_name ?? '';
-                    }
 
                     // if bogo
                     $effectiveQty = ($data->is_bogo) ? floor($data->quantity / 2) : $data->quantity;
@@ -2841,11 +2763,8 @@ class UserController extends Controller
                 //     Mail::send('emails.orderstatuschanged', $data, function ($message) use ($data, $emaildetail) {
                 //         $message->to($data['sendemail'], 'Liquor')->subject($emaildetail->subject);
                 //         $message->from($data['from_email'], $emaildetail->title);
-                //     });
 
-                // } catch (\Throwable $th) {
                 //     // throw $th;
-                // }
                 $ismail = $this->order_cancel_email($customer_details->first_name, $customer_details->first_name, $sendemail, $order, $message);
 
                 $result['code'] = strval(1);
@@ -2914,11 +2833,7 @@ class UserController extends Controller
 
             if (!empty($orderInformation)) {
                 $order_status = DB::table('order_status')->where('id', $orderInformation->order_status)->first();
-                if ($request->language == 1) {
-                    $status_title = ($order_status->name_fr) ? $order_status->name_fr : $order_status->name;
-                } else {
                     $status_title = $order_status->name;
-                }
 
                 $result['code'] = strval(1);
                 $result['message'] = strval(@$status_title);
@@ -3077,7 +2992,6 @@ class UserController extends Controller
                 $query->where('status', 1);
             })->withWhereHas('area', function ($query) {
                 $query->where('status', 1);
-                // })->where([['user_id', $user_id], ['status', 1]])->get();
             })->where([['user_id', $userData->id], ['status', 1], ['default', 1]])->get();
 
 
@@ -3647,7 +3561,6 @@ class UserController extends Controller
     //             'error'=>$validator->messages(),
     //             'data' => null
     //         ], 200);
-    //     }
 
     //     $order_id = $request->order_id;
     //     $fileName = 'order_' . $order_id . '.pdf';
@@ -3671,7 +3584,6 @@ class UserController extends Controller
     //                 'message' => 'Order not found',
     //                 'data' => null
     //             ], 404);
-    //         }
 
 
     //         $settings = Setting::find(1);
@@ -3698,8 +3610,6 @@ class UserController extends Controller
     //                     : $data->product_original_amount;
 
     //                 $bogoDiscount += $display_qty * $unit_price;
-    //             }
-    //         }
 
     //         foreach ($orderDetails as $data) {
     //             $display_qty =  $data->quantity;
@@ -3709,7 +3619,6 @@ class UserController extends Controller
     //                 : $data->product_original_amount;
 
     //             $totalAmount += $display_qty * $unit_price;
-    //         }
 
     //         // Tax calculation
     //         $discountAmount = $orderData->discount_amount ?? 0;
@@ -3731,10 +3640,8 @@ class UserController extends Controller
     //         // Make directory if not exists
     //         if (!is_dir($directory)) {
     //             mkdir($directory, 0777, true);
-    //         }
 
     //         file_put_contents($filePath, $pdf->output());
-    //     }
 
     //     // Generate public URL
     //     // $publicUrl = asset('storage/uploads/invoices/' . $fileName);
@@ -3748,7 +3655,6 @@ class UserController extends Controller
     //         ]
     //     ], 200);
 
-    // }
 
 
 }

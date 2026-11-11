@@ -74,10 +74,8 @@ class LabelController extends Controller
 
         $label = new Label();
         $this->validateRequest();
-        $label->language_id = 2;
         $label->label_name = $request->label_name;
         $label->label_value = $request->label_value;
-        $label->label_value_fr = $request->label_value_fr;
         $label->label_type = $request->label_type;
         $label->status = 1;
         //$label->created_at = date('Y-m-d H:i:s');
@@ -112,7 +110,6 @@ class LabelController extends Controller
         $label = Label::find($id);
         //$label->labelname = $request->label_key;
         $label->label_value = $request->label_value;
-        $label->label_value_fr = $request->label_value_fr;
         $label->label_type = $request->label_type;
         $label->status = 1;
         $label->updated_at = date('Y-m-d H:i:s');
@@ -159,7 +156,6 @@ class LabelController extends Controller
             $validateData =request()->validate([
               //  'label_name'=>'required',
                 'label_value' => 'required',
-                'label_value_fr'=>'required',
                 // 'label_type'=>'required'
             ],
             [
@@ -174,7 +170,6 @@ class LabelController extends Controller
             $validateData =request()->validate([
                 'label_name' => 'required',
                 'label_value'=>'required',
-                'label_value_fr' => 'required',
                 'label_type'=>'required'
 
             ],

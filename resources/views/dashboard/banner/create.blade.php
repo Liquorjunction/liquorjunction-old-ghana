@@ -103,9 +103,9 @@ $title_var2 = "title_" . env('DEFAULT_LANGUAGE');
 
             <div class="personal_informations">
                 <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">Title [EN]</label>
+                    <label class="col-sm-2 form-control-label">Title</label>
                     <div class="col-sm-8">
-                        <input type="text" name="title" id="title" class="form-control" placeholder="Title [EN]" value="{{old('title')}}">
+                        <input type="text" name="title" id="title" class="form-control" placeholder="Title" value="{{old('title')}}">
                         </div>
                         <div class="col-sm-2">
                                     <div class="text-color-picker-container">
@@ -115,24 +115,14 @@ $title_var2 = "title_" . env('DEFAULT_LANGUAGE');
                                     </div>
                                 </div>
                             </div>
+                
                 <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">Title [FR]</label>
-                    <div class="col-sm-8">
-                        <input type="text" name="title_fr" id="title_fr" class="form-control" placeholder="Title [FR]" value="{{old('title_fr')}}">
-                    </div>
-                </div>
-                <div class="form-group row">
-                    <label class="col-sm-2 form-control-cms">Description [EN]</label>
+                    <label class="col-sm-2 form-control-cms">Description</label>
                     <div class="col-sm-10">
-                        <textarea class="form-control" id="description" name="description" rows="5" placeholder="Description [EN]">{{old('description')}}</textarea>
+                        <textarea class="form-control" id="description" name="description" rows="5" placeholder="Description">{{old('description')}}</textarea>
                     </div>
                 </div>
-                <div class="form-group row">
-                    <label class="col-sm-2 form-control-cms">Description [FR]</label>
-                    <div class="col-sm-10">
-                        <textarea class="form-control" id="description_fr" name="description_fr" rows="5" placeholder="Description [FR]">{{old('description_fr')}}</textarea>
-                    </div>
-                </div>
+                
                 <div class="form-group row">
                     <label class="col-sm-2 form-control-cms">Type<span class="valid_field">*</span></label>
                     <div class="col-sm-10">

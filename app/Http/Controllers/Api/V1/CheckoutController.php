@@ -114,7 +114,6 @@ class CheckoutController extends Controller
     //                             $order_type_name = "In-store";
     //                         } elseif ($order->order_type == 3) {
     //                             $order_type_name = "Purchase Order";
-    //                         } else {
     //                             $order_type_name = "Unknown Order Type";
     //                         }
 
@@ -124,7 +123,6 @@ class CheckoutController extends Controller
     //                             $payment_type_name = "Card (Debit/Credit)";
     //                         } elseif ($transactions->payment_type == 3) {
     //                             $payment_type_name = "Cash on Delivery";
-    //                         } else {
     //                             $payment_type_name = "Unknown Payment Type";
     //                         }
 
@@ -135,10 +133,8 @@ class CheckoutController extends Controller
     //                                 $order_type_from = 'Android';
     //                             } elseif ($order_info->order_from == 3) {
     //                                 $order_type_from = 'iOS';
-    //                             } else {
     //                                 $order_type_from = 'Unknown Source';
     //                             }
-    //                         } else {
     //                             $order_type_from = 'Unknown Source';
     //                         }
     //             // Initialize the admin email content with the basic details
@@ -174,7 +170,6 @@ class CheckoutController extends Controller
     //             if (!empty($storePickupAddress) && $storePickupAddress !== 'Not provided') {
     //                 $adminEmailContent .= "
     //                 <div class='item'><span class='label'><b>Store Address:</b></span>  <span class='value'>{$storePickupAddress}</span></div>";
-    //             } else {
     //                 $adminEmailContent .= "
     //                 <div class='item'><span class='label'>Delivery Address:</span>  <span class='value'>{$order->delivery_address}</span></div>";
     //             }
@@ -945,8 +940,7 @@ class CheckoutController extends Controller
 
     //     $purchase_type = $request->purchase_type;
     //     $coupon_id = $request->coupon_id;
-    //     $language = $request->language;
-    //     $store_id =  $request->store_id;
+    //    //     $store_id =  $request->store_id;
     //     $user_address_id = $request->user_address_id;
     //     $purchase_order_type = $request->purchase_order_type;
 
@@ -1033,14 +1027,11 @@ class CheckoutController extends Controller
     //             if ($is_buy_now == 1) {
     //                 $variantIds = $request->buy_product_variant_id;
     //                 $get_qty = $request->buy_quantity;
-    //             } else {
     //                 $cartInfo = Cart::select('*')->where(['user_id' => $userData->id, 'product_variant_id' => $data->id])->where('status', 1)->first();
     //                 $get_qty = $cartInfo->quantity;
     //             }
 
-    //             if ($request->language == 1) {
-    //                 $title = ($data->get_product_details->product_name_fr) ? $data->get_product_details->product_name_fr : $data->get_product_details->product_name;
-    //             } else {
+    //                 $title = $data->get_product_details->product_name;
     //                 $title = $data->get_product_details->product_name ?: '';
     //             }
     //             $product_image = $data->get_product_details->get_product_images->first();
@@ -1051,7 +1042,6 @@ class CheckoutController extends Controller
     //             $product_size =  ($data->variant_size) ? $data->variant_size . ' ' . $product_unit : '';
     //             if (file_exists(public_path() . '/uploads/product/' . $product_image->image)) {
     //                 $image_path =  asset('uploads/product/' . $product_image->image);
-    //             } else {
     //                 $image_path =  asset('assets/frontend/images/image-not-avilable.png');
     //             }
 
@@ -1071,7 +1061,6 @@ class CheckoutController extends Controller
     //     }
     //             if ($purchase_type == 1) {
     //                 $cart_id =  strval(@$cartInfo->id);
-    //             } else {
     //                 $cart_id = NULL;
     //             }
 
@@ -1092,7 +1081,6 @@ class CheckoutController extends Controller
     //         $total_products_price = $org_price;
     //         if (in_array(true, $is_product_discount)) {
     //             $final_amount = ($total_products_price - $total_discount_price);
-    //         } else {
     //             $final_amount =  $total_products_price;
     //         }
 
@@ -1116,7 +1104,6 @@ class CheckoutController extends Controller
     //             $tax_amount = (Helper::Settings('tax') / 100) * $final_amount;
     //             $tax_percentage = Helper::Settings('tax');
     //             $total_amount = $final_amount + $tax_amount;
-    //         } else {
     //             $total_amount = $final_amount;
     //         }
 
@@ -1140,7 +1127,6 @@ class CheckoutController extends Controller
     //         $result['result']   =   $productDataArr;
     //         $mainResult   =   $result;
     //         return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-    //     } else {
     //         $result['code']     =  strval(0);
     //         $result['message']  =  'no_data_found';
     //         $result['result']   =  [];
@@ -1184,7 +1170,6 @@ class CheckoutController extends Controller
             $coupon_id = null;
         }
         $reward = (float) $request->reward;
-        $language = $request->language;
         $store_id =  $request->store_id;
         $user_address_id = $request->user_address_id;
         $purchase_order_type = $request->purchase_order_type;
@@ -1361,11 +1346,7 @@ class CheckoutController extends Controller
                     $offer_type =  $cartInfo->offer_type ?? null;
                 }
 
-                if ($request->language == 1) {
-                    $title = ($data->get_product_details->product_name_fr) ? $data->get_product_details->product_name_fr : $data->get_product_details->product_name;
-                } else {
-                    $title = $data->get_product_details->product_name ?: '';
-                }
+                $title = $data->get_product_details->product_name ?? '';
                 $product_image = $data->get_product_details->get_product_images->first();
 
                 $product_unit = Helper::getUnitById($data->variant_uof);
@@ -1722,7 +1703,6 @@ class CheckoutController extends Controller
         $purchase_type = $request->purchase_type;
         $coupon_id = $request->coupon_id;
         $coupon_percentage = $request->coupon_percentage;
-        $language = $request->language;
         $store_id =  $request->store_id;
         $user_address_id = $request->user_address_id;
         $user_bill_address_id = $request->user_bill_address_id;

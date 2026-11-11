@@ -15,7 +15,6 @@ class StoreDetails extends Model
         'sub_admin_type',
         'sub_admin_id',
         'store_name',
-        'store_name_fr',
         'country', 
         'state', 
         'contact_number',

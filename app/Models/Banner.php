@@ -10,16 +10,13 @@ class Banner extends Model
     protected $table = 'banners';
 
     protected $fillable = [
-        'language_id',
         'title',
-        'title_fr',
         'type',
         'category_id',
         'subcategory_id',
         'product_id',
         'brand_id',
         'description',
-        'description_fr',
         'banner_url',
         'photo',
         'offer',
@@ -27,9 +24,4 @@ class Banner extends Model
         'highlight',
         'status' 
     ];
-
-    public function LabelLanguage()
-    {
-      return $this->hasOne('App\Models\Language','id','language_id');
-    }
 }

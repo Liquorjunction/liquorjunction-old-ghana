@@ -16,20 +16,14 @@
     </div>
     <div class="form-group row">
 
-        <label class="col-sm-2 form-control-label">{!! __('Title [EN]') !!}</label>
+        <label class="col-sm-2 form-control-label">{!! __('Title') !!}</label>
         <div class="col-sm-10">
             <div class="show_blade_div">
                 {{@$regionData->title}}
             </div>
         </div>
     </div>
-    <div class="form-group row">
-        <label class="col-sm-2 form-control-label">{!! __('Title [FR]') !!}</label>
-        <div class="col-sm-10">
-            <div class="show_blade_div">
-                {{@$regionData->title_fr}}
-            </div>
-        </div>
+    
     </div>
 
 

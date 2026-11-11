@@ -418,11 +418,7 @@
                                                     $product_info = Helper::getProductDetails(@$result->product_id);
                                                     $product_image = $product_info->get_product_images->first();
                                                     $product_title = '';
-                                                    if (session::get('language') == 2) {
-                                                        $product_title = $product_info->product_name_fr;
-                                                    } else {
-                                                        $product_title = $product_info->product_name;
-                                                    }
+                                                    $product_title = $product_info->product_name;
 
                                                     $bogo_status = $result->is_bogo;
                                                 @endphp

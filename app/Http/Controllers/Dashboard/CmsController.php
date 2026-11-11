@@ -62,11 +62,8 @@ class CmsController extends Controller
         $this->validateRequest();
         $cms = new Cms();
         $cms->page_name = $request->page_name;
-        $cms->page_name_fr = $request->page_name_fr;
         $cms->page_content = $request->page_content;
-        $cms->page_content_fr = $request->page_content_fr;
         $cms->mobile_page_content = $request->mobile_page_content;
-        $cms->mobile_page_content_fr = $request->mobile_page_content_fr;
         $cms->status = 1;
         $cms->create_by = Auth::user()->id;
         $cms->created_at = date('Y-m-d H:i:s');
@@ -133,11 +130,8 @@ class CmsController extends Controller
         // Update CMS fields
         $cms->fill([
             'page_name' => $request->page_name,
-            'page_name_fr' => $request->page_name_fr,
             'page_content' => $request->page_content,
-            'page_content_fr' => $request->page_content_fr,
             'mobile_page_content' => $request->mobile_page_content,
-            'mobile_page_content_fr' => $request->mobile_page_content_fr,
             'status' => 1,
             'update_by' => Auth::user()->id,
             'updated_at' => now(),
@@ -187,11 +181,8 @@ class CmsController extends Controller
             $validateData = request()->validate(
                 [
                     'page_name' => 'required',
-                    'page_name_fr' => 'required',
                     'page_content' => 'required',
-                    'page_content_fr' => 'required',
                     'mobile_page_content' => 'required',
-                    'mobile_page_content_fr' => 'required',
                     'photo' => 'image|mimes:jpeg,png,jpg|max:2048',
                 ],
                 [
@@ -206,11 +197,8 @@ class CmsController extends Controller
 
             $validateData = request()->validate([
                 'page_name' => 'required',
-                'page_name_fr' => 'required',
                 'page_content' => 'required',
-                'page_content_fr' => 'required',
                 'mobile_page_content' => 'required',
-                'mobile_page_content_fr' => 'required',
             ]);
 
         }

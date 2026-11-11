@@ -58,26 +58,10 @@
 
 
 
-/* Point 6: Lock background html & body scroll when modal is open */
-
-
-
-html.modal-open,
-
-
+/* Point 6: Lock background body scroll cleanly when modal is open without collapsing document height */
 
 body.modal-open {
-
-
-
     overflow: hidden !important;
-
-
-
-    height: 100vh !important;
-
-
-
 }
 
 
@@ -85,44 +69,6 @@ body.modal-open {
 /* Point 3: Hide floating cart pulse button when modal is open */
 
 
-
-body.modal-open .floating-cart,
-
-
-
-body.modal-open #floatingCart,
-
-
-
-.modal.show ~ * .floating-cart,
-
-
-
-.modal.show ~ .floating-cart {
-
-
-
-    display: none !important;
-
-
-
-    visibility: hidden !important;
-
-
-
-    opacity: 0 !important;
-
-
-
-    pointer-events: none !important;
-
-
-
-    z-index: -100 !important;
-
-
-
-}
 
 
 
@@ -316,6 +262,16 @@ body.modal-open #floatingCart,
 
 
 /* Point 2: Scrollbar elimination on standard screens */
+
+#addressModal,
+#addressModal .modal-dialog,
+#addressModal .modal-content,
+#addressModal .modal-body,
+#addressModal .modal-form-col,
+#unified_address_form {
+    scroll-behavior: auto !important;
+    overscroll-behavior: contain !important;
+}
 
 #addressModal .modal-body {
 
@@ -3301,6 +3257,10 @@ body.modal-open #floatingCart,
 
         }
 
+        if (typeof resetAddressModalScroll === 'function') {
+            resetAddressModalScroll();
+        }
+
     }
 
 
@@ -5707,7 +5667,30 @@ body.modal-open #floatingCart,
         }
     };
 
+    var savedPageScrollY = 0;
+    var isAddressModalOpen = false;
+
+    function lockWindowScroll() {
+        if (isAddressModalOpen) {
+            window.scrollTo(0, savedPageScrollY);
+        }
+    }
+
+    function resetAddressModalScroll() {
+        var elements = document.querySelectorAll('#addressModal, #addressModal .modal-dialog, #addressModal .modal-content, #addressModal .modal-body, #addressModal .modal-form-col, #unified_address_form');
+        for (var i = 0; i < elements.length; i++) {
+            elements[i].scrollTop = 0;
+        }
+        $('#addressModal, #addressModal .modal-dialog, #addressModal .modal-content, #addressModal .modal-body, #addressModal .modal-form-col, #unified_address_form').scrollTop(0);
+    }
+
     function openAddressModal(type, action, id, isCheckout, initialLat, initialLng) {
+
+        if (!savedPageScrollY || savedPageScrollY === 0) {
+            savedPageScrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        }
+        isAddressModalOpen = true;
+        resetAddressModalScroll();
 
         window.savedAddressLat = null;
         window.savedAddressLng = null;
@@ -5852,8 +5835,10 @@ body.modal-open #floatingCart,
 
 
 
-        // Show modal
+        // Reset scroll strictly BEFORE opening modal
+        resetAddressModalScroll();
 
+        // Show modal
         $('#addressModal').modal('show');
 
 
@@ -5885,6 +5870,10 @@ body.modal-open #floatingCart,
 
         }
 
+        if (typeof resetAddressModalScroll === 'function') {
+            resetAddressModalScroll();
+        }
+
     }
 
 
@@ -5895,27 +5884,39 @@ body.modal-open #floatingCart,
 
     $(document).ready(function() {
 
-
-
         $('#addressModal').on('show.bs.modal', function() {
 
+            if (!savedPageScrollY || savedPageScrollY === 0) {
+                savedPageScrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+            }
 
+            isAddressModalOpen = true;
+            $('body').addClass('modal-open');
+            window.addEventListener('scroll', lockWindowScroll, { passive: true });
+            resetAddressModalScroll();
 
-            $('html, body').addClass('modal-open').css('overflow', 'hidden');
-
-
-
-            // floating cart sits naturally under backdrop
-
-
+            if (savedPageScrollY > 0) {
+                window.scrollTo(0, savedPageScrollY);
+            }
 
         });
 
-
+        $('#addressModal').on('hide.bs.modal', function() {
+            resetAddressModalScroll();
+        });
 
         $('#addressModal').on('hidden.bs.modal', function() {
 
-            $('html, body').removeClass('modal-open').css('overflow', '');
+            isAddressModalOpen = false;
+            window.removeEventListener('scroll', lockWindowScroll);
+            $('body').removeClass('modal-open').css('overflow', '');
+
+            if (savedPageScrollY > 0) {
+                window.scrollTo(0, savedPageScrollY);
+                savedPageScrollY = 0;
+            }
+
+            resetAddressModalScroll();
 
             // CRITICAL: Clean up moved coordinates when modal closes
             // so next time user clicks button, it won't show old moved position!
@@ -5947,6 +5948,50 @@ body.modal-open #floatingCart,
             refreshMap();
             setTimeout(refreshMap, 150);
         });
+
+        // Point 6: Prevent background body from scrolling when mouse wheel / touch occurs inside or over modal
+        var addressModalEl = document.getElementById('addressModal');
+        if (addressModalEl) {
+            addressModalEl.addEventListener('wheel', function(e) {
+                var scrollContainer = e.target.closest('.modal-form-col, .modal-body');
+                if (!scrollContainer) {
+                    e.preventDefault();
+                    return false;
+                }
+                var delta = e.deltaY;
+                var atTop = delta < 0 && scrollContainer.scrollTop <= 0;
+                var atBottom = delta > 0 && (scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 1);
+                if (atTop || atBottom) {
+                    e.preventDefault();
+                    return false;
+                }
+            }, { passive: false });
+
+            var touchStartY = 0;
+            addressModalEl.addEventListener('touchstart', function(e) {
+                if (e.touches && e.touches.length) {
+                    touchStartY = e.touches[0].clientY;
+                }
+            }, { passive: true });
+
+            addressModalEl.addEventListener('touchmove', function(e) {
+                var scrollContainer = e.target.closest('.modal-form-col, .modal-body');
+                if (!scrollContainer) {
+                    e.preventDefault();
+                    return false;
+                }
+                if (e.touches && e.touches.length) {
+                    var currentY = e.touches[0].clientY;
+                    var delta = touchStartY - currentY;
+                    var atTop = delta < 0 && scrollContainer.scrollTop <= 0;
+                    var atBottom = delta > 0 && (scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 1);
+                    if (atTop || atBottom) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+            }, { passive: false });
+        }
 
 
 
@@ -6437,9 +6482,11 @@ body.modal-open #floatingCart,
 
                         $('#addressModal').modal('hide');
 
-                        window.location.reload();
-
-
+                        if (isCheckout === 1 && typeof refreshCheckoutAddresses === 'function') {
+                            refreshCheckoutAddresses(res.id, type, action);
+                        } else {
+                            window.location.reload();
+                        }
 
                     } else {
 
@@ -6543,11 +6590,10 @@ body.modal-open #floatingCart,
 
         $(document).on('click', '.open-address-modal', function(e) {
 
-
-
             e.preventDefault();
 
-
+            savedPageScrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+            resetAddressModalScroll();
 
             var type = $(this).data('type') || 'shipping';
 

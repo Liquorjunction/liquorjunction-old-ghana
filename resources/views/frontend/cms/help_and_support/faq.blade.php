@@ -32,13 +32,7 @@
                         @endphp
                         @foreach($faqData as $faq)
                         @php
-                        if(\Session::get('language')==1){
-                            $question = $faq->question_name;
-                            $answer = $faq->answer;
-                        }else{
-                            $question = ($faq->question_name_fr)?$faq->question_name_fr:$faq->question_name;
-                            $answer = ($faq->answer_fr)?$faq->answer_fr:$faq->answer;
-                        }
+                        $question = $faq->question_name; $answer = $faq->answer;
                         @endphp
                         <div class="accordion-item">
                             <h5 class="accordion-header" id="heading{{$i}}">

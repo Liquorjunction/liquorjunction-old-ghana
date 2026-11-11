@@ -10,7 +10,6 @@ class Setting extends Model
     protected $table = 'settings';
 
     protected $fillable = [
-        'language_id', 
         'email', 
         'website_logo', 
         'phone', 
@@ -46,9 +45,4 @@ class Setting extends Model
         'site_maintenance',
         'site_maintenance_at',
     ];
-
-    public function SettingLanguage()
-    {
-      return $this->hasOne('App\Models\Language','id','language_id');
-    }
 }

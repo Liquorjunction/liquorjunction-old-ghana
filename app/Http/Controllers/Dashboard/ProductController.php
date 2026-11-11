@@ -145,15 +145,10 @@ class ProductController extends Controller
                     'subcategory_id' => 'required',
                     'brand_id' => 'required',
                     'product_name' => 'required|max:150',
-                    'product_name_fr' => 'required|max:150',
                     'short_description' => 'required|max:150',
-                    'short_description_fr' => 'required',
                     'video' => 'mimes:mp4|max:20480',
                     'page_content' => 'required',
                     'property_images.*' => 'mimetypes:image/png,image/jpg,image/jpeg|max:2048',
-                    'short_description_fr' => 'nullable',
-                    'short_description_fr' => 'required|max:150',
-                    'page_content_fr' => 'required',
                     'prod_variant.*.variant_uof' => 'required',
                     'prod_variant.*.variant_size' => 'required',
                     'prod_variant.*.variant_price' => 'required',
@@ -171,13 +166,8 @@ class ProductController extends Controller
                     // 'page_content.required' => 'The long description field is required.',
                     // 'brand_id.required' => 'The brand field is required.',
                     // 'property_images.mimetypes' => 'The images must be in .png, .jpg or .jpeg format.',
-                    // 'page_content_fr.required' => 'The long description field is required.',
                     // 'qty.required' => 'The product qty field is required.',
-                    'product_name_fr.max' => 'The product name should be maximum of 150 charecters.',
-                    // 'short_description_fr.max' => 'The short description should be maximum of 150 charecters.',
                     // 'image.required' => 'The image field is requied',
-                    'short_description_fr' => 'The short description filed is required',
-                    'long_description_fr' => 'The long description filed is required',
                     'category_id.required' => 'The category field is required.',
                     'subcategory_id.required' => 'The subcategory field is required.',
                     'retail_price.required' => 'The original price field is required.',
@@ -192,9 +182,7 @@ class ProductController extends Controller
 
                     'property_images.mimetypes' => 'The images must be in .png, .jpg or .jpeg format.',
                     'property_images.*.mimetypes' => ['The images must be in .png, .jpg or .jpeg format.'],
-                    'page_content_fr.required' => 'The long description field is required.',
                     'product_qty.required' => 'The product qty field is required.',
-                    'product_name_fr.max' => 'The product name should be maximum of 150 characters.',
                     'prod_variant.*.variant_uof.required' => 'The unit field is required.',
                     'prod_variant.*.variant_size.required' => 'The variant size field is required.',
                     'prod_variant.*.variant_price.required' => 'The original price field is required.',
@@ -204,7 +192,6 @@ class ProductController extends Controller
                     'video.mimes' => 'The video must be in mp4',
                     'video.max' => 'The video should be less than 20 MB',
                     'short_description.max' => 'The short description should be maximum of 150 characters.',
-                    'short_description_fr.max' => 'The short description should be maximum of 150 characters.',
 
                 ],
                 // $priceRules = [
@@ -227,7 +214,6 @@ class ProductController extends Controller
                     // 'brand_id' => 'required',
                     // 'image'=>'required',
                     'product_name' => 'required|max:150',
-                    // 'product_name_fr' => 'required|max:40',
                     'short_description' => 'required|max:150',
                     // 'retail_price' => 'required',
                     // 'discount_price' => '',
@@ -236,15 +222,7 @@ class ProductController extends Controller
                     'property_images' => 'required',
                     'property_images.*' => 'required|mimetypes:image/png,image/jpg,image/jpeg|max:2048',
                     'page_content' => 'required',
-                    'product_name_fr' => 'required|nullable|max:150',
-                    'short_description_fr' => 'nullable',
-                    'short_description_fr' => 'required|max:150',
                     'video' => 'mimes:mp4| max:20480',
-
-
-                    'page_content_fr' => 'nullable',
-
-                    'page_content_fr' => 'required',
 
                     // 'product_qty' => 'required',
                     'prod_variant.*.variant_uof' => 'required',
@@ -265,11 +243,8 @@ class ProductController extends Controller
                     'property_images' => 'The image filed is reuired',
                     'property_images.mimetypes' => 'The images must be in .png, .jpg or .jpeg format.',
                     'property_images.*.mimetypes' => ['The images must be in .png, .jpg or .jpeg format.'],
-                    'page_content_fr.required' => 'The long description field is required.',
                     'qty.required' => 'The product qty field is required.',
-                    'product_name_fr.max' => 'The product name should be maximum of 150 characters.',
                     'short_description.max' => 'The short description should be maximum of 150 characters.',
-                    'short_description_fr.max' => 'The short description should be maximum of 150 characters.',
                     'prod_variant.*.variant_uof.required' => 'The unit field is required.',
                     'prod_variant.*.variant_size.required' => 'The variant size field is required.',
                     'prod_variant.*.variant_price.required' => 'The original price field is required.',
@@ -355,9 +330,6 @@ class ProductController extends Controller
         $product->brand_id = $request->input('brand_id');
         $product->video = $videofileFinalName_ar;
         $product->sku = $sku;
-        $product->product_name_fr = $request->input('product_name_fr');
-        $product->short_description_fr = $request->input('short_description_fr');
-        $product->page_content_fr = $request->input('page_content_fr');
         $product->product_qty = $request->input('product_qty');
         $product->status = 1;
         $product->is_admin_approve = 0;
@@ -526,9 +498,6 @@ class ProductController extends Controller
                     'subcategory_id' => $request->input('subcategory_id'),
                     'brand_id' => $request->input('brand_id'),
                     'video' => $videofileFinalName_ar,
-                    'product_name_fr' => $request->input('product_name_fr'),
-                    'short_description_fr' => $request->input('short_description_fr'),
-                    'page_content_fr' => $request->input('page_content_fr'),
                     'product_qty' => $request->input('product_qty'),
                 )
             );

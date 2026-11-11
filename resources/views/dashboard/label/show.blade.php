@@ -68,14 +68,8 @@
                                 </tr>
                                 <tr>
                                     <tbody>
-                                        <th>{!! __('backend.labelValue') !!} [EN]</th>
+                                        <th>{!! __('backend.labelValue') !!}</th>
                                         <td>{{ $label->label_value }}</td>
-                                    </tbody>
-                                </tr>
-                                <tr>
-                                    <tbody>
-                                        <th>{!! __('backend.labelValue') !!} [FR]</th>
-                                        <td>{{ $label->label_value_fr }}</td>
                                     </tbody>
                                 </tr>
                                 <tr>

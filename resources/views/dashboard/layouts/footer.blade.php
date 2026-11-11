@@ -45,7 +45,7 @@
   <script>
       $(document).ready(function(){
           var timezone = moment.tz.guess();
-          var language = $(this).val();
+          
           let url = "{{route('frontend.setTimeZone')}}";
           $.ajax({
               url: url,

@@ -62,25 +62,12 @@ $title_var2 = "title_" . env('DEFAULT_LANGUAGE');
                     </div>
 
                     <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">{!!  __('backend.labelValue') !!} [EN] <span class="valid_field">*</span></label>
+                        <label class="col-sm-2 form-control-label">{!!  __('backend.labelValue') !!} <span class="valid_field">*</span></label>
                         <div class="col-sm-10">
-                            <input type="text" name="label_value" id="label_value" class="form-control" placeholder="Label Value [EN]" value="{{old('label_value')}}">
+                            <input type="text" name="label_value" id="label_value" class="form-control" placeholder="Label Value" value="{{old('label_value')}}">
                             @if ($errors->has('label_value'))
                             <span class="help-block">
                                 <span  style="color: red;" class='validate'>{{ $errors->first('label_value') }}</span>
-                            </span>
-                            @endif
-                        </div>
-                    </div>
-
-
-                    <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">{!!  __('backend.labelValue') !!} [FR] <span class="valid_field">*</span></label>
-                        <div class="col-sm-10">
-                            <input type="text" name="label_value_fr" id="label_value" class="form-control" placeholder="Label Value [FR]" value="{{old('label_value_fr')}}">
-                            @if ($errors->has('label_value_fr'))
-                            <span class="help-block">
-                                <span  style="color: red;" class='validate'>{{ $errors->first('label_value_fr') }}</span>
                             </span>
                             @endif
                         </div>

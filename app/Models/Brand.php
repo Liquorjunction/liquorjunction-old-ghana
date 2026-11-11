@@ -13,7 +13,6 @@ class Brand extends Model
     protected $fillable = [
         'id',
         'title',
-        'title_fr',
         'status', 
         'created_at', 
         'updated_at' 

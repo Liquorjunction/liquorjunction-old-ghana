@@ -54,19 +54,13 @@
 
                 <div class="personal_informations">
                     <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">{!! __('backend.name_of_store') !!} [EN]</label>
+                        <label class="col-sm-2 form-control-label">{!! __('backend.name_of_store') !!}</label>
                         <div class="col-sm-10">
                             <input type="text" name="street_address" id="street_address" class="form-control"
                                 value="{{ @$StoreDetails->store_name }}" readonly>
                         </div>
                     </div>
-                    <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">{!! __('backend.name_of_store') !!} [FN]</label>
-                        <div class="col-sm-10">
-                            <input type="text" name="street_address" id="street_address" class="form-control"
-                                value="{{ @$StoreDetails->store_name_fr }}" readonly>
-                        </div>
-                    </div>
+                    
                     <div class="form-group row">
                         <label class="col-sm-2 form-control-label">{!! __('backend.address') !!} </label>
                         <div class="col-sm-10">

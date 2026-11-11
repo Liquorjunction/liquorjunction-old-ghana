@@ -1,22 +1,5 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-<script>
-    $(document).ready(function(){
-       $("#langchange").on('change', function(){
-            var language = $(this).val();
-            let url = "{{route('frontend.changeLanguage')}}";
-            $.ajax({
-                url: url,
-                type: 'post',
-                data: {
-                    language: language
-                },
-                success: function(result) {
-                    location.reload();
-                }
-            });
-       });
-    });
-</script>
+
 <!-- Jquery JS -->
 <script type="text/javascript" src="{{ asset('assets/frontend/js/jquery.min.js') }}"></script>
     <!-- End Jquery JS -->

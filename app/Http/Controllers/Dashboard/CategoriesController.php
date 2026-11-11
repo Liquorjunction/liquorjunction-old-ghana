@@ -95,11 +95,9 @@ class CategoriesController extends Controller
             $category = new Categories();
             $category->uniqid = uniqid();
             $category->title = $request->title;
-            $category->title_fr = $request->title_fr;
             $category->url = $request->url;
             // $category->icon_id = $request->icon_id;
             // $category->description = $request->description;
-            // $category->description_fr = $request->description_fr;
             $category->status = 1;
 
 
@@ -172,14 +170,12 @@ class CategoriesController extends Controller
                     }
                     $category->update([
                         'title' => $request->title,
-                        'title_fr' => $request->title_fr,
                         'imagefile' => $imageName,
                     ]);
                 } else {
                     // dd($request->all());
                     $category->update([
                         'title' => $request->title,
-                        'title_fr' => $request->title_fr,
                         'url' => $request->url,
 
                     ]);
@@ -202,7 +198,6 @@ class CategoriesController extends Controller
                     }
                     $category->update([
                         'title' => $request->title,
-                        'title_fr' => $request->title_fr,
                         'photo' => $imageName,
                     ]);
                 } else {
@@ -211,7 +206,6 @@ class CategoriesController extends Controller
                     $category->update([
 
                         'title' => $request->title,
-                        'title_fr' => $request->title_fr,
                         'url' => $request->url,
                     ]);
                     // dd($category);

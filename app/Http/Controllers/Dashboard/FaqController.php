@@ -75,9 +75,7 @@ class FaqController extends Controller
         $this->validateRequest();
        // $faq->type = $request->type;
         $faq->question_name = $request->question;
-        $faq->question_name_fr = $request->question_fr;
         $faq->answer = $request->answer;
-        $faq->answer_fr = $request->answer_fr;
         $faq->status = 1;
         $faq->create_by = Auth::user()->id;
         $faq->created_at = date('Y-m-d H:i:s');
@@ -137,9 +135,7 @@ class FaqController extends Controller
         $faq = Faq::find($id);
         //$faq->type = $request->type;
         $faq->question_name = $request->question;
-        $faq->question_name_fr = $request->question_fr;
         $faq->answer = $request->answer;
-        $faq->answer_fr = $request->answer_fr;
         $faq->status = 1;
         $faq->create_by = Auth::user()->id;
         $faq->created_at = date('Y-m-d H:i:s');
@@ -185,9 +181,7 @@ class FaqController extends Controller
             $validateData =request()->validate([
                 // 'type' => 'required',
                 'question' => 'required',
-                'question_fr' => 'required',
                 'answer' => 'required',
-                'answer_fr' => 'required',
 
             ]);
 
@@ -196,9 +190,7 @@ class FaqController extends Controller
             $validateData =request()->validate([
                 // 'type' => 'required',
                 'question' => 'required',
-                'question_fr' => 'required',
                 'answer' => 'required',
-                'answer_fr' => 'required',
 
             ]);
             

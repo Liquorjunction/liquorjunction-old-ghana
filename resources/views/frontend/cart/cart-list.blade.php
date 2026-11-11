@@ -180,7 +180,7 @@
     <!-- Cart -->
     <section class="cart pt-20">
         <div class="container">
-            <div class="row">
+            <div class="row" id="cart_main_row">
                 @if (!empty($productData) && count($productData) > 0)
                 <div class="col-md-8">
                     <div class="cart-top">
@@ -199,11 +199,7 @@
                                 @foreach ($productData as $result)
                                     @php
                                         $product_title = '';
-                                        if (session::get('language') == 1) {
-                                            $product_title = $result->get_product_details->product_name;
-                                        } else {
-                                            $product_title = $result->get_product_details->product_name_fr ? $result->get_product_details->product_name_fr : $result->get_product_details->product_name;
-                                        }
+                                        $product_title = $result->get_product_details->product_name;
                                         $product_image = $result->get_product_details->get_product_images->first();
                                         
                                         $bogo_cart = $result->cart->where('user_id', $user_id)->sortByDesc('id')->first();
@@ -289,7 +285,7 @@
                                         }
                                              
                                     @endphp
-                                    <li>
+                                    <li id="cart_item_{{ $result->id }}" class="cart-product-item">
                                         <div class="single-product">
                                             <div class="product-img">
                                                 <a
@@ -446,13 +442,11 @@
                                     <input type="hidden" value="{{@Helper::numberFormat($original_price)}}" name="inp_product_total_price" >
                                 
                                 </tr>
-                                @if( $is_product_discount == true)
-                                <tr>
+                                <tr id="discount_row" style="{{ $is_product_discount ? '' : 'display:none;' }}">
                                     <td> {{@Helper::language('discount_label')}}</td>
                                     <td>&#8722;<span id="product_discount_price">{{@Helper::numberFormat($total_discount_price)}} </span> {{Helper::Settings('currency_symbol')}}</td>
                                     <input type="hidden" value="{{$total_discount_price}}" name="inp_product_discount_price" >
                                 </tr>
-                                @endif
                                 @php
                                 $final_amount = @Helper::numberFormat(($original_price - $total_discount_price));                               
                                 @endphp 
@@ -522,11 +516,7 @@
 
                                     $product_title = '';
 
-                                    if (session::get('language') == 1) {
-                                        $product_title = $result->product_name;
-                                    } else {
-                                        $product_title = $result->product_name_fr ? $result->product_name_fr : $result->product_name;                                     
-                                    }
+                                    $product_title = $result->product_name;
                                     $product_image = $result->get_product_images->first();
                                     $product_variant = $result->get_product_variants->first();
                                     $product_unit = Helper::getUnitById($product_variant->variant_uof);
@@ -696,11 +686,7 @@
                                 $fav_data = Helper::userFavoriteProduct($result->id);
 
                                     $product_title = '';
-                                    if (session::get('language') == 1) {
-                                        $product_title = $result->product_name;
-                                    } else {
-                                        $product_title = $result->product_name_fr ? $result->product_name_fr : $result->product_name;
-                                    }
+                                    $product_title = $result->product_name;
                                     $product_image = $result->get_product_images->first();
                                     $product_variant = $result->get_product_variants->first();
                                     $product_unit = Helper::getUnitById($product_variant->variant_uof);
@@ -858,7 +844,7 @@
 @push('after-scripts')
 
 <script>
-    const clickLock = {};
+    var cartListDebounceTimers = {};
 
     $(document).on('click', '.btn-increment, .btn-decrement', function (event) {
         event.preventDefault();
@@ -867,53 +853,128 @@
         const $button = $(this);
         const variantId = $button.data('id');
         const offer_status = $button.data('offer_status');
-
         const type = $button.hasClass('btn-increment') ? 'incr' : 'desc';
-        const productId = $button.data('product'); // Add this as a data attribute in HTML
+        const productId = $button.data('product');
 
-        if (clickLock[variantId]) return;
-        clickLock[variantId] = true;
-
-        let tquty = parseInt($("#qty_ince_" + variantId).val()) || 1;
+        let qtyInput = $("#qty_ince_" + variantId);
+        let tquty = parseInt(qtyInput.val()) || 1;
+        let prevQty = tquty;
         let quantity = tquty;
 
         if (type === 'incr') {
             quantity += 1;
         } else if (type === 'desc') {
-            if (tquty === 1) {
-                clickLock[variantId] = false;
-                return;
-            }
+            if (tquty <= 1) return false;
             quantity -= 1;
         }
 
-        $.ajax({
-            type: "POST",
-            url: "{{ route('cartincrement') }}",
-            data: {
-                product_id: productId,
-                quantity: quantity,
-                variantId: variantId,
-                offer_status:offer_status
-            },
-            success: function(response) {
-                $("#qty_ince_" + variantId).val(quantity);
-                $("#product_total_price").text(response.total_products_price);
-                $("#product_discount_price").text(response.total_discount_price);
-                $("#tax_amount").text(response.tax_amount);
-                $("#total_amount").text(response.total_amount);
+        // 1. Instant optimistic update - NO LAG, NO DISABLED BUTTONS!
+        qtyInput.val(quantity);
 
-                $("input[name='inp_product_total_price']").val(response.total_products_price);
-                $("input[name='inp_product_discount_price']").val(response.total_discount_price);
-                $("input[name='inp_tax_amount']").val(response.tax_amount);
-                $("input[name='inp_total_amount']").val(response.total_amount);
-
-                location.reload();
-            },
-            complete: function() {
-                clickLock[variantId] = false;
-            }
+        // Optimistically update basket total items
+        let totalQty = 0;
+        $(".counter__input").each(function() {
+            totalQty += parseInt($(this).val()) || 0;
         });
+        $('#basket_quantity').val(totalQty);
+        let basket_total = document.getElementById('basket_total');
+        if (basket_total) {
+            basket_total.innerHTML = `Basket Total ( ${totalQty} items)`;
+        }
+
+        // 2. Clear any pending debounce timer for this variant
+        if (cartListDebounceTimers[variantId]) {
+            clearTimeout(cartListDebounceTimers[variantId]);
+        }
+
+        // 3. Debounce AJAX call (400ms after last click)
+        cartListDebounceTimers[variantId] = setTimeout(function () {
+            const finalQty = parseInt($("#qty_ince_" + variantId).val()) || quantity;
+
+            $.ajax({
+                type: "POST",
+                url: "{{ route('cartincrement') }}",
+                data: {
+                    product_id: productId,
+                    quantity: finalQty,
+                    variantId: variantId,
+                    offer_status: offer_status,
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success === "true") {
+                        if (response.capped) {
+                            qtyInput.val(response.capped_quantity);
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Stock Limit',
+                                    text: response.message || ('Only ' + response.available_qty + ' item(s) available in stock.'),
+                                    confirmButtonColor: '#fbb516'
+                                });
+                            }
+                        }
+
+                        const currencySymbol = '{{ Helper::Settings("currency_symbol") }}';
+                        const taxPercent = parseFloat('{{ Helper::Settings("tax") }}') || 0;
+
+                        // Update price summary from server response
+                        $("#product_total_price").text(' ' + parseFloat(response.total_products_price).toFixed(2));
+                        $("input[name='inp_product_total_price']").val(response.total_products_price);
+
+                        // Update discount
+                        if (parseFloat(response.total_discount_price) > 0) {
+                            $("#product_discount_price").text(parseFloat(response.total_discount_price).toFixed(2) + ' ');
+                            $("input[name='inp_product_discount_price']").val(response.total_discount_price);
+                            $("#discount_row").show();
+                        } else {
+                            $("#discount_row").hide();
+                        }
+
+                        // Update tax
+                        if (taxPercent > 0) {
+                            $("#tax_amount").text(' ' + parseFloat(response.tax_amount).toFixed(2));
+                            $("input[name='inp_tax_amount']").val(response.tax_amount);
+                        }
+
+                        // Update total amount
+                        $("#total_amount").text(parseFloat(response.total_amount).toFixed(2));
+                        $("input[name='inp_total_amount']").val(response.total_amount);
+
+                        // Sync basket quantity
+                        let syncedQty = 0;
+                        $(".counter__input").each(function() {
+                            syncedQty += parseInt($(this).val()) || 0;
+                        });
+                        $('#basket_quantity').val(syncedQty);
+                        if (basket_total) {
+                            basket_total.innerHTML = `Basket Total ( ${syncedQty} items)`;
+                        }
+
+                        if (typeof updateCartUI === 'function') {
+                            updateCartUI();
+                        }
+                    } else {
+                        if (response.available_qty !== undefined) {
+                            qtyInput.val(response.available_qty);
+                        } else {
+                            qtyInput.val(prevQty);
+                        }
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Stock Limit',
+                                text: response.message || 'Unable to update quantity',
+                                confirmButtonColor: '#fbb516'
+                            });
+                        }
+                    }
+                },
+                error: function() {
+                    qtyInput.val(prevQty);
+                }
+            });
+        }, 400);
     });
 
 
@@ -932,17 +993,77 @@
                 customClass: {
                     confirmButton: 'swal-custom-confirm',
                     cancelButton: 'swal-custom-cancel',
-                    },
+                },
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
                         type: "post",
                         data: {
-                            variant_id: variant_id
+                            variant_id: variant_id,
+                            _token: $('meta[name="csrf-token"]').attr('content')
                         },
                         url: "{{ route('cartremove') }}",
-                        success: function(data) {
-                            location.reload();
+                        success: function(response) {
+                            var remainingItems = $(".cart-product-item").length - 1;
+                            if (response.cart_count === 0 || response.empty || remainingItems <= 0) {
+                                var emptyCartHtml = `
+                                    <div class="col-md-12" align="center">
+                                        <img src="https://staghaute.vrinsoft.in/images/cartempty.png" style="width: 10%" data-pagespeed-url-hash="3916564767" onload="pagespeed.CriticalImages.checkImageForCriticality(this);">
+                                        <h3><center>It feels so light !!</center></h3>
+                                        <h4><center>Your shopping cart is empty.Let's add some items.</center></h4>
+                                    </div>
+                                `;
+                                $("#cart_main_row").html(emptyCartHtml);
+                                $(".cart-item-total-count").html('0');
+                                if (typeof floatingCartCount !== 'undefined' && floatingCartCount) {
+                                    floatingCartCount.textContent = '0';
+                                }
+                            } else {
+                                $("#cart_item_" + variant_id).fadeOut(300, function() {
+                                    $(this).remove();
+
+                                    const currencySymbol = '{{ Helper::Settings("currency_symbol") }}';
+                                    const taxPercent = parseFloat('{{ Helper::Settings("tax") }}') || 0;
+
+                                    $("#product_total_price").text(' ' + parseFloat(response.total_products_price).toFixed(2));
+                                    $("input[name='inp_product_total_price']").val(response.total_products_price);
+
+                                    if (parseFloat(response.total_discount_price) > 0) {
+                                        $("#product_discount_price").text(parseFloat(response.total_discount_price).toFixed(2) + ' ');
+                                        $("input[name='inp_product_discount_price']").val(response.total_discount_price);
+                                        $("#discount_row").show();
+                                    } else {
+                                        $("#discount_row").hide();
+                                    }
+
+                                    if (taxPercent > 0) {
+                                        $("#tax_amount").text(' ' + parseFloat(response.tax_amount).toFixed(2));
+                                        $("input[name='inp_tax_amount']").val(response.tax_amount);
+                                    }
+
+                                    $("#total_amount").text(parseFloat(response.total_amount).toFixed(2));
+                                    $("input[name='inp_total_amount']").val(response.total_amount);
+
+                                    let totalQty = 0;
+                                    $(".counter__input").each(function() {
+                                        totalQty += parseInt($(this).val()) || 0;
+                                    });
+                                    $('#basket_quantity').val(totalQty);
+
+                                    let basket_total = document.getElementById('basket_total');
+                                    if (basket_total) {
+                                        basket_total.innerHTML = `Basket Total ( ${totalQty} items)`;
+                                    }
+
+                                    $(".cart-item-total-count").html(response.cart_count);
+                                    if (typeof floatingCartCount !== 'undefined' && floatingCartCount) {
+                                        floatingCartCount.textContent = response.cart_count;
+                                    }
+                                    if (typeof updateCartUI === 'function') {
+                                        updateCartUI();
+                                    }
+                                });
+                            }
                         }
                     });
                 }
@@ -953,42 +1074,9 @@
   
 
     function productFav(product_id, status) {
-        var status = status;
-        var user_id = $("#user_id").val();
-        if (user_id ) {
-            action_url = "{{ route('productfav') }}";
-        } else {
-            var url = "{{route('websitelogin')}}";
-            window.location.href = url;
-
+        if (typeof toggleProductFav === 'function') {
+            return toggleProductFav(product_id, status);
         }
-        var csrf = "{{ csrf_token() }}";
-        $.ajax({
-            url: action_url,
-            data: {
-                'user_id': user_id,
-                'product_id': product_id,
-                'status': status
-            },
-            headers: {
-                'X-CSRF-TOKEN': csrf
-            },
-            type: "POST",
-
-            beforeSend: function() {
-                $(".loader").fadeIn();
-                $('.loader').css("visibility", "visible");
-            },
-            success: function(response) {
-                // return false;
-                 if(user_id != ''){
-                    location.reload();
-                }else{
-                    location.href="{{route('websitelogin')}}";
-                }
-            },
-        });
-
     }
 </script>
 

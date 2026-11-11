@@ -74,7 +74,6 @@ class BrandController extends Controller
 
             $brand = new Brand();
             $brand->title = $request->input('title');
-            $brand->title_fr = $request->input('title_fr');
             $brand->status = 1;
             $brand->save();
 
@@ -101,8 +100,6 @@ class BrandController extends Controller
             $brand_id = $request->input('brand_id');
             $brand = Brand::where('id', $brand_id)->update(array(
                 'title' => $request->title,
-                'title_fr' => $request->title_fr,
-
             ));
             Alert::success('Success', __('backend.brand_has_been_updated_successfully'));
             return response()->json(['success' => 'true']);
@@ -249,8 +246,6 @@ class BrandController extends Controller
             $sort = 'id';
         } elseif ($columnIndex == 1) {
             $sort = 'title';
-        } elseif ($columnIndex == 2) {
-            $sort = 'title_fr';
         } else {
             $sort = 'id';
         }
@@ -310,7 +305,6 @@ class BrandController extends Controller
                 "checkbox" => '<label class="ui-check m-a-0"> <input type="checkbox" name="ids[]" value="' . $data->id . '" class="has-value" onchange="checkChange();" data-id="' . $data->id . '"><i class="dark-white"></i> <input class="form-control row_no has-value" name="row_ids[]" type="hidden" value="' . $data->id . '"> </label>',
                 "brand_id" =>   isset($data->id) ? $data->id : '',
                 "brand_name" => isset($data->title) ? $data->title : '',
-                "brand_title_fr" => isset($data->title_fr) ? $data->title_fr : '',
                 "status" =>   isset($status) ? $status : '',
                 "options" => isset($options) ? $options : '',
             );

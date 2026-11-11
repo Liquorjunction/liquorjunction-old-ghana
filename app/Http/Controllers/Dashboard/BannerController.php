@@ -10,7 +10,6 @@ use Illuminate\Http\Request;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
-use App\Models\Language;
 use App\Models\Product;
 use Config;
 use Response;
@@ -55,13 +54,12 @@ class BannerController extends Controller
      */
     public function create(Request $request)
     {
-        $language = Language::get();
         $categories = Categories::where('status', 1)->orderby('title', 'ASC')->get();
         $product = Product::where('status', 1)->orderby('product_name', 'ASC')->get();
         $brand = Brand::where('status', 1)->orderby('title', 'ASC')->get();
         $subcategories = SubCategories::where('status', 1)->orderby('title', 'ASC')->get();
 
-        return view('dashboard.banner.create', compact('language', 'categories', 'product','brand','subcategories'));
+        return view('dashboard.banner.create', compact('categories', 'product','brand','subcategories'));
     }
 
     /**
@@ -83,11 +81,8 @@ class BannerController extends Controller
         } else {
 
             $Banner = new Banner();
-            $Banner->language_id = null;
             $Banner->title = isset($request->title) ? $request->title : '';
-            $Banner->title_fr = isset($request->title_fr) ? $request->title_fr : '';
             $Banner->description = isset($request->description) ? $request->description : '';
-            $Banner->description_fr = isset($request->description_fr) ? $request->description_fr : '';
             $Banner->banner_url = isset($request->banner_url) ? $request->banner_url : '';
             $Banner->type = isset($request->type) ? $request->type : '';
             $Banner->category_id = isset($request->category_id) ? $request->category_id : '';
@@ -135,9 +130,7 @@ class BannerController extends Controller
                     //     return $query->where('status', '!=', '2');
                     // // })],
                     // 'title' => 'required',
-                    // 'title_fr' => 'required',
                     // 'description' => 'required',
-                    // 'description_fr' => 'required',
                     'photo' => 'image|mimes:jpeg,png,jpg|max:2048',
                     'type' => 'required',
                     'category_id' => 'required',
@@ -145,9 +138,7 @@ class BannerController extends Controller
 
                 ], [
                     // 'title.required' => 'The title field is required.',
-                    // 'title_fr.required' => 'The title fr field is required.',
                     // 'description.required' => 'The description field is required.',
-                    // 'description_fr.required' => 'The description fr field is required.',
                     'banner_url.required' => 'The URL field is required.',
                     'banner_url.regex' => 'Please Enter valid URL',
                     'photo.required' => 'The image field is required.',
@@ -168,9 +159,7 @@ class BannerController extends Controller
 
                 ],[
                     // 'title.required' => 'The title field is required.',
-                    // 'title_fr.required' => 'The title fr field is required.',
                     // 'description.required' => 'The description field is required.',
-                    // 'description_fr.required' => 'The description fr field is required.',
                     'banner_url.required' => 'The URL field is required.',
                     'banner_url.regex' => 'Please Enter valid URL',
                     'photo.required' => 'The image field is required.',
@@ -185,9 +174,7 @@ class BannerController extends Controller
                     //     return $query->where('status', '!=', '2');
                     // })],
                     // 'title' => 'required',
-                    // 'title_fr' => 'required',
                     // 'description' => 'required',
-                    // 'description_fr' => 'required',
                     'photo' => 'image|mimes:jpeg,png,jpg|max:2048',
                     'type' => 'required',
                     'product_id' => 'required',
@@ -195,9 +182,7 @@ class BannerController extends Controller
 
                 ], [
                     'title.required' => 'The title field is required.',
-                    'title_fr.required' => 'The title fr field is required.',
                     'description.required' => 'The description field is required.',
-                    'description_fr.required' => 'The description fr field is required.',
                     'banner_url.required' => 'The URL field is required.',
                     'banner_url.regex' => 'Please Enter valid URL',
                     'photo.required' => 'The image field is required.',
@@ -211,18 +196,14 @@ class BannerController extends Controller
                     //     return $query->where('status', '!=', '2');
                     // })],
                     // 'title' => 'required',
-                    // 'title_fr' => 'required',
                     // 'description' => 'required',
-                    // 'description_fr' => 'required',
                     'banner_url' => ['required', 'regex:/\b(?:(?:https?|ftp):\/\/|www\.)[-a-z0-9+&@#\/%?=~_|!:,.;]*[-a-z0-9+&@#\/%=~_|]/i'],
                     'photo' => 'image|mimes:jpeg,png,jpg|max:2048',
                     'type' => 'required',
                     'banner_type' => 'required',
                 ], [
                     'title.required' => 'The title field is required.',
-                    'title_fr.required' => 'The title fr field is required.',
                     'description.required' => 'The description field is required.',
-                    'description_fr.required' => 'The description fr field is required.',
                     'banner_url.required' => 'The URL field is required.',
                     'banner_url.regex' => 'Please Enter valid URL',
                     'photo.required' => 'The image field is required.',
@@ -241,9 +222,7 @@ class BannerController extends Controller
                     //     })
                     // ],
                     // 'title' => 'required',
-                    // 'title_fr' => 'required',
                     // 'description' => 'required',
-                    // 'description_fr' => 'required',
                     'photo' => 'required|image|mimes:jpeg,png,jpg|max:2048',
                     'type' => 'required',
                     'category_id' => 'required',
@@ -252,9 +231,7 @@ class BannerController extends Controller
 
                 ], [
                     'title.required' => 'The title field is required.',
-                    'title_fr.required' => 'The title fr field is required.',
                     'description.required' => 'The description field is required.',
-                    'description_fr.required' => 'The description fr field is required.',
                     'banner_url.required' => 'The URL field is required.',
                     'banner_url.regex' => 'Please Enter valid URL',
                     'photo.required' => 'The image field is required.',
@@ -272,9 +249,7 @@ class BannerController extends Controller
                     'banner_type' => 'required',
                 ],[
                     'title.required' => 'The title field is required.',
-                    'title_fr.required' => 'The title fr field is required.',
                     'description.required' => 'The description field is required.',
-                    'description_fr.required' => 'The description fr field is required.',
                     'banner_url.required' => 'The URL field is required.',
                     'banner_url.regex' => 'Please Enter valid URL',
                     'photo.required' => 'The image field is required.',
@@ -292,9 +267,7 @@ class BannerController extends Controller
                     //     })
                     // ],
                     // 'title' => 'required',
-                    // 'title_fr' => 'required',
                     // 'description' => 'required',
-                    // 'description_fr' => 'required',
                     'photo' => 'required|image|mimes:jpeg,png,jpg|max:2048',
                     'type' => 'required',
                     'product_id' => 'required',
@@ -302,9 +275,7 @@ class BannerController extends Controller
 
                 ], [
                     'title.required' => 'The title field is required.',
-                    'title_fr.required' => 'The title fr field is required.',
                     'description.required' => 'The description field is required.',
-                    'description_fr.required' => 'The description fr field is required.',
                     'banner_url.required' => 'The URL field is required.',
                     'banner_url.regex' => 'Please Enter valid URL',
                     'photo.required' => 'The image field is required.',
@@ -321,18 +292,14 @@ class BannerController extends Controller
                     //     })
                     // ],
                     // 'title' => 'required',
-                    // 'title_fr' => 'required',
                     // 'description' => 'required',
-                    // 'description_fr' => 'required',
                     'banner_url' => ['required', 'regex:/\b(?:(?:https?|ftp):\/\/|www\.)[-a-z0-9+&@#\/%?=~_|!:,.;]*[-a-z0-9+&@#\/%=~_|]/i'],
                     'photo' => 'required|image|mimes:jpeg,png,jpg|max:2048',
                     'type' => 'required',
                     'banner_type' => 'required',
                 ], [
                     'title.required' => 'The title field is required.',
-                    'title_fr.required' => 'The title fr field is required.',
                     'description.required' => 'The description field is required.',
-                    'description_fr.required' => 'The description fr field is required.',
                     'banner_url.required' => 'The URL field is required.',
                     'banner_url.regex' => 'Please Enter valid URL',
                     'photo.required' => 'The image field is required.',
@@ -450,7 +417,6 @@ class BannerController extends Controller
     public function edit($id)
     {
         $banner = banner::find($id);
-        $language = Language::all();
         $categories = Categories::where('status', 1)->orderby('title', 'ASC')->get();
         $brand = Brand::where('status', 1)->orderby('title', 'ASC')->get();
         $product = Product::where('status', 1)->orderby('product_name', 'ASC')->get();
@@ -460,7 +426,7 @@ class BannerController extends Controller
         if ($banner == null) {
             return redirect()->intended('admin/banner');
         }
-        return view('dashboard.banner.edit', ['banner' => $banner, 'language' => $language, 'categories' => $categories,'brand' => $brand, 'product' => $product,'subcategories'=>$subcategories]);
+        return view('dashboard.banner.edit', ['banner' => $banner, 'categories' => $categories,'brand' => $brand, 'product' => $product,'subcategories'=>$subcategories]);
     }
 
     /**
@@ -535,11 +501,8 @@ class BannerController extends Controller
 
         // Prepare the data for updating the banner
         $updateData = [
-            'language_id' => null,
             'title' => $request->title,
-            'title_fr' => $request->title_fr,
             'description' => $request->description,
-            'description_fr' => $request->description_fr,
             'banner_url' => $banner_url,
             'type' => $request->type,
             'category_id' => $category_id,
@@ -607,11 +570,8 @@ class BannerController extends Controller
     //     else {
     //         // dd(1);
 
-    //         $updateData['language_id'] = null;
     //         $updateData['title'] = $request->title;
-    //         $updateData['title_fr'] = $request->title_fr;
     //         $updateData['description'] = $request->description;
-    //         $updateData['description_fr'] = $request->description_fr;
     //         $updateData['banner_url'] = $request->banner_url;
     //         $updateData['type'] = $request->type;
     //         $updateData['category_id'] = $request->category_id;
@@ -651,11 +611,8 @@ class BannerController extends Controller
 
     //     // dd($result);
     //     // $Banner = new Banner();
-    //     // $Banner->language_id = null;
     //     // $Banner->title = isset($request->title) ? $request->title : '';
-    //     // $Banner->title_fr = isset($request->title_fr) ? $request->title_fr : '';
     //     // $Banner->description = isset($request->description) ? $request->description : '';
-    //     // $Banner->description_fr = isset($request->description_fr) ? $request->description_fr : '';
     //     // $Banner->banner_url = isset($request->banner_url) ? $request->banner_url : '';
     //     // $Banner->type = isset($request->type) ? $request->type : '';
     //     // $Banner->category_id = isset($request->category_id) ? $request->category_id : '';

@@ -56,9 +56,9 @@
             {{ Form::open(['route' => ['store.update', @$StoreDetails->id], 'method' => 'POST', 'files' => true, 'enctype' => 'multipart/form-data', 'id' => 'storeForm']) }}
             <div class="personal_informations">
                 <div class="form-group row">
-                    <label class="col-sm-3 form-control-label">{!! __('backend.name_of_store') !!} [EN]<span class="valid_field">*</span></label>
+                    <label class="col-sm-3 form-control-label">{!! __('backend.name_of_store') !!}<span class="valid_field">*</span></label>
                     <div class="col-sm-9">
-                        <input type="text" name="store_name" id="store_name" class="form-control" placeholder="Name of store [EN]" value="{{ @$StoreDetails->store_name }}">
+                        <input type="text" name="store_name" id="store_name" class="form-control" placeholder="Name of store" value="{{ @$StoreDetails->store_name }}">
                         @if ($errors->has('store_name'))
                         <span class="help-block">
                             <span style="color: red;" class='validate'>{{ $errors->first('store_name') }}</span>
@@ -66,17 +66,7 @@
                         @endif
                     </div>
                 </div>
-                <div class="form-group row">
-                    <label class="col-sm-3 form-control-label">{!! __('backend.name_of_store') !!} [FR] <span class="valid_field">*</span></label>
-                    <div class="col-sm-9">
-                        <input type="text" name="store_name_fr" id="store_name" class="form-control" placeholder="Name of store [FR]" value="{{ @$StoreDetails->store_name_fr }}">
-                        @if ($errors->has('store_name_fr'))
-                        <span class="help-block">
-                            <span style="color: red;" class='validate'>{{ $errors->first('store_name_fr') }}</span>
-                        </span>
-                        @endif
-                    </div>
-                </div>
+                
                 <div class="form-group row">
                     <label class="col-sm-3 form-control-label">{!! __('backend.store_contact_number') !!} <span class="valid_field">*</span></label>
                     <div class="col-sm-2">

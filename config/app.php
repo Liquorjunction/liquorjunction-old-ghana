@@ -85,7 +85,6 @@ return [
     'locales' => [
         'en',
      ],
-     'available_locales' => ['fr'], // Supported languages
 
         /*
     |-------------------------------------------
@@ -95,11 +94,7 @@ return [
 
     'api_latest'  => '1',
 
-    // 'available_locales' => [
-    //     'English' => 'en',
-    //     'Russian' => 'ru',
-    //     'French' => 'fr',
-    //   ],
+
 
     /*
     |--------------------------------------------------------------------------

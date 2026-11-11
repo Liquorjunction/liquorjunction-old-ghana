@@ -133,11 +133,11 @@
                     @csrf
                     <div class="modal-body">
                         <div class="form-group row">
-                            <label class="col-sm-2 form-control-label">{!! __('Title [EN]') !!}<span
+                            <label class="col-sm-2 form-control-label">{!! __('Title') !!}<span
                                     class="valid_field">*</span></label>
                             <div class="col-sm-10">
                                 <input type="text" name="title" id="title" class="form-control"
-                                    onkeypress="return isNumberKey(event)" placeholder="Title [EN]"
+                                    onkeypress="return isNumberKey(event)" placeholder="Title"
                                     value="{{ old('title') }}">
                                 <span style="color: red;display: none;" id="errorMsgtitle" class='validate'></span>
 
@@ -145,17 +145,7 @@
 
                         </div>
 
-                        <div class="form-group row">
-                            <label class="col-sm-2 form-control-label">{!! __('Title [FR]') !!}<span
-                                    class="valid_field">*</span></label>
-                            <div class="col-sm-10">
-                                <input type="text" name="title_fr" id="title_fr" class="form-control"
-                                    onkeypress="return isNumberKey(event)" placeholder="Title [FR]"
-                                    value="{{ old('title_fr') }}">
-
-                            </div>
-
-                        </div>
+                        
                     </div>
                     <div class="modal-footer">
 
@@ -211,10 +201,6 @@
                         maxlength: 30,
 
                     },
-                    title_fr: {
-                        required: true,
-                        maxlength: 30,
-                    },
                 },
                 // in 'messages' user have to specify message as per rules
                 messages: {
@@ -223,10 +209,6 @@
                         required: "Title field is required.",
                         maxlength: "Title field cannot exceed {0} characters.",
 
-                    },
-                    title_fr: {
-                        required: "Title Fr field is required.",
-                        maxlength: "Title Fr field cannot exceed {0} characters."
                     },
                 },
                 submitHandler: function() {

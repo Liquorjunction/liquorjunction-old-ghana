@@ -156,19 +156,7 @@ video::-webkit-media-controls-timeline {
 </style>
     @include('sweetalert::alert')
     @php
-        if (session::get('language') == 1) {
-            $product_title = $product_info->product_name;
-            $category_title = $product_info->get_category->title;
-            $product_short_description = $product_info->short_description;
-            $product_long_description = $product_info->description;
-            $brand_name = $product_info->get_brand_details->title;
-        } else {
-            $product_title = @isset($product_info->product_name_fr) ? $product_info->product_name_fr : $product_info->product_name;
-            $product_short_description = $product_info->short_description_fr ? $product_info->short_description_fr : $product_info->short_description;
-            $product_long_description = $product_info->page_content_fr ? $product_info->page_content_fr : $product_info->description;
-            $category_title = $product_info->get_category->title_fr ? $product_info->get_category->title_fr : $product_info->get_category->title;
-            $brand_name = $product_info->get_brand_details->title_fr ? $product_info->get_brand_details->title_fr : $product_info->get_brand_details->title;
-        }
+        $product_title = $product_info->product_name; $category_title = $product_info->get_category->title; $product_short_description = $product_info->short_description; $product_long_description = $product_info->description; $brand_name = $product_info->get_brand_details->title;
         $user_id = isset(
             auth()
                 ->guard('user')
@@ -412,7 +400,9 @@ video::-webkit-media-controls-timeline {
                                     @foreach ($product_info->get_product_variants as $key => $variant_result)
                                         <div class="check-group">
                                             <input class="form-check-input" type="radio"
-                                                data-id="{{ Helper::encodeUrl($variant_result->id) }}" name="pack_size"
+                                                data-id="{{ Helper::encodeUrl($variant_result->id) }}"
+                                                data-available-qty="{{ $variant_result->available_qty }}"
+                                                name="pack_size"
                                                 id="pack-size{{ Helper::encodeUrl($variant_result->id) }}"
                                                 @if ($key == 0) checked="checked" @endif
                                                 value="{{ $variant_result->id }}">
@@ -591,11 +581,7 @@ video::-webkit-media-controls-timeline {
                                 @php
                                     $fav_data = Helper::userFavoriteProduct($result->id);
                                     $product_title = '';
-                                    if (session::get('language') == 1) {
-                                        $product_title = $result->product_name;
-                                    } else {
-                                        $product_title = $result->product_name_fr ? $result->product_name_fr : $result->product_name;
-                                    }
+                                    $product_title = $result->product_name;
                                     $product_image = $result->get_product_images->first();
                                     $product_variant = $result->get_product_variants->first();
                                     $product_unit = Helper::getUnitById($product_variant->variant_uof);
@@ -772,11 +758,7 @@ video::-webkit-media-controls-timeline {
                                     @php
                                     $favData = Helper::userFavoriteProduct($result->id);
                                         $product_title = '';
-                                        if (session::get('language') == 1) {
-                                            $product_title = $result->product_name;
-                                        } else {
-                                            $product_title = $result->product_name_fr ? $result->product_name_fr : $result->product_name;
-                                        }
+                                        $product_title = $result->product_name;
                                         $product_image = $result->get_product_images->first();
                                         $product_variant = $result->get_product_variants->first();
                                         $product_unit = Helper::getUnitById($product_variant->variant_uof);
@@ -998,6 +980,13 @@ video::-webkit-media-controls-timeline {
                     }
                     $("#varinat_orignal_price").val(response.orignal_price);
                     $("#variant_disc_price").val(response.discounted_price);
+                    if (response.available_qty !== undefined) {
+                        $("#pack-size" + id).attr('data-available-qty', response.available_qty);
+                        var curVal = parseInt($(".counter__input").val()) || 1;
+                        if (curVal > response.available_qty && response.available_qty > 0) {
+                            $(".counter__input").val(response.available_qty);
+                        }
+                    }
                     if (response.product_stock == true) {
                         $("#available").text('Available');
                         $("#div-cart").css("display", "block");
@@ -1029,41 +1018,9 @@ video::-webkit-media-controls-timeline {
         }
 
         function productFav(product_id, status) {
-            var status = status;
-            var user_id = $("#user_id").val();
-            if (user_id) {
-                action_url = "{{ route('productfav') }}";
-            } else {
-                var url = "{{ route('websitelogin') }}";
-                window.location.href = url;
+            if (typeof toggleProductFav === 'function') {
+                return toggleProductFav(product_id, status);
             }
-            var csrf = "{{ csrf_token() }}";
-            $.ajax({
-                url: action_url,
-                data: {
-                    'user_id': user_id,
-                    'product_id': product_id,
-                    'status': status
-                },
-                headers: {
-                    'X-CSRF-TOKEN': csrf
-                },
-                type: "POST",
-
-                beforeSend: function() {
-                    $(".loader").fadeIn();
-                    $('.loader').css("visibility", "visible");
-                },
-                success: function(response) {
-                    // return false;
-                    if (user_id != '') {
-                        location.reload();
-                    } else {
-                        location.href = "{{ route('websitelogin') }}";
-                    }
-                },
-            });
-
         }
 
         function cartAdd(product_id) {

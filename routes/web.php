@@ -3,7 +3,6 @@
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Frontend\HomeController;
-use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\SiteMapController;
 use App\Http\Controllers\Frontend\UsersController;
 use App\Http\Controllers\Frontend\WebsiteLoginController;
@@ -71,7 +70,6 @@ Route::get('/special-offers', [HomeController::class, 'special'])->name('special
 Route::get('/load-offer-list', [HomeController::class, 'loadfilterofferlist'])->name('loadfilterofferlist');
 Route::get('/load-bogo-list', [HomeController::class, 'loadfilterbogolist'])->name('loadfilterbogolist');
 
-Route::post('/change-language', [HomeController::class, 'changeLanguage'])->name('frontend.changeLanguage');
 Route::post('/search-auto-suggestion', [HomeController::class, 'autoSuggestion'])->name('searchAutoSuggestion');
 Route::post('/set-timezone', [HomeController::class, 'setTimeZone'])->name('frontend.setTimeZone');
 // Route::get('/send-notification',[HomeController::class, 'sendNotification'])->name('sendNotification');
@@ -189,6 +187,7 @@ Route::middleware(['PreventBackHistory'])->group(function () {
         Route::post('/buy-now/update-quantity', [CheckoutController::class, 'updateBuyNowQuantity'])->name('buyNow.updateQuantity');
         Route::get('/checkoutedit-address/{id}', [CheckoutController::class, 'checkouteditAddress'])->name('checkoutedit-address');
         Route::get('/checkoutedit-bill-address/{id}', [CheckoutController::class, 'checkouteditBillAddress'])->name('checkoutedit-bill-address');
+        Route::get('/checkout/get-addresses', [CheckoutController::class, 'getCheckoutAddresses'])->name('checkout.get-addresses');
         Route::post('/store-checkout', [CheckoutController::class, 'storePlaceOrder'])->name('storeCheckout');
         Route::post('/apply-coupon', [CheckoutController::class, 'applyCoupon'])->name('applyCoupon');
         Route::post('/apply-reward', [CheckoutController::class, 'applyReward'])->name('applyReward');
@@ -356,7 +355,6 @@ Route::get('/privacy-policy', [CMSController::class, 'aboutUs'])->name('privacyP
 // Start of Frontend Routes
 // ../site map
 Route::get('/sitemap.xml', [SiteMapController::class, 'siteMap'])->name('siteMap');
-Route::get('/{lang}/sitemap', [SiteMapController::class, 'siteMap'])->name('siteMapByLang');
 //Site url
 
 

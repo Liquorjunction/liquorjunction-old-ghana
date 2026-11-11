@@ -702,56 +702,7 @@
                     
                     <form class="checkout-form">
                         <div id="shippingAddressScrollContainer" class="shipping-address-scroll-container">
-                            @foreach($UserAddressData as $key=>$data)
-                        <div class="address-group radio-group {{ $key >= 3 ? 'extra-shipping-address d-none' : '' }}">
-                            <div class="radio-btn w-100" style="min-width: 0;">
-                                <input id="radioAddress{{$data->id}}" {{ ($data->is_selected_address_id == 1 || ($loop->first && !$UserAddressData->contains('is_selected_address_id', 1))) ? 'checked' : "" }} type="radio" value="{{$data->id}}" name="address_radio" class="addressRadioCurrent" data-has-location="{{ (!empty($data->latitude) && !empty($data->longitude)) ? '1' : '0' }}" />
-                                <label onclick="checkDeliveryAddressByArea('{{$data->id}}')" for="radioAddress{{$data->id}}"></label>
-                                <div class="detail w-100" style="min-width: 0;">
-                                    @php
-                                        $fullAddress = Helper::formatUserAddress($data, false);
-                                        $phoneNumber = '(+' . $data->phonecode . ') ' . $data->phone;
-                                        $hasMapLocation = (!empty($data->latitude) && !empty($data->longitude));
-                                    @endphp
-                                    <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
-                                        <span class="fw-bold text-dark text-truncate" style="max-width: 240px; font-weight: 700;" title="{{ $data->name }}">{{ $data->name }}</span>
-                                        <span class="fw-bold text-dark text-nowrap" style="font-weight: 700;"><i class="fa fa-phone small me-1 text-muted" style="font-size: 11px;"></i>{{ $phoneNumber }}</span>
-                                        @if($data->is_selected_address_id == 1)
-                                            <span class="badge bg-warning text-dark py-1 px-2" style="font-size: 10px; font-weight: 600;">Default</span>
-                                        @endif
-
-                                    </div>
-
-                                    <div class="text-secondary text-truncate small mb-1" style="max-width: 500px;" title="{{ $fullAddress }}">
-                                        <i class="fa fa-map-marker-alt text-warning me-1"></i>{{ \Illuminate\Support\Str::limit($fullAddress, 70, '...') }}
-                                    </div>
-
-                                    @if(!$hasMapLocation)
-                                        <div class="alert alert-warning py-1 px-2 my-1 d-inline-flex align-items-center gap-2" style="font-size: 11px; border-radius: 4px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
-                                            <span>
-                                                <i class="fa fa-exclamation-triangle text-danger me-1"></i>
-                                                <strong>Location not set on map!</strong>
-                                            </span>
-                                            <a href="javascript:void(0)" class="btn btn-xs py-0 px-2 fw-bold text-dark open-address-modal" data-type="shipping" data-action="edit" data-id="{{@$data->id}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" style="background: #fbb516; font-size: 10.5px; border-radius: 4px; white-space: nowrap;">
-                                                <i class="fa fa-map-marker-alt me-1"></i>Set on Map
-                                            </a>
-                                        </div>
-                                    @endif
-
-                                    <div class="mt-1">
-                                        <input type="hidden" name="checkout_page" id="checkout_page" value="1">
-                                        <input type="hidden" name="checkout_address" id="checkout_address" value="1">
-                                        <input type="hidden" name="address_id" id="address_id" value="{{@$data->id}}">
-                                        <input type="hidden" class="user_address_id" name="user_address_id" value="{{@$data->id}}">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <a href="javascript:void(0)" class="btn-card-action btn-card-edit open-address-modal EditAddress" data-type="shipping" data-action="edit" data-id="{{@$data->id}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" title="Edit Address">
-                                <i class="fa fa-pen" style="font-size: 11px;"></i>
-                            </a>
-                        </div>
-                            @endforeach
+                            @include('frontend.checkout.partials.shipping-address-list', ['UserAddressData' => $UserAddressData, 'selectedId' => null])
                         </div>
                     </form>
 
@@ -882,6 +833,95 @@
                                 }, 100);
                             }
                         });
+
+                        function refreshCheckoutAddresses(savedId, type, action) {
+                            var currentSelectedShippingId = $('input[name="address_radio"]:checked').val();
+                            var targetShippingId = (type === 'shipping' && savedId) ? savedId : currentSelectedShippingId;
+
+                            if (window.Swal) {
+                                var successMsg = action === 'edit' 
+                                    ? "{{ \Helper::language('user_address_update_successfully') }}" 
+                                    : "{{ \Helper::language('address_added_successfully') }}";
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: "{{ \Helper::language('success') }}",
+                                    text: successMsg,
+                                    confirmButtonColor: "#fbb516",
+                                    confirmButtonText: "OK",
+                                    timer: 2500,
+                                    timerProgressBar: true,
+                                    customClass: {
+                                        confirmButton: 'swal-custom-confirm'
+                                    }
+                                });
+                            }
+
+                            $.ajax({
+                                url: "{{ route('checkout.get-addresses') }}",
+                                type: "GET",
+                                data: {
+                                    selected_shipping_id: targetShippingId
+                                },
+                                dataType: "json",
+                                success: function(data) {
+                                    if (!data || !data.success) return;
+
+                                    if (data.shipping_html) {
+                                        $('#shippingAddressScrollContainer').html(data.shipping_html);
+                                    }
+
+                                    if (data.billing_html) {
+                                        $('#billingAddressContainer').html(data.billing_html);
+                                    }
+
+                                    // Shipping More button
+                                    var scrollContainer = document.getElementById('shippingAddressScrollContainer');
+                                    var isScrollable = scrollContainer && scrollContainer.classList.contains('shipping-address-scrollable');
+                                    if (data.shipping_count > 3) {
+                                        if (isScrollable) {
+                                            $('.extra-shipping-address').removeClass('d-none');
+                                            $('#shippingMoreAddressesWrapper').hide();
+                                        } else {
+                                            $('#shippingMoreAddressesWrapper').show();
+                                        }
+                                    } else {
+                                        $('#shippingMoreAddressesWrapper').hide();
+                                    }
+
+                                    // Billing "Add New" button visibility
+                                    if (data.has_billing) {
+                                        $('.add_new_bill_address_div').addClass('d-none');
+                                    } else {
+                                        $('.add_new_bill_address_div').removeClass('d-none');
+                                    }
+
+                                    // Select the target shipping address
+                                    var activeId = targetShippingId || data.default_shipping_id;
+                                    if (activeId) {
+                                        var $radio = $('#radioAddress' + activeId);
+                                        if ($radio.length) {
+                                            $("input[name='address_radio']").prop('checked', false);
+                                            $radio.prop('checked', true);
+                                            checkDeliveryAddressByArea(activeId);
+                                            if (typeof scrollAddressIntoView === 'function') {
+                                                scrollAddressIntoView($radio.closest('.address-group'), false);
+                                            }
+                                        }
+                                    }
+
+                                    // If billing was edited, highlight it
+                                    if (type === 'billing' && savedId) {
+                                        var $billItem = $('#billAddressGroupItem_' + savedId);
+                                        if ($billItem.length && typeof scrollAddressIntoView === 'function') {
+                                            scrollAddressIntoView($billItem, false);
+                                        }
+                                    }
+                                },
+                                error: function() {
+                                    window.location.reload();
+                                }
+                            });
+                        }
                     </script>
 
                     <p class="mt-2 mb-1"><span class="error red-text" id="user_address_error"></span></p>
@@ -1000,12 +1040,10 @@
                     @if($user && !$user->is_guest_user == 1)
                     <div class="d-flex align-items-center justify-content-between mb-2 mt-5 flex-wrap gap-2">
                         <h5 class="mb-0">Billing Address</h5>
-                        @if($UserBillAddressData->isEmpty())
-                        <a href="javascript:void(0)" class="add_new_bill_address_div open-address-modal btn btn-sm btn-outline-dark d-inline-flex align-items-center gap-2 py-1 px-3" data-type="billing" data-action="add" data-is-checkout="1" style="font-size: 12.5px; font-weight: 600; border-radius: 20px;">
+                        <a href="javascript:void(0)" class="add_new_bill_address_div open-address-modal btn btn-sm btn-outline-dark d-inline-flex align-items-center gap-2 py-1 px-3 {{ $UserBillAddressData->isNotEmpty() ? 'd-none' : '' }}" data-type="billing" data-action="add" data-is-checkout="1" style="font-size: 12.5px; font-weight: 600; border-radius: 20px;">
                             <i class="fa fa-plus-circle text-warning" style="font-size: 14px;"></i>
                             <span>Add New</span>
                         </a>
-                        @endif
                     </div>
                     {{-- 🟢 Logged-in real user --}}
                     <div style="margin-top:15px;margin-bottom:20px;">
@@ -1034,55 +1072,7 @@
                     @endif
                     
                     <div id="billingAddressContainer">
-                        @if ( !$user->is_guest_user == 1)
-                            @if($UserBillAddressData->isEmpty())
-                                <div class="py-3 px-3 text-center border rounded bg-light mb-3" style="border-radius: 8px;">
-                                    <p class="text-muted small mb-2"><i class="fa fa-info-circle text-warning me-1"></i> No separate billing address saved yet.</p>
-                                </div>
-                            @else
-                                @foreach($UserBillAddressData as $key=>$data)
-                                <form class="checkout-form">
-                                    <div class="address-group">
-                                        <div class="detail w-100" style="min-width: 0;">
-                                            @php
-                                                $fullBillAddress = Helper::formatUserAddress($data, false);
-                                                $phoneBillNumber = '(+' . $data->phonecode . ') ' . $data->phone;
-                                                $hasBillMapLocation = (!empty($data->latitude) && !empty($data->longitude));
-                                            @endphp
-                                            <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
-                                                <span class="fw-bold text-dark text-truncate" style="max-width: 240px; font-weight: 700;" title="{{ $data->name }}">{{ $data->name }}</span>
-                                            <span class="fw-bold text-dark text-nowrap" style="font-weight: 700;"><i class="fa fa-phone small me-1 text-muted" style="font-size: 11px;"></i>{{ $phoneBillNumber }}</span>
-                                                <span class="badge bg-warning text-dark py-1 px-2" style="font-size: 10px; font-weight: 600;">Default Billing</span>
-
-                                            </div>
-
-                                            <div class="text-secondary text-truncate small mb-1" style="max-width: 500px;" title="{{ $fullBillAddress }}">
-                                                <i class="fa fa-map-marker-alt text-warning me-1"></i>{{ \Illuminate\Support\Str::limit($fullBillAddress, 70, '...') }}
-                                            </div>
-
-                                            @if(!$hasBillMapLocation)
-                                                <div class="alert alert-warning py-1 px-2 my-1 d-inline-flex align-items-center gap-2" style="font-size: 11px; border-radius: 4px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
-                                                    <span>
-                                                        <i class="fa fa-exclamation-triangle text-danger me-1"></i>
-                                                        <strong>Billing location not set on map!</strong>
-                                                    </span>
-                                                    <a href="javascript:void(0)" class="btn btn-xs py-0 px-2 fw-bold text-dark open-address-modal" data-type="billing" data-action="edit" data-id="{{@$data->id}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" style="background: #fbb516; font-size: 10.5px; border-radius: 4px; white-space: nowrap;">
-                                                        <i class="fa fa-map-marker-alt me-1"></i>Set on Map
-                                                    </a>
-                                                </div>
-                                            @endif
-                                        </div>
-                                
-                                        <input type="hidden" name="bill_address_id" id="bill_address_id" value="{{@$data->id}}">
-                                        <input type="hidden" class="user_bill_address_id" name="user_bill_address_id" id="user_bill_address_id" value="{{@$data->id}}" data-has-location="{{ $hasBillMapLocation ? '1' : '0' }}"> 
-                                        <a href="javascript:void(0)" class="btn-card-action btn-card-edit open-address-modal EditBillAddress" data-type="billing" data-action="edit" data-id="{{@$data->id}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" title="Edit Address">
-                                            <i class="fa fa-pen" style="font-size: 11px;"></i>
-                                        </a>
-                                    </div>
-                                    @endforeach
-                                </form>
-                            @endif
-                        @endif
+                        @include('frontend.checkout.partials.billing-address-list', ['UserBillAddressData' => $UserBillAddressData, 'user' => $user])
                     </div>
                     <p class="mt-2 mb-1"><span class="error red-text" id="billing_address_error"></span></p>
                     <form class="checkout-form billAddressEditform d-none" id="billAddressEditForm">
@@ -1206,13 +1196,7 @@
                     @foreach ($productData as $result)
                         @php
                         $product_title = '';
-                        if (session::get('language') == 1) {
-                            $product_title = $result->get_product_details->product_name;
-                            $image_not_found = 'Image not available';
-                        } else {
-                            $product_title = $result->get_product_details->product_name_fr ? $result->get_product_details->product_name_fr : $result->get_product_details->product_name;
-                            $image_not_found = 'Image non disponible';
-                        }
+                        $product_title = $result->get_product_details->product_name; $image_not_found = 'Image not available';
                         $product_image = $result->get_product_details->get_product_images->first();
                         if($is_buy_now == 0)
                         {
@@ -1296,7 +1280,7 @@
                                     <input class="counters__input" type="text"
                                         value="{{$qty}}"
                                         name="counters" size="5" id="qty_ince_{{$result->id}}" readonly="readonly" />
-                                    <a class="counters__increment" onclick="quntityIncreaseOrDecrease('{{Helper::encodeUrl($result->get_product_details->id)}}','{{$result->id}}','incr',{{$is_offer ?? 0}});"  href="javascript:void(0)" data-id="{{$result->id}}">
+                                    <a class="counters__increment" onclick="quntityIncreaseOrDecrease('{{Helper::encodeUrl($result->get_product_details->id)}}','{{$result->id}}','incr',{{$is_offer ?? 0}}, this);"  href="javascript:void(0)" data-id="{{$result->id}}">
                                         <svg width="24" height="24" viewBox="0 0 24 24"
                                             fill="none" xmlns="http://www.w3.org/2000/svg">
                                             <g id="plus">
@@ -1306,7 +1290,7 @@
                                             </g>
                                         </svg>
                                     </a>
-                                    <a class="counters__decrement" style="cursor: pointer;"  onclick="quntityIncreaseOrDecrease('{{Helper::encodeUrl($result->get_product_details->id)}}','{{$result->id}}','desc',{{$is_offer ?? 0}});">
+                                    <a class="counters__decrement" style="cursor: pointer;"  onclick="quntityIncreaseOrDecrease('{{Helper::encodeUrl($result->get_product_details->id)}}','{{$result->id}}','desc',{{$is_offer ?? 0}}, this);">
                                         <svg width="24" height="24" viewBox="0 0 24 24"
                                             fill="none" xmlns="http://www.w3.org/2000/svg">
                                             <path
@@ -1344,7 +1328,7 @@
                                 </li>
 
                                 <li>
-                                    <a href="javascript:void(0)" onclick="removeCartItem('{{ $result->id }}')" class="link-button">{{@Helper::language('remove_btn')}}</a>
+                                    <a href="javascript:void(0)" onclick="removeCartItem('{{ $result->id }}', this)" class="link-button">{{@Helper::language('remove_btn')}}</a>
                                 </li>
                                 <input type="hidden" name="offer_status[]" value="{{ $is_offer }}">
                                 <input type="hidden" name="offer_type[]" value="{{ $offer_type ?? '' }}">
@@ -1401,9 +1385,7 @@
                         </h5>
                         @foreach ($freeItems as $freeItem)
                             @php
-                                $product_title = session::get('language') == 1
-                                    ? $freeItem->get_product_details->product_name
-                                    : ($freeItem->get_product_details->product_name_fr ?? $freeItem->get_product_details->product_name);
+                                $product_title = $freeItem->get_product_details->product_name;
                                 $product_image = $freeItem->get_product_details->get_product_images->first();
                                 $price_to_show = $freeItem->variant_discounted_price && $freeItem->variant_discounted_price != 0
                                     ? $freeItem->variant_discounted_price
@@ -1597,6 +1579,7 @@
                         <input type="hidden" value="" id="coupon_code_id">
                         <input type="hidden" value="" id="coupon_percentage">
                         <input type="hidden" value="" id="coupon_code_amount">
+                        <input type="hidden" value="" id="coupon_min_amount">
 
                         <li id="li-reward" style="display: none;"><span>Reward Discount</span> <span id="reward_amount_text"></span></li>
                         <input type="hidden" value="" id="reward_id">
@@ -1681,19 +1664,7 @@
         });
     });
 
-    var scrolled = 0;
-    $('.EditAddress').click(function(e) {
-        e.preventDefault();
-        var id = $(this).siblings(".user_address_id").val() || $(this).data("id");
-        openAddressModal('shipping', 'edit', id);
-    });
-
-    // Bill Address
-    $('.EditBillAddress').click(function(e) {
-        e.preventDefault();
-        var id = $(this).siblings(".user_bill_address_id").val() || $(this).data("id");
-        openAddressModal('billing', 'edit', id);
-    });
+    // Edit address handlers are unified and delegated via .open-address-modal in address-modal.blade.php
 
 
 
@@ -2443,7 +2414,7 @@
         }
     }
 
-    function removeCartItem(variant_id) {
+    function removeCartItem(variant_id, btnElement) {
         Swal.fire({
             text: "{{Helper::language('remove_cart_product')}}",
             showCancelButton: true,
@@ -2458,13 +2429,40 @@
 
         }).then((result) => {
             if (result.isConfirmed) {
+                const _token = $('meta[name="csrf-token"]').attr('content');
+                const $itemRow = btnElement 
+                    ? $(btnElement).closest('.single-product') 
+                    : $('#qty_ince_' + variant_id).closest('.single-product');
+
                 $.ajax({
                     type: "post",
                     data: {
-                        variant_id: variant_id
+                        variant_id: variant_id,
+                        _token: _token
                     },
                     url: "{{ route('cartremove') }}",
-                    success: function(data) {
+                    success: function(response) {
+                        const remainingItems = $(".single-product").length - 1;
+
+                        // Update floating & header cart counters
+                        if (typeof response.cart_count !== 'undefined') {
+                            $(".cart-item-total-count").html(response.cart_count);
+                            $(".cart-item-total-count-floating").html(response.cart_count);
+                            $("#cartCount").html(response.cart_count);
+                        }
+
+                        if (response.cart_count === 0 || response.empty || remainingItems <= 0) {
+                            // If cart became empty, redirect to cart page where empty state is displayed
+                            window.location.href = "{{ route('cart') }}";
+                        } else {
+                            // Smoothly remove item from DOM and recalculate all checkout totals & coupons
+                            $itemRow.fadeOut(300, function() {
+                                $(this).remove();
+                                updateCheckoutTotals();
+                            });
+                        }
+                    },
+                    error: function() {
                         location.reload();
                     }
                 });
@@ -2612,6 +2610,7 @@
                         $("#coupon_percentage").val(response.coupon_percentage);
                         $("#coupon_code_id").val(response.code_id);
                         $("#coupon_code_amount").val(parseFloat(response.coupon_code_price));
+                        $("#coupon_min_amount").val(response.minimum_amount || 0);
                         $("#tax-amount").text(response.tax_amount + " {{Helper::Settings('currency_symbol')}}");
 
                        Swal.fire({
@@ -2773,63 +2772,290 @@
 </script>
 
 
-{{-- Cart Increment --}}
+{{-- Cart Increment with Debounce & Optimistic UI --}}
 <script>
-    function quntityIncreaseOrDecrease(product_id, variantId, type,is_offer) {
+    var checkoutDebounceTimers = {};
+
+    function quntityIncreaseOrDecrease(product_id, variantId, type, is_offer, btnElement) {
         const isBuyNow = $('#buy-now').val() == '1';
         let qtyInput = $("#qty_ince_" + variantId);
-        let currentQty = parseInt(qtyInput.val());
+        if (!qtyInput.length) return false;
+
+        let currentQty = parseInt(qtyInput.val()) || 1;
+        let prevQty = currentQty;
 
         if (type === 'incr') {
             currentQty += 1;
         } else if (type === 'desc') {
-            if (currentQty === 1) return false;
+            if (currentQty <= 1) return false;
             currentQty -= 1;
         }
 
-        qtyInput.val(currentQty); 
+        // 1. Instant Optimistic UI Update - NO LAG, NO DISABLED STATE!
+        qtyInput.val(currentQty);
+        qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(currentQty);
 
-        const _token = $('meta[name="csrf-token"]').attr('content');
+        // 2. Instant Local Totals Update (recalculates subtotal, discount, coupon, tax immediately)
+        updateCheckoutTotals();
 
-        if (isBuyNow) {
-            // Update Buy Now session quantity
-            $.post({
-                url: '/buy-now/update-quantity',
-                data: {
-                    quantity: currentQty,
-                    _token: _token
-                },
-                success: function (response) {
-                    if (response.status) {
-                        location.reload();
-                    } else {
-                        alert(response.message);
-                    }
-                }
-            });
-        } else {
-            // Update Cart item
-            $.ajax({
-                type: "POST",
-                url: "{{ route('cartincrement') }}",
-                data: {
-                    product_id: product_id,
-                    quantity: currentQty,
-                    variantId: variantId,
-                    offer_status: is_offer,
-                    _token: _token
-                },
-                success: function (response) {
-                    if (response.success === "true") {
-                        location.reload();
-                    }
-                }
-            });
+        // 3. Clear any pending debounce timer for this variant
+        if (checkoutDebounceTimers[variantId]) {
+            clearTimeout(checkoutDebounceTimers[variantId]);
         }
+
+        // 4. Send request after 400ms from the LAST click
+        checkoutDebounceTimers[variantId] = setTimeout(function () {
+            const finalQty = parseInt($("#qty_ince_" + variantId).val()) || currentQty;
+            const _token = $('meta[name="csrf-token"]').attr('content');
+
+            if (isBuyNow) {
+                // Update Buy Now session quantity
+                $.post({
+                    url: '{{ url("/buy-now/update-quantity") }}',
+                    data: {
+                        quantity: finalQty,
+                        _token: _token
+                    },
+                    success: function (response) {
+                        if (response.status && response.success === 'true') {
+                            if (response.capped) {
+                                $("#qty_ince_" + variantId).val(response.capped_quantity);
+                                qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(response.capped_quantity);
+                                if (typeof Swal !== 'undefined') {
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'Stock Limit',
+                                        text: response.message || ('Only ' + response.available_qty + ' item(s) available in stock.'),
+                                        confirmButtonColor: '#fbb516'
+                                    });
+                                }
+                            }
+                            updateCheckoutTotals(response);
+                        } else {
+                            if (response.available_qty !== undefined) {
+                                $("#qty_ince_" + variantId).val(response.available_qty);
+                                qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(response.available_qty);
+                                updateCheckoutTotals();
+                            } else {
+                                $("#qty_ince_" + variantId).val(prevQty);
+                                qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(prevQty);
+                                updateCheckoutTotals();
+                            }
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Stock Limit',
+                                    text: response.message || 'Unable to update quantity',
+                                    confirmButtonColor: '#fbb516'
+                                });
+                            } else {
+                                alert(response.message || 'Unable to update quantity');
+                            }
+                        }
+                    },
+                    error: function() {
+                        $("#qty_ince_" + variantId).val(prevQty);
+                        qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(prevQty);
+                        updateCheckoutTotals();
+                    }
+                });
+            } else {
+                // Update Cart item
+                $.ajax({
+                    type: "POST",
+                    url: "{{ route('cartincrement') }}",
+                    data: {
+                        product_id: product_id,
+                        quantity: finalQty,
+                        variantId: variantId,
+                        offer_status: is_offer,
+                        _token: _token
+                    },
+                    success: function (response) {
+                        if (response.success === "true") {
+                            if (response.capped) {
+                                $("#qty_ince_" + variantId).val(response.capped_quantity);
+                                qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(response.capped_quantity);
+                                if (typeof Swal !== 'undefined') {
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'Stock Limit',
+                                        text: response.message || ('Only ' + response.available_qty + ' item(s) available in stock.'),
+                                        confirmButtonColor: '#fbb516'
+                                    });
+                                }
+                            }
+                            updateCheckoutTotals(response);
+                        } else {
+                            if (response.available_qty !== undefined) {
+                                $("#qty_ince_" + variantId).val(response.available_qty);
+                                qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(response.available_qty);
+                                updateCheckoutTotals();
+                            } else {
+                                $("#qty_ince_" + variantId).val(prevQty);
+                                qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(prevQty);
+                                updateCheckoutTotals();
+                            }
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Stock Limit',
+                                    text: response.message || 'Unable to update quantity',
+                                    confirmButtonColor: '#fbb516'
+                                });
+                            }
+                        }
+                    },
+                    error: function() {
+                        $("#qty_ince_" + variantId).val(prevQty);
+                        qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(prevQty);
+                        updateCheckoutTotals();
+                    }
+                });
+            }
+        }, 400);
     }
 
+    /**
+     * Update DOM with new totals from AJAX response (no page reload)
+     */
+    function updateCheckoutTotals(response) {
+        const currencySymbol = '{{ Helper::Settings("currency_symbol") }}';
+        const taxPercent = parseFloat('{{ Helper::Settings("tax") }}') || 0;
 
+        // --- Recalculate per-item line totals from DOM ---
+        let totalOriginal = 0;
+        let totalDiscounted = 0;
+        let totalQty = 0;
 
+        $(".single-product").each(function () {
+            const $item = $(this);
+            const qty = parseInt($item.find(".counters__input").val()) || 0;
+            const orgPrice = parseFloat($item.find("input[name='buy_org_price']").val()) || 0;
+            const discPrice = parseFloat($item.find("input[name='buy_discounted_price']").val()) || 0;
+
+            const offerStatus = parseInt($item.find("input[name='offer_status[]']").val()) || 0;
+            const offerType = $item.find("input[name='offer_type[]']").val();
+            const discountAmt = parseFloat($item.find("input[name='discount_amount[]']").val()) || 0;
+            const isBogo = parseInt($item.find("input[name='bogo_status[]']").val()) || 0;
+
+            let lineOriginal = orgPrice * qty;
+            let lineDiscount = lineOriginal;
+
+            if (!isBogo && offerStatus) {
+                if (offerType === 'flat') {
+                    lineDiscount = Math.max(0, lineOriginal - (discountAmt * qty));
+                } else if (offerType === 'percentage') {
+                    lineDiscount = Math.max(0, lineOriginal - (lineOriginal * discountAmt / 100));
+                }
+            } else if (discPrice && discPrice != 0) {
+                lineDiscount = discPrice * qty;
+            }
+
+            const effectiveQty = isBogo ? (qty * 2) : qty;
+            totalQty += effectiveQty;
+            totalOriginal += lineOriginal;
+            totalDiscounted += lineDiscount;
+        });
+
+        // --- Update basket quantity ---
+        $('#basket_quantity').val(totalQty);
+
+        // Update "Price Details (X items)" heading
+        $(".price-detail h6").first().html(
+            '{{ @Helper::language("price_detail_label") }}' + '( ' + totalQty + ' {{ @Helper::language("items") }})'
+        );
+
+        // --- Update price summary section ---
+        const mrpDiscount = totalOriginal - totalDiscounted;
+        const baseTotal = totalDiscounted;
+
+        // Update Total MRP
+        $(".cart-total-summary").find("li").first().find("span").last().text(
+            totalOriginal.toFixed(2) + ' ' + currencySymbol
+        );
+
+        // Update discount line if present
+        if (mrpDiscount > 0) {
+            $(".cart-discount").text('- ' + mrpDiscount.toFixed(2) + ' ' + currencySymbol);
+            $(".discounted").text(totalDiscounted.toFixed(2) + ' ' + currencySymbol);
+        }
+
+        // --- Coupon discount recalculation ---
+        let couponAmount = 0;
+        const isCouponApplied = $("#coupon_applied").val() === "1" && $("#coupon_code_id").val() !== "";
+        if (isCouponApplied) {
+            const couponMinAmount = parseFloat($("#coupon_min_amount").val()) || 0;
+            if (couponMinAmount > 0 && baseTotal < couponMinAmount) {
+                // Cart dropped below required minimum amount for this coupon
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Coupon Removed',
+                    text: 'Cart amount dropped below the minimum required (' + couponMinAmount.toFixed(2) + ' ' + currencySymbol + ') for this coupon.',
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+                $('#clear-coupon').hide(); 
+                $('#coupon-success-box').hide();
+                $('.loyalty-points-form-group').show();
+                $('#li-coupon').hide();
+                $("#coupon_code_id").val("");
+                $("#coupon_percentage").val("");
+                $("#coupon_code_amount").val("");
+                $("#coupon_min_amount").val("");
+                $("#coupon_applied").val("");
+                $("#coupon_code").val('');
+                $("#coupon").val('');
+                couponAmount = 0;
+            } else {
+                const couponPercentage = parseFloat($("#coupon_percentage").val()) || 0;
+                if (couponPercentage > 0) {
+                    couponAmount = (couponPercentage / 100) * baseTotal;
+                    couponAmount = Math.round(couponAmount * 100) / 100;
+                    $("#coupon_code_amount").val(couponAmount.toFixed(2));
+                    $("#coupon_code_amount_text").text('-' + couponAmount.toFixed(2) + ' ' + currencySymbol);
+                    $("#coupon-saved-msg").html('You just saved <strong>' + couponAmount.toFixed(2) + ' ' + currencySymbol + '</strong> on your order');
+                } else {
+                    couponAmount = parseFloat($("#coupon_code_amount").val()) || 0;
+                }
+            }
+        }
+
+        // Reward discount
+        const rewardAmount = parseFloat($('#reward_discount_applied').val()) || 0;
+
+        // --- Tax ---
+        // Tax is calculated on base amount after coupon/reward discount
+        const taxableBase = Math.max(0, baseTotal - couponAmount - rewardAmount);
+        let taxAmount = 0;
+        if (taxPercent > 0) {
+            taxAmount = (taxPercent / 100) * taxableBase;
+            taxAmount = Math.round(taxAmount * 100) / 100;
+            $('#tax-amount').text(taxAmount.toFixed(2) + ' ' + currencySymbol);
+        }
+
+        // --- Grand Total (taxableBase + tax + delivery + gift) ---
+        let grandTotal = taxableBase + taxAmount;
+
+        // Delivery fee
+        const deliveryFee = parseFloat($('#inp-delivery-fee').val()) || 0;
+        if (deliveryFee > 0) {
+            grandTotal += deliveryFee;
+        }
+
+        // Gift card charge
+        const giftChecked = $('#userGift').is(':checked');
+        if (giftChecked) {
+            grandTotal += 20;
+        }
+
+        grandTotal = Math.max(0, grandTotal);
+
+        // Update grand total display & hidden inputs
+        $('#grand-total-amount').text(grandTotal.toFixed(2) + ' ' + currencySymbol);
+        $('#inp-grand-total-amount').val(grandTotal.toFixed(2));
+        $('#base_total').val(baseTotal.toFixed(2));
+    }
 </script>
 
 {{-- rewards --}}
@@ -3107,6 +3333,7 @@
                         $("#coupon_percentage").val(response.coupon_percentage);
                         $("#coupon_code_id").val(response.code_id);
                         $("#coupon_code_amount").val(response.coupon_code_price);
+                        $("#coupon_min_amount").val(response.minimum_amount || 0);
                         $("#tax-amount").text(response.tax_amount + " {{Helper::Settings('currency_symbol')}}");
                     }
                 }
@@ -3275,6 +3502,7 @@
         $("#coupon_code_id").val("");
         $("#coupon_percentage").val("");
         $("#coupon_code_amount").val("");
+        $("#coupon_min_amount").val("");
 
         $("#coupon_applied").val("");
         $("#coupon_code").val('');

@@ -57,40 +57,9 @@
  <script src="{{ asset('assets/frontend/js/jquery.min.js') }}"></script>
     <script type="text/javascript">
     	function productFav(product_id,status) {
-      	// alert()
-        var status = status;
-        var user_id = $("#user_id").val();
-        // alert(user_id);
-        if (user_id) {
-            // alert('ttt')
-        action_url = "{{ route('productfav') }}";
-        }else{
-            // alert('ttt25')
-            var url = "{{route('websitelogin')}}";
-            window.location.href = url;
-        
+            if (typeof toggleProductFav === 'function') {
+                return toggleProductFav(product_id, status);
+            }
         }
-        var csrf = "{{ csrf_token() }}";
-        $.ajax({
-                            url: action_url,
-                            data: {'user_id':user_id,'product_id':product_id,'status':status},
-                            headers: {
-                                'X-CSRF-TOKEN': csrf
-                            },
-                            type: "POST",
-                    
-                             beforeSend: function(){
-                                    $(".loader").fadeIn();
-                                    $('.loader').css("visibility", "visible");
-                                },
-                            success: function (response) 
-                            {
-                                $('.loader').css("visibility", "visible");
-                                // return false;
-                                location.reload();
-                            },
-                        });
-
-    }
     </script>
 @endsection

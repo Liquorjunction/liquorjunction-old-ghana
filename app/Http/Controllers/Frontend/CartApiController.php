@@ -33,8 +33,15 @@ public function deleteCartItem($id)
             ->first();
 
         if ($cart) {
+            $productId = $cart->product_id;
+            $variantId = $cart->product_variant_id;
             $cart->delete();
-            return response()->json(['success' => true]);
+            return response()->json([
+                'success' => true,
+                'product_id' => $productId,
+                'encoded_product_id' => Helper::encodeUrl($productId),
+                'variant_id' => $variantId
+            ]);
         }
 
         return response()->json([
@@ -63,7 +70,12 @@ public function deleteCartItem($id)
 
             session()->put('cart_info', $sessionCart);
 
-            return response()->json(['success' => true]);
+            return response()->json([
+                'success' => true,
+                'product_id' => $product_id,
+                'encoded_product_id' => Helper::encodeUrl($product_id),
+                'variant_id' => $variant_id
+            ]);
         }
     }
 

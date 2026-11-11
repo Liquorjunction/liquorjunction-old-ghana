@@ -346,15 +346,7 @@ if ($user_id) {
                                             @endphp
                                             @if (!empty($get_category))
                                                 @foreach ($get_category as $result)
-                                                    @php
-                                                        if (\Session::get('language') == 1) {
-                                                            $category_title = $result->title;
-                                                        } else {
-                                                            $category_title = $result->title_fr
-                                                                ? $result->title_fr
-                                                                : $result->title;
-                                                        }
-                                                    @endphp
+                                                    @php $category_title = $result->title; @endphp
                                                     <div class="mobile-menu__divider"></div>
                                                     <li class="main-nav__item" data-mobile-menu-item="">
                                                         <a href="{{ route('productlist', ['id' => Helper::encodeUrl($result->id)]) }}"
@@ -380,18 +372,7 @@ if ($user_id) {
                                                                     <div class="mobile-menu__panel-body">
                                                                         <ul class="mobile-menu__links second_level">
                                                                             @foreach ($result->subcategory as $sub_result)
-                                                                                @php
-                                                                                    if (
-                                                                                        \Session::get('language') == 1
-                                                                                    ) {
-                                                                                        $subcategory_title =
-                                                                                            $sub_result->title;
-                                                                                    } else {
-                                                                                        $subcategory_title = $sub_result->title_fr
-                                                                                            ? $sub_result->title_fr
-                                                                                            : $sub_result->title;
-                                                                                    }
-                                                                                @endphp
+                                                                                @php $subcategory_title = $sub_result->title; @endphp
                                                                                 <li data-mobile-menu-item>
                                                                                     <a
                                                                                         href="{{ route('productlist', ['id' => Helper::encodeUrl($result->id)]) }}?sid={{ Helper::encodeUrl($sub_result->id) }}">{{ ucfirst($subcategory_title) }}</a>
@@ -412,12 +393,7 @@ if ($user_id) {
                                             <div class="mobile-menu__divider"></div>
                                             <li class="main-nav__item" data-mobile-menu-item>
                                                 <a href="{{ route('special') }}" class="sidebar_close">
-                                                    @php
-                                                        $special_title =
-                                                            \Session::get('language') == 1
-                                                                ? 'Special Offers'
-                                                                : 'Offres Spéciales';
-                                                    @endphp
+                                                    @php $special_title = 'Special Offers'; @endphp
                                                     {{ $special_title }}
                                                 </a>
                                             </li>
@@ -603,22 +579,17 @@ if ($user_id) {
                                         <svg width="24" height="24" viewBox="0 0 24 24"
                                             xmlns="http://www.w3.org/2000/svg">
                                             <g id="icon_wishlist">
-                                                @if ($favoriteCount > 0)
-                                                    {{-- Filled Heart Icon --}}
-                                                    <path fill="#000000" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5
+                                                {{-- Filled Heart Icon --}}
+                                                <path class="wishlist-filled" style="{{ $favoriteCount > 0 ? '' : 'display:none;' }}" fill="#000000" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5
                                                 2 6 4 4 6.5 4c1.74 0 3.41 1.01 4.13 2.44h1.74C14.09 5.01 15.76 4 17.5 4
                                                 20 4 22 6 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                                                @else
-                                                    {{-- Outlined Heart Icon --}}
-                                                    <path fill="#242424"
-                                                        d="M11.5312 4.62479L11.9648 5.09071L12.4336 4.62557C13.7422 3.35789 15.5547 2.78093 17.3359 3.07562C20.0273 3.52135 22 5.83617 22 8.55013V8.77532C22 10.3866 21.3281 11.928 20.1406 13.0268L13.082 19.5768C12.7891 19.8486 12.4023 20 12 20C11.5977 20 11.2109 19.8486 10.918 19.5768L3.85898 13.0268C2.67305 11.928 2 10.3866 2 8.77532V8.55013C2 5.83617 3.97344 3.52135 6.66406 3.07562C8.41016 2.78093 10.2578 3.35789 11.5312 4.62479ZM11.9648 7.72701L10.207 5.90994C9.35938 5.10158 8.15625 4.71798 6.97266 4.91366C5.18555 5.20991 3.875 6.74859 3.875 8.55013V8.77532C3.875 9.87022 4.33242 10.9185 5.13828 11.664L12 18.0315L18.8633 11.664C19.668 10.9185 20.125 9.87022 20.125 8.77532V8.55013C20.125 6.74859 18.8125 5.20991 17.0273 4.91366C15.8438 4.71798 14.6406 5.10158 13.793 5.90994L11.9648 7.72701Z" />
-                                                @endif
+                                                {{-- Outlined Heart Icon --}}
+                                                <path class="wishlist-outlined" style="{{ $favoriteCount > 0 ? 'display:none;' : '' }}" fill="#242424"
+                                                    d="M11.5312 4.62479L11.9648 5.09071L12.4336 4.62557C13.7422 3.35789 15.5547 2.78093 17.3359 3.07562C20.0273 3.52135 22 5.83617 22 8.55013V8.77532C22 10.3866 21.3281 11.928 20.1406 13.0268L13.082 19.5768C12.7891 19.8486 12.4023 20 12 20C11.5977 20 11.2109 19.8486 10.918 19.5768L3.85898 13.0268C2.67305 11.928 2 10.3866 2 8.77532V8.55013C2 5.83617 3.97344 3.52135 6.66406 3.07562C8.41016 2.78093 10.2578 3.35789 11.5312 4.62479ZM11.9648 7.72701L10.207 5.90994C9.35938 5.10158 8.15625 4.71798 6.97266 4.91366C5.18555 5.20991 3.875 6.74859 3.875 8.55013V8.77532C3.875 9.87022 4.33242 10.9185 5.13828 11.664L12 18.0315L18.8633 11.664C19.668 10.9185 20.125 9.87022 20.125 8.77532V8.55013C20.125 6.74859 18.8125 5.20991 17.0273 4.91366C15.8438 4.71798 14.6406 5.10158 13.793 5.90994L11.9648 7.72701Z" />
                                             </g>
                                         </svg>
                                     </a>
-                                    @if ($favoriteCount > 0)
-                                        <span class="count-number favorite-no">{{ @$favoriteCount }}</span>
-                                    @endif
+                                    <span class="count-number favorite-no" style="{{ $favoriteCount > 0 ? '' : 'display:none;' }}">{{ @$favoriteCount }}</span>
                                 </li>
                                 @endif
 
@@ -746,6 +717,19 @@ if ($user_id) {
                                 </div>
                             </li>
                             <style>
+                            .cart-dropdown-wrapper {
+                                position: relative;
+                                display: inline-block;
+                            }
+                            .small-cart-dropdown::before {
+                                content: '';
+                                position: absolute;
+                                top: -20px;
+                                left: 0;
+                                width: 100%;
+                                height: 20px;
+                                background: transparent;
+                            }
                             .small-cart-dropdown::-webkit-scrollbar {
                                 width: 6px;
                                 background: #f1f1f1;
@@ -772,7 +756,7 @@ if ($user_id) {
                                                 <div style="font-size:13px; color:#888;">Qty: ${item.qty}</div>
                                                 <div style="font-size:14px; color:#242424;">${item.price} {{ Helper::Settings('currency_symbol') }} </div>
                                             </div>
-                                            <button class="delete-cart-item-btn" data-id="${item.id}" title="Remove"
+                                            <button class="delete-cart-item-btn" data-id="${item.id}" data-product-id="${item.product_id || ''}" data-encoded-product-id="${item.encoded_product_id || ''}" data-variant-id="${item.variant_id || ''}" title="Remove"
         style="background:none; border:none; cursor:pointer; padding:5px;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <path d="M3 6H21" stroke="#ff4d4f" stroke-width="1.5" stroke-linecap="round"/>
@@ -790,6 +774,106 @@ if ($user_id) {
                                 container.innerHTML = html;
                             }
 
+                            function showProductCartButton(pId, epId, vId) {
+                                // 1. Show matching .add-bucket on cards
+                                var bucketButtons = document.querySelectorAll('.add-bucket');
+                                bucketButtons.forEach(function(btn) {
+                                    var cardPId = btn.getAttribute('data-product-id');
+                                    var cardVId = btn.getAttribute('data-variant-id');
+
+                                    var productMatches = (epId && cardPId === String(epId)) || (pId && cardPId === String(pId));
+                                    var variantMatches = vId && cardVId && String(cardVId) === String(vId);
+
+                                    if (variantMatches || (productMatches && (!cardVId || !vId || String(cardVId) === String(vId)))) {
+                                        btn.style.display = 'flex';
+                                    }
+                                });
+
+                                // 2. Product Detail Page (#add-to-bucket and #go-to-cart)
+                                var detailAddBtn = document.getElementById('add-to-bucket');
+                                var detailGoBtn = document.getElementById('go-to-cart');
+                                var prodInput = document.getElementById('prod_ids');
+                                if (detailAddBtn && detailGoBtn) {
+                                    var detailPId = detailAddBtn.getAttribute('data-id') || (prodInput ? prodInput.value : '');
+                                    var checkedVar = document.querySelector("input[name='pack_size']:checked");
+                                    var detailVId = checkedVar ? checkedVar.value : '';
+
+                                    var productMatches = (epId && detailPId === String(epId)) || (pId && detailPId === String(pId));
+                                    var variantMatches = vId && detailVId && String(detailVId) === String(vId);
+
+                                    if (variantMatches || (productMatches && (!detailVId || !vId || String(detailVId) === String(vId)))) {
+                                        detailAddBtn.style.display = 'flex';
+                                        detailGoBtn.style.display = 'none';
+                                    }
+                                }
+                            }
+
+                            function syncPageCartButtons(items) {
+                                items = items || [];
+                                var inCartProducts = new Set();
+                                var inCartVariants = new Set();
+                                var inCartPairs = new Set();
+
+                                items.forEach(function(item) {
+                                    if (item.product_id) inCartProducts.add(String(item.product_id));
+                                    if (item.encoded_product_id) inCartProducts.add(String(item.encoded_product_id));
+                                    if (item.variant_id) {
+                                        inCartVariants.add(String(item.variant_id));
+                                        if (item.product_id) inCartPairs.add(String(item.product_id) + '_' + String(item.variant_id));
+                                        if (item.encoded_product_id) inCartPairs.add(String(item.encoded_product_id) + '_' + String(item.variant_id));
+                                    }
+                                });
+
+                                // 1. Sync card buttons (.add-bucket)
+                                var bucketButtons = document.querySelectorAll('.add-bucket');
+                                bucketButtons.forEach(function(btn) {
+                                    var pId = btn.getAttribute('data-product-id');
+                                    var vId = btn.getAttribute('data-variant-id');
+
+                                    var isInCart = false;
+                                    if (pId && vId && inCartPairs.has(String(pId) + '_' + String(vId))) {
+                                        isInCart = true;
+                                    } else if (vId && inCartVariants.has(String(vId))) {
+                                        isInCart = true;
+                                    } else if (pId && !vId && inCartProducts.has(String(pId))) {
+                                        isInCart = true;
+                                    }
+
+                                    if (isInCart) {
+                                        btn.style.display = 'none';
+                                    } else {
+                                        btn.style.display = 'flex';
+                                    }
+                                });
+
+                                // 2. Sync product detail page buttons
+                                var detailAddBtn = document.getElementById('add-to-bucket');
+                                var detailGoBtn = document.getElementById('go-to-cart');
+                                var prodInput = document.getElementById('prod_ids');
+                                if (detailAddBtn && detailGoBtn) {
+                                    var detailPId = detailAddBtn.getAttribute('data-id') || (prodInput ? prodInput.value : '');
+                                    var checkedVar = document.querySelector("input[name='pack_size']:checked");
+                                    var detailVId = checkedVar ? checkedVar.value : '';
+
+                                    var isInCart = false;
+                                    if (detailPId && detailVId && inCartPairs.has(String(detailPId) + '_' + String(detailVId))) {
+                                        isInCart = true;
+                                    } else if (detailVId && inCartVariants.has(String(detailVId))) {
+                                        isInCart = true;
+                                    } else if (detailPId && inCartProducts.has(String(detailPId))) {
+                                        isInCart = true;
+                                    }
+
+                                    if (isInCart) {
+                                        detailAddBtn.style.display = 'none';
+                                        detailGoBtn.style.display = 'flex';
+                                    } else {
+                                        detailAddBtn.style.display = 'flex';
+                                        detailGoBtn.style.display = 'none';
+                                    }
+                                }
+                            }
+
                             function updateCartUI() {
                                 fetch("{{ route('cart.data') }}")
                                     .then(res => {
@@ -800,13 +884,12 @@ if ($user_id) {
                                     })
                                     .then(data => {
                                         var count = (data && typeof data.count !== 'undefined') ? data.count : 0;
-                                        var countEl = document.querySelector('.cart-item-total-count');
-                                        if (countEl) countEl.textContent = count;
+                                        var countEls = document.querySelectorAll('.cart-item-total-count, .cart-item-total-count-floating');
+                                        countEls.forEach(function(el) { el.textContent = count; });
 
-                                        var floatingCountEl = document.querySelector('.cart-item-total-count-floating');
-                                        if (floatingCountEl) floatingCountEl.textContent = count;
-
-                                        renderSmallCartDropdown(data.items || []);
+                                        var items = data.items || [];
+                                        renderSmallCartDropdown(items);
+                                        syncPageCartButtons(items);
                                     })
                                     .catch(err => {
                                         console.error('Error fetching cart data:', err);
@@ -814,23 +897,32 @@ if ($user_id) {
                             }
 
                             document.addEventListener('DOMContentLoaded', function() {
-                                var cartUrl = document.getElementById('cart-url');
+                                var wrapper = document.querySelector('.cart-dropdown-wrapper');
                                 var dropdown = document.getElementById('small-cart-dropdown');
-                                if(cartUrl && dropdown) {
-                                    cartUrl.addEventListener('mouseenter', function() {
+                                var hideTimer = null;
+
+                                if (wrapper && dropdown) {
+                                    function showDropdown() {
+                                        if (hideTimer) {
+                                            clearTimeout(hideTimer);
+                                            hideTimer = null;
+                                        }
                                         dropdown.style.display = 'block';
-                                    });
-                                    cartUrl.addEventListener('mouseleave', function() {
-                                        setTimeout(function() {
-                                            if(!dropdown.matches(':hover')) dropdown.style.display = 'none';
-                                        }, 200);
-                                    });
-                                    dropdown.addEventListener('mouseenter', function() {
-                                        dropdown.style.display = 'block';
-                                    });
-                                    dropdown.addEventListener('mouseleave', function() {
-                                        dropdown.style.display = 'none';
-                                    });
+                                    }
+
+                                    function scheduleHideDropdown() {
+                                        if (hideTimer) {
+                                            clearTimeout(hideTimer);
+                                        }
+                                        hideTimer = setTimeout(function() {
+                                            dropdown.style.display = 'none';
+                                        }, 300);
+                                    }
+
+                                    wrapper.addEventListener('mouseenter', showDropdown);
+                                    wrapper.addEventListener('mouseleave', scheduleHideDropdown);
+                                    dropdown.addEventListener('mouseenter', showDropdown);
+                                    dropdown.addEventListener('mouseleave', scheduleHideDropdown);
                                 }
 
                                 // Handle delete cart item via event delegation
@@ -838,6 +930,10 @@ if ($user_id) {
                                     var btn = e.target.closest('.delete-cart-item-btn');
                                     if (btn) {
                                         var id = btn.getAttribute('data-id');
+                                        var prodId = btn.getAttribute('data-product-id');
+                                        var encProdId = btn.getAttribute('data-encoded-product-id');
+                                        var varId = btn.getAttribute('data-variant-id');
+
                                         var tokenMeta = document.querySelector('meta[name="csrf-token"]');
                                         var token = tokenMeta ? tokenMeta.getAttribute('content') : '{{ csrf_token() }}';
                                         var deleteUrl = "{{ url('cart/item') }}/" + encodeURIComponent(id);
@@ -852,6 +948,16 @@ if ($user_id) {
                                         .then(res => res.json())
                                         .then(data => {
                                             if (data && data.success) {
+                                                var pId = data.product_id || prodId;
+                                                var epId = data.encoded_product_id || encProdId;
+                                                var vId = data.variant_id || varId;
+                                                showProductCartButton(pId, epId, vId);
+
+                                                if (window.location.pathname.endsWith('/cart') || window.location.pathname.endsWith('/cart/')) {
+                                                    window.location.reload();
+                                                    return;
+                                                }
+
                                                 updateCartUI();
                                             }
                                         })
@@ -866,15 +972,6 @@ if ($user_id) {
                             });
                             // Call updateCartUI() after AJAX add-to-cart success
                             </script>
-                            <li class="site_language">
-                                <select class="form-select" aria-label="site_language" name="LanguageChange"
-                                    id="langchange">
-                                    <option style="display:none"></option>
-                                    <option @if (\Session::get('language') == 1) {{ 'selected' }} @endif
-                                        value="1" selected="">EN</option>
-                                    <!-- <option @if (\Session::get('language') == 2) {{ 'selected' }} @endif value="2">FR</option> -->
-                                </select>
-                            </li>
                         </ul>
                     </div>
                 </div>
@@ -891,13 +988,7 @@ if ($user_id) {
                     @endphp
                     @if (!empty($get_category))
                         @foreach ($get_category as $result)
-                            @php
-                                if (\Session::get('language') == 1) {
-                                    $category_title = $result->title;
-                                } else {
-                                    $category_title = $result->title_fr ? $result->title_fr : $result->title;
-                                }
-                            @endphp
+                            @php $category_title = $result->title; @endphp
                             <li class="nav-item @if ($result->subcategory->isNotEmpty()) {{ 'has-children ' }} @endif">
                                 <a href="{{ route('productlist', ['id' => Helper::encodeUrl($result->id)]) }}">{{ $category_title }}
                                 </a>
@@ -905,15 +996,7 @@ if ($user_id) {
                                     <div class="sub-menu">
                                         <ul>
                                             @foreach ($result->subcategory as $sub_result)
-                                                @php
-                                                    if (\Session::get('language') == 1) {
-                                                        $subcategory_title = $sub_result->title;
-                                                    } else {
-                                                        $subcategory_title = $sub_result->title_fr
-                                                            ? $sub_result->title_fr
-                                                            : $sub_result->title;
-                                                    }
-                                                @endphp
+                                                @php $subcategory_title = $sub_result->title; @endphp
                                                 <li><a
                                                         href="{{ route('productlist', ['id' => Helper::encodeUrl($result->id)]) }}?sid={{ Helper::encodeUrl($sub_result->id) }}">{{ ucfirst($subcategory_title) }}</a>
                                                 </li>

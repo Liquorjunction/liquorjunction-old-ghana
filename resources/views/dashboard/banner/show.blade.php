@@ -71,28 +71,18 @@
                             <table class="table table-bordered m-a-0">
                                 <tr>
                                     <tbody>
-                                        <th>Title [EN]</th>
+                                        <th>Title</th>
                                         <td style="width: 75%">{{ isset($banner->title) ? $banner->title : '' }}</td>
                                     </tbody>
                                 </tr>
+                                
                                 <tr>
                                     <tbody>
-                                        <th>Title [FR]</th>
-                                        <td>{{ isset($banner->title_fr) ? $banner->title_fr : '' }}</td>
-                                    </tbody>
-                                </tr>
-                                <tr>
-                                    <tbody>
-                                        <th>Description [EN]</th>
+                                        <th>Description</th>
                                         <td>{{ $banner->description }}</td>
                                     </tbody>
                                 </tr>
-                                <tr>
-                                    <tbody>
-                                        <th>Description [FR]</th>
-                                        <td>{{ $banner->description_fr }}</td>
-                                    </tbody>
-                                </tr>
+                                
                                 <tr>
                                     <tbody>
                                         <th>Type</th>

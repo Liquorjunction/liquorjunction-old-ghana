@@ -55,9 +55,9 @@
             {{ Form::open(['route' => ['store.store'], 'method' => 'POST', 'files' => true, 'enctype' => 'multipart/form-data', 'id' => 'storeForm']) }}
             <div class="personal_informations">
                 <div class="form-group row">
-                    <label class="col-sm-3 form-control-label">{!! __('backend.name_of_store') !!} [EN] <span class="valid_field">*</span></label>
+                    <label class="col-sm-3 form-control-label">{!! __('backend.name_of_store') !!} <span class="valid_field">*</span></label>
                     <div class="col-sm-9">
-                        <input type="text" name="store_name" id="store_name" class="form-control" placeholder="Name of store [EN]" value="{{ old('store_name') }}">
+                        <input type="text" name="store_name" id="store_name" class="form-control" placeholder="Name of store" value="{{ old('store_name') }}">
                         <!-- @if ($errors->has('store_name'))
                         <span class="help-block" id="errorMessageStorename" >
                             <span style="color: red;" id="errorMsgStorename" class='validate'>{{ $errors->first('store_name') }}</span>
@@ -68,20 +68,7 @@
                         </span>
                     </div>
                 </div>
-                <div class="form-group row">
-                    <label class="col-sm-3 form-control-label">{!! __('backend.name_of_store') !!} [FR] <span class="valid_field">*</span></label>
-                    <div class="col-sm-9">
-                        <input type="text" name="store_name_fr" id="store_name" class="form-control" placeholder="Name of store [FR]" value="{{ old('store_name_fr') }}">
-                        <!-- @if ($errors->has('store_name_fr'))
-                        <span class="help-block">
-                            <span style="color: red;" id="errorMessageStorenamefr" class='validate'>{{ $errors->first('store_name_fr') }}</span>
-                        </span>
-                        @endif -->
-                        <span class="help-block" id="errorMessageStorenamefr1" style="display:none">
-                            <span style="color: red;display: none;" id="errorMsgStorenamefr" class='validate'></span>
-                        </span>
-                    </div>
-                </div>
+                
                 <div class="form-group row">
                     <label class="col-sm-3 form-control-label">{!! __('backend.store_contact_number') !!} <span class="valid_field">*</span></label>
                     <div class="col-sm-2">
@@ -294,17 +281,12 @@
                 //     var errorData = JSON.parse(error.responseText);
                 //     // console.error('Error:', error);
                 //         console.log(error.errorData); 
-                //     // console.log(error.store_name_fr);
-                //     // Check if store_name and store_name_fr fields are defined in the error JSON
+                
+                
                 //     if (errorData.store_name) {
                 //         $("span#errorMessageStorename").css("display", "block");
                 //         $("span#errorMessageStorenamefr").css("display", "block");
                 //         $("span#errorMsgStorename").html(errorData.store_name[0]);
-                //     }
-                //     if (errorData.store_name_fr) {
-                //         $("span#errorMessageStorename").css("display", "block");
-                //         $("span#errorMessageStorenamefr").css("display", "block");
-                //         $("span#errorMsgStorenamefr").html(errorData.store_name_fr[0]);
                 //     }
                 //     // Add similar checks for other fields
 
@@ -329,13 +311,6 @@
                                         $("#errorMessageStorename1").css("display", "block");
                                         $("#errorMsgStorename").css("display", "block");
                                         $("#errorMsgStorename").html(errstr);
-                                    }
-                                    else if(err == "store_name_fr") {
-                                        // $("span#errorMessageAddress1").css("display", "none");
-                                        // $("span#errorMessageStorename1").css("display", "none");
-                                        $("span#errorMessageStorenamefr1").css("display", "block");
-                                        $("span#errorMsgStorenamefr").css("display", "block");
-                                        $("span#errorMsgStorenamefr").html(errstr);
                                     }
                                     else if(err == "contact_number") {
                                         // $("span#errorMessageAddress1").css("display", "none");

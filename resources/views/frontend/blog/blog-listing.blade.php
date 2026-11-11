@@ -38,11 +38,7 @@
                 @foreach ($blogs as $blogs_result )
                 @php
                     $blog_title='';                  
-                    if(session::get('language')==2){
-                        $blog_title = ($blogs_result->title_fr)?$blogs_result->title_fr:$blogs_result->title;
-                    }else{
-                        $blog_title = $blogs_result->title;
-                    } 
+                    $blog_title = $blogs_result->title; 
                 @endphp
                 <div class="col-md-4 col-sm-6 blog-col">
                     <div class="blog-box">

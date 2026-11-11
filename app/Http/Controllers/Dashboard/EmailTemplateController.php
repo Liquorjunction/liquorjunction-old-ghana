@@ -65,7 +65,6 @@ class EmailTemplateController extends Controller
         //dd($request);
         $this->validateRequest();
         $emailtemplate = new EmailTemplate();
-        $emailtemplate->language_id = 2;
         $emailtemplate->title = $request->title;
         $emailtemplate->subject = $request->subject;
         $emailtemplate->content = $request->content;
@@ -102,7 +101,6 @@ class EmailTemplateController extends Controller
     {
         $this->validateRequest();
         $emailtemplate = EmailTemplate::find($id);
-        $emailtemplate->language_id = 2;
         $emailtemplate->title = $request->title;
         $emailtemplate->subject = $request->subject;
         $emailtemplate->content = $request->content;

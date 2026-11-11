@@ -87,7 +87,6 @@ class SubCategoriesController extends Controller
         $subcategory->uniqid = $uniqid;
         $subcategory->category_id = $request->category_id;
         $subcategory->title = $request->title;
-        $subcategory->title_fr = $request->title_fr;
         // $subcategory->image = $fileFinalName_ar;
         $subcategory->status = 1;
         $subcategory->save();
@@ -116,7 +115,6 @@ class SubCategoriesController extends Controller
             $subcategory_id = $request->subcategory_id;
              $category = SubCategories::where('id', $subcategory_id)->update(array(
                 'title' => $request->title,
-                'title_fr' => $request->title_fr,
                 'category_id' => $request->category_id,
             ));
             Alert::success('Success', __('backend.SubCategory_has_been_updated_successfully'));

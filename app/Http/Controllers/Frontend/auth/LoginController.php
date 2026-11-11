@@ -217,11 +217,7 @@ class LoginController extends Controller
 
     public function logoutMainUser()
     {
-        /* dd();*/
-
-        Auth::logout();
-        /*\Cookie::queue(\Cookie::forget('admin_email'));
-        \Cookie::queue(\Cookie::forget('admin_password'));*/
+        Auth::guard('web')->logout();
         return redirect('/admin/login');
     }
 

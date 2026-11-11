@@ -4,30 +4,18 @@
         <form class="cmxform" id="categoryEditForm" method="post" action="" autocomplete="off">
             <div class="modal-body">
                 <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">{!! __('Title [EN]') !!}<span
+                    <label class="col-sm-2 form-control-label">{!! __('Title') !!}<span
                             class="valid_field">*</span></label>
                     <div class="col-sm-10">
                         <input type="text" name="title" id="title" class="form-control"
-                            placeholder="Title [EN]" onkeypress="return isNumberKey(event)"
+                            placeholder="Title" onkeypress="return isNumberKey(event)"
                             value="{{ @$categoryData->title }}">
                         <span class="help-block" id="errorMessage" style="display:none">
                             <span style="color: red;display: none;" id="errorMsg" class='validate'></span>
                         </span>
                     </div>
                 </div>
-                <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">Title [FR]<span class="valid_field">*</span></label>
-                    <div class="col-sm-10">
-                        <input type="text" name="title_fr" id="title_fr" class="form-control"
-                            placeholder="Title [FR]" value="{{ @$categoryData->title_fr }}">
-
-                        <span style="color: red;display: none;" id="errorMsgtitlefr" class='validate'></span>
-                        <span class="help-block" id="errorMessagetitlefr" style="display:none">
-                        </span>
-
-                    </div>
-
-                </div>
+                
                 <div class="form-group row">
                     <label class="col-sm-2 form-control-label">Image<span class="valid_field">*</span></label>
                     <div class="col-sm-10">
@@ -134,12 +122,7 @@
                                 maxlength: 30,
 
                             },
-                            title_fr: {
-                                required: true,
-                                maxlength: 30,
-                            },
                             description: "required",
-                            description_fr: "required",
                             icon_id: "required",
                         },
                         // in 'messages' user have to specify message as per rules
@@ -152,12 +135,7 @@
                                 maxlength: "Title field cannot exceed {0} characters.",
 
                             },
-                            title_fr: {
-                                required: "Title Fr field is required.",
-                                maxlength: "Title Fr field cannot exceed {0} characters."
-                            },
                             description: " Description field is required",
-                            description_fr: "Descripton Fr field is required",
                             // icon_id: "Icon field is required",
                         },
                         submitHandler: function() {

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
+    <meta name="base-url" content="{{ url('/') }}">
     <meta charset="UTF-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
@@ -27,7 +28,6 @@
     <!-- Style -->
     <link rel="stylesheet" type="text/css" href="{{ asset('assets/frontend/css/style.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ asset('assets/frontend/css/custom.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ asset('assets/frontend/css/style-french.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ asset('assets/frontend/css/responsive.css') }}">
     <!-- End Style -->
     <!-- Font Awesome -->
@@ -59,4 +59,4 @@
   })();
 </script>
 </head>
-<body id="appBody" class="@if(\Session::get('language')!=1){{'fr-FR'}}@endif">
+<body id="appBody">

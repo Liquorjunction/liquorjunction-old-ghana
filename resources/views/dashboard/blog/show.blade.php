@@ -35,32 +35,21 @@
                     <!-- <h3>{!!  __('backend.cms') !!}</h3>
                     <br> -->
                     <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">{!!  __('Title [EN]') !!} </label>
+                        <label class="col-sm-2 form-control-label">{!!  __('Title') !!} </label>
                         <div class="col-sm-10">
                             <input type="text" name="title" id="title" class="form-control" placeholder="Enter Title" value="{{@$blogData->title}}" readonly>                           
                         </div>
                     </div>
-                    <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">{!!  __('Title [FR]') !!} </label>
-                        <div class="col-sm-10">
-                            <input type="text" name="title" id="title" class="form-control" placeholder="Enter Title" value="{{@$blogData->title_fr}}" readonly>
-                           
-                        </div>
-                    </div>
+                    
 
                     <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">{!!  __('backend.short_description_en') !!} </label>
+                        <label class="col-sm-2 form-control-label">{!!  __('backend.short_description') !!} </label>
                         <div class="col-sm-10">
                             <textarea class="form-control" name="short_description" id="short_description" placeholder="Enter Short Description" readonly>{{@$blogData->short_description}}</textarea>
                            
                         </div>
                     </div>
-                    <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">{!!  __('backend.short_description_fr') !!} </label>
-                        <div class="col-sm-10">
-                            <textarea class="form-control" name="short_description" id="short_description" placeholder="Enter Short Description" readonly>{{@$blogData->short_description_fr}}</textarea>                           
-                        </div>
-                    </div>
+                    
                     <div class="form-group row">
                             <label class="col-sm-2 form-control-label">Image </label>
                             <div class="col-sm-6">
@@ -74,17 +63,12 @@
                             </div>
                         </div>
                     <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">Long Description [EN] </label>
+                        <label class="col-sm-2 form-control-label">Long Description </label>
                         <div class="col-sm-10">
                             <textarea class="form-control" id="long_description" name="long_description" autofocus disabled>{!! urldecode(@$blogData->long_description) !!}</textarea>                           
                         </div>
                     </div>
-                    <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">Long Description [FR]</label>
-                        <div class="col-sm-10">
-                             <textarea class="form-control" id="long_description_fr" name="long_description" autofocus disabled>{!! urldecode(@$blogData->long_description_fr) !!}</textarea>
-                        </div>
-                    </div>                    
+                                        
                 </div>               
                 <div class="form-group row">
                     <label class="col-sm-2 form-control-label"></label>                        
@@ -223,21 +207,7 @@
             }
         });
 
-        CKEDITOR.replace('long_description_fr', {
-            on: {
-                focus: onFocus,
-                blur: onBlur,
-                pluginsLoaded: function(evt) {
-                    var doc = CKEDITOR.document,
-                        ed = evt.editor;
-                    if (!ed.getCommand('bold')) doc.getById('exec-bold').hide();
-                    if (!ed.getCommand('link')) doc.getById('exec-link').hide();
-                }
-            }
-        });
-
-
-    </script>
+        </script>
      <script type="text/javascript">
         CKEDITOR.config.height='400px';
 </script>

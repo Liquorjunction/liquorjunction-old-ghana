@@ -60,9 +60,9 @@ $title_var2 = "title_" . env('DEFAULT_LANGUAGE');
                         </div>
                     </div> --}}
                     <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">Question [EN]<span class="valid_field">*</span></label>
+                        <label class="col-sm-2 form-control-label">Question<span class="valid_field">*</span></label>
                         <div class="col-sm-10">
-                            <input type="text" name="question" id="question" class="form-control" placeholder="Question [EN]" value="{{old('question_name ')}}">
+                            <input type="text" name="question" id="question" class="form-control" placeholder="Question" value="{{old('question_name ')}}">
                             @if ($errors->has('question'))
                             <span class="help-block">
                                 <span  style="color: red;" class='validate'>{{ $errors->first('question') }}</span>
@@ -70,22 +70,12 @@ $title_var2 = "title_" . env('DEFAULT_LANGUAGE');
                             @endif
                         </div>
                     </div>
-                    <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">Question [FR]<span class="valid_field">*</span></label>
-                        <div class="col-sm-10">
-                            <input type="text" name="question_fr" id="question" class="form-control" placeholder="Question [FR]" value="{{old('question_name_fr')}}">
-                            @if ($errors->has('question_fr'))
-                            <span class="help-block">
-                                <span  style="color: red;" class='validate'>{{ $errors->first('question_fr') }}</span>
-                            </span>
-                            @endif
-                        </div>
-                    </div>
+                    
 
                     <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">Answer [EN]<span class="valid_field">*</span></label>
+                        <label class="col-sm-2 form-control-label">Answer<span class="valid_field">*</span></label>
                         <div class="col-sm-10">
-                            <textarea class="form-control" id="faq_answer" name="answer" autofocus placeholder="Answer [EN]" >{{old('answer')}}</textarea>
+                            <textarea class="form-control" id="faq_answer" name="answer" autofocus placeholder="Answer" >{{old('answer')}}</textarea>
                             @if ($errors->has('answer'))
                             <span class="help-block">
                                 <span  style="color: red;" class='validate'>{{ $errors->first('answer') }}</span>
@@ -94,17 +84,7 @@ $title_var2 = "title_" . env('DEFAULT_LANGUAGE');
                         </div>
                     </div>
 
-                    <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">Answer [FR]<span class="valid_field">*</span></label>
-                        <div class="col-sm-10">
-                            <textarea class="form-control" id="faq_answer_fr" name="answer_fr" autofocus placeholder="Answer [FR]">{{old('answer_fr')}}</textarea>
-                            @if ($errors->has('answer_fr'))
-                            <span class="help-block">
-                                <span  style="color: red;" class='validate'>{{ $errors->first('answer_fr') }}</span>
-                            </span>
-                            @endif
-                        </div>
-                    </div>
+                    
 
                 </div>
 

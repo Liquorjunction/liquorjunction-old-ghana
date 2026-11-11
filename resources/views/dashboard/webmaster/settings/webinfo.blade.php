@@ -14,13 +14,7 @@
                     <option value="m/d/Y" {{ env('DATE_FORMAT', 'Y-m-d') == 'm/d/Y' ? 'selected' : '' }}>m/d/Y</option>
                 </select>
             </div>--}}
-            <div class="col-sm-6" style="margin-bottom: 2px;">
-            <label>Language: </label>
-            <select name="language_id" class="form-control c-select">
-                <option {{ (isset($WebmasterSetting->language_id) && $WebmasterSetting->language_id	 == 1) || old('language_id') == 1  ? 'selected' : '' }} value="1">EN</option>
-                <option {{ (isset($WebmasterSetting->language_id	) && $WebmasterSetting->language_id	 == 2) || old('language_id') == 2  ? 'selected' : '' }} value="2">FR</option>
-            </select>
-        </div>
+            
         <div class="col-sm-6">
             <label for="phone">Phone Number:</label> {!! Form::text('phone', $WebmasterSetting->phone, [ 'placeholder' => '', 'class' => 'form-control', 'id' => 'phone', ]) !!}
         </div>
@@ -43,13 +37,10 @@
     <div class="p-a-sm col-md-12">
         <div class="row">            
             <div class="col-sm-6" id="">
-                    <label>Address [EN]:</label>
+                    <label>Address:</label>
                     <textarea rows="3" name="address" class="form-control">{{$WebmasterSetting->address}}</textarea>
             </div>         
-            <div class="col-sm-6" id="">
-                    <label>Address [FR]:</label>
-                    <textarea rows="3" name="address_fr" class="form-control">{{$WebmasterSetting->address_fr}}</textarea>
-            </div>
+            
            
         </div>
     </div>

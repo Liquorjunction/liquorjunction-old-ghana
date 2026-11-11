@@ -43,7 +43,6 @@ class WebmasterSettingsController extends Controller
         $this->validateSettingRequest($Setting->id);
         if (!empty($Setting)) {
             //isset($data->page_name) ? $data->page_name: '',currency_symbol
-            // $Setting->language_id = isset($request->language_id	) ? $request->language_id: '';
             $Setting->commission_in_per = isset($request->commission_in_per) ? $request->commission_in_per : '';
             $Setting->currency_symbol = isset($request->currency_symbol) ? $request->currency_symbol : '';
             $Setting->popular_dance_category = isset($request->popular_dance_category) ? $request->popular_dance_category : 0;
@@ -127,10 +126,8 @@ class WebmasterSettingsController extends Controller
             // dd($WebinfoSetting);    
             if (!empty($WebinfoSetting)) {
                 //isset($data->page_name) ? $data->page_name: '',currency_symbol
-                $WebinfoSetting->language_id = isset($request->language_id	) ? $request->language_id: '';
                 $WebinfoSetting->phone = isset($request->phone) ? $request->phone : '';
                 $WebinfoSetting->address = isset($request->address) ? $request->address : '';
-                $WebinfoSetting->address_fr = isset($request->address_fr) ? $request->address_fr : '';
                 $WebinfoSetting->map_url = isset($request->map_url) ? $request->map_url : '';
                 $WebinfoSetting->email = isset($request->email) ? $request->email : '';
                 $WebinfoSetting->fax = isset($request->address) ? $request->fax : '';

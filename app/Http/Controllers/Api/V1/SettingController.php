@@ -46,7 +46,6 @@ public function version(Request $request)
         // echo "string";exit();
         $result = [];
         $labels = [];
-        $language_id = isset($request->language_id) ? $request->language_id : 1;
 
         if(!empty($request->input('updated_date'))){
             
@@ -62,7 +61,7 @@ public function version(Request $request)
         foreach($labelList as $lkey => $lvalue){
             $labels[$lkey]['key'] =  strval($lvalue['label_name']);            
             $labels[$lkey]['value'] =  strval($lvalue['label_value']);          
-            $labels[$lkey]['value_fr'] =  strval($lvalue['label_value_fr']);            
+                        
         }
 
         if(!empty($labelList) && count($labelList) > 0){

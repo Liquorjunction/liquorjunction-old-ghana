@@ -136,7 +136,6 @@ class labelTableSeeder extends Seeder
         foreach($d as $key => $mkm)
         {
             $labels = new Label();
-            $labels->language_id = 1;
             $labels->labelname = $key;
             $labels->labelvalue = $mkm;
             $labels->status = 1;

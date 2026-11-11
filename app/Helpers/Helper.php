@@ -97,6 +97,8 @@ static function getUserCartItems()
 
             $cartItems[] = [
                 'id' => $cart->id,
+                'product_id' => $cart->product_id,
+                'encoded_product_id' => Helper::encodeUrl($cart->product_id),
                 'name' => $cart->product_name ?? 'Product',
                 'variant_id' => $cart->product_variant_id,
                 'qty' => $cart->quantity,
@@ -161,6 +163,8 @@ if (!empty($sessionCart)) {
 
             $cartItems[] = [
                 'id' => $product_id . '_' . $variant_id,
+                'product_id' => $product_id,
+                'encoded_product_id' => Helper::encodeUrl($product_id),
                 'name' => $product->product_name ?? 'Product',
                 'variant_id' => $variant_id,
                 'qty' => $qty,
@@ -1652,25 +1656,10 @@ if (!empty($sessionCart)) {
 
     static function language($keys)
     {
-        $general_setting = Helper::Settings('language_id');
-
-        if (Session::get('language') == null && $general_setting == 2) {
-            Session::put('language', 2);
-        }
-
-        if (Session::get('language') == null && $general_setting == 1) {
-            Session::put('language', 1);
-        }
-
         $get_result = Label::where(['status' => 1, 'label_name' => $keys, 'label_type' => 1])->first();
 
         if (!empty($get_result)) {
-            if (Session::get('language') == 2) {
-                $label = ($get_result->label_value_fr) ? $get_result->label_value_fr : $get_result->label_value;
-            } else {
-                $label = $get_result->label_value;
-            }
-            return $label;
+            return $get_result->label_value ?: "";
         } else {
             return "";
         }
@@ -2091,12 +2080,7 @@ if (!empty($sessionCart)) {
     static function getOrderStatus($id)
     {
         $order_status = DB::table('order_status')->where('id', $id)->first();
-        if (Session::get('language') == 2) {
-            $status =  $order_status->name_fr;
-        } else {
-            $status = $order_status->name;
-        }
-        return $status;
+        return $order_status ? $order_status->name : '';
     }
 
     static function paymentStatusLabel($status)

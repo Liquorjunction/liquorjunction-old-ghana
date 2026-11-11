@@ -510,12 +510,14 @@ class LoginController extends Controller
     public function logoutMainUser()
     {
         Auth::guard('web')->logout();
+        Session::forget(['TimeZoneSession', 'uid']);
         return redirect('/admin/login');
     }
 
     public function logoutMainWholesaler()
     {
         auth()->guard('main_user')->logout();
+        Session::forget(['TimeZoneSession', 'uid']);
         return redirect('/wholesaler');
     }
 

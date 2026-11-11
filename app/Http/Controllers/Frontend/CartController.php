@@ -222,14 +222,15 @@ class CartController extends Controller
             $removeItem = Cart::where('user_id', $user_id)->where('product_variant_id',$variant_id)->delete();
         }else{            
             $new_cart_array = array();        
-            foreach($get_cart_array as $key => $variant_array){    
-                if(array_key_exists($variant_id,$variant_array)){ 
-                    unset($variant_array[$variant_id]);
+            if(!empty($get_cart_array)){
+                foreach($get_cart_array as $key => $variant_array){    
+                    if(array_key_exists($variant_id,$variant_array)){ 
+                        unset($variant_array[$variant_id]);
+                    }
+                    if(!empty($variant_array)){
+                        $new_cart_array[$key] = $variant_array;
+                    }               
                 }
-                //When item variant is one and remove it then  blank array is generation s this reason we are using below condition.
-                if(!empty($variant_array)){
-                    $new_cart_array[$key] = $variant_array;
-                }               
             }
             Session::put('cart_info',$new_cart_array);
         }
@@ -239,7 +240,107 @@ class CartController extends Controller
             Session::forget('buy_now_info');
         }
 
-        return true;
+        // Get remaining variant IDs in cart
+        $variantIds = array();
+        if($user_id){
+            $cartData = Cart::select(DB::raw('group_concat(product_variant_id) as variantIds'))
+                ->where('user_id', $user_id)
+                ->groupBy('user_id')
+                ->where('status', 1)
+                ->first();
+            if(!empty($cartData)){
+                $variantIds = array_filter(explode(',', $cartData->variantIds));
+            }
+        }else{
+            $cart_info = Session::get('cart_info');
+            if(!empty($cart_info)){
+                foreach($cart_info as $result){
+                    foreach($result as $keys => $value){
+                        $variantIds[] = $keys;
+                    }               
+                }
+            }
+        }
+
+        $cart_count = count($variantIds);
+        if($cart_count == 0){
+            return response()->json([
+                'success' => 'true',
+                'cart_count' => 0,
+                'empty' => true,
+                'total_products_price' => 0,
+                'total_discount_price' => 0,
+                'tax_amount' => 0,
+                'total_amount' => 0
+            ]);
+        }
+
+        $productData = ProductVariants::getProductDetalsBasedOnVariant()->with('cart')->whereIn('id', $variantIds)->get();
+        $original_price = 0;
+        $total_discount_price = 0;
+        $is_product_discount = [];
+
+        $today = Carbon::now()->toDateString();
+        $currentOffer = Offers::where('status', 1)
+                        ->whereDate('expiry_date', '>=', $today)
+                        ->first(); 
+        $currentOfferType = $currentOffer ? $currentOffer->offer_type : null;
+        $currentOfferAmount = $currentOffer ? $currentOffer->dis_amount : null;
+
+        foreach($productData as $result){
+            if($user_id == ""){
+                $is_offer = Helper::getCartOfferStatus($result->id);
+                $discount_amount = Helper::getCartDiscountAmount($result->id);
+                $offer_type = Helper::getCartOfferType($result->id);
+                $qty = Helper::getCartQuantity($result->id);
+            }else{
+                $offer_cart = $result->cart->where('user_id', $user_id)->sortByDesc('id')->first();
+                $is_offer = $offer_cart ? $offer_cart->is_offer : 0;
+                $discount_amount = $offer_cart ? $offer_cart->discount_amount : null;
+                $offer_type = $offer_cart ? $offer_cart->offer_type : null;
+                $qty = Helper::getUserCartQuantity($result->id, $user_id);
+            }
+
+            $org_price = @$result->variant_price ? ($result->variant_price * $qty) : 0;
+            $original_price += $org_price;
+            $discount_price = $org_price;
+
+            if ($is_offer) {
+                if ($offer_type == 'flat') {
+                    $discount_price = max(0, $org_price - ($discount_amount * $qty));
+                } elseif ($offer_type == 'percentage') {
+                    $discount_price = max(0, $org_price - ($org_price * $discount_amount / 100));
+                }
+                $is_product_discount[] = true;
+            } elseif ($result->variant_discounted_price && $result->variant_discounted_price != 0) {
+                $discount_price = $result->variant_discounted_price * $qty;
+                $is_product_discount[] = true;
+            }
+
+            $total_discount_price += ($org_price - $discount_price);
+        }
+
+        $total_products_price = $original_price;
+
+        if(in_array(true, $is_product_discount)){
+            $final_amount = ($total_products_price - $total_discount_price);
+        } else {
+            $final_amount = $total_products_price;
+        }
+
+        $tax_amount = (Helper::Settings('tax') / 100) * $final_amount;
+        $tax_amount = round($tax_amount, 2);
+        $total_amount = $final_amount + $tax_amount;
+
+        return response()->json([
+            'success' => 'true',
+            'cart_count' => $cart_count,
+            'empty' => false,
+            'total_products_price' => $total_products_price,
+            'total_discount_price' => $total_discount_price,
+            'tax_amount' => $tax_amount,
+            'total_amount' => $total_amount
+        ]);
     }
 
     // public function productCartIncrement(Request $request){
@@ -365,8 +466,18 @@ class CartController extends Controller
         $offer_status = (int) $request->offer_status; 
         $product_variant = ProductVariants::where('id',$variant_id)->first();
         
-        if($product_variant->available_qty < $quantity){
-            return false;
+        $isStockCapped = false;
+        if($product_variant && $product_variant->available_qty < $quantity){
+            if ($product_variant->available_qty <= 0) {
+                return response()->json([
+                    'success' => 'false',
+                    'status' => false,
+                    'available_qty' => 0,
+                    'message' => 'This product is currently out of stock.'
+                ]);
+            }
+            $quantity = (int) $product_variant->available_qty;
+            $isStockCapped = true;
         }
 
         $user_id = $this->user_id;
@@ -557,6 +668,10 @@ class CartController extends Controller
 
         return response()->json([
             'success' => 'true',
+            'capped' => $isStockCapped,
+            'available_qty' => $product_variant ? $product_variant->available_qty : $quantity,
+            'capped_quantity' => $quantity,
+            'message' => $isStockCapped ? 'Only ' . $product_variant->available_qty . ' item(s) available in stock.' : 'Quantity updated',
             'total_products_price' => $total_products_price,
             'total_discount_price' => $total_discount_price,
             'tax_amount' => $tax_amount,
@@ -587,11 +702,16 @@ class CartController extends Controller
 
         $bogo_status = (int) $request->bogo_status;
         $offer_status = (int) $request->offer_status;
+        $quantity = (int) $request->quantity;
 
+        $variant_check = ProductVariants::find($request->variantId);
+        if ($variant_check && $variant_check->available_qty > 0 && $quantity > $variant_check->available_qty) {
+            $quantity = (int) $variant_check->available_qty;
+        }
 
         $data = [
             'product_id' => $request->product_id,
-            'quantity' => $request->quantity,
+            'quantity' => $quantity,
             'variantId' => $request->variantId,
             'is_bogo' => $bogo_status,
         ];

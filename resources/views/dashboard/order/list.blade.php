@@ -680,7 +680,8 @@ if (isset($check_updation_permission) && $check_updation_permission == true) {
                     success: function(result) {
                         $('#updateOrderStatus').modal('hide');
                         // $("html, body").animate({ scrollTop: "0" });
-                        $('#order_type_status').trigger('change');
+                        var tabe = $('#label').DataTable();
+                        tabe.ajax.reload(null, false);
                         if (result.success == true) {
                             $('#success_file_popup').append(messages('alert-success', result.msg));
                             setTimeout(function() {

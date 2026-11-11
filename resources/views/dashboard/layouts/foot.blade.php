@@ -30,3 +30,4 @@
 
 
 @stack('after-scripts')
+<script src="{{ asset('assets/dashboard/js/datatable-state-manager.js') }}"></script>

@@ -14,16 +14,14 @@ class SubCategories extends Model
         'uniqid',
         'category_id',
         'title',
-        'title_fr',
         'description',
-        'description_fr',
         'image',
         'status', 
         'created_at', 
         'updated_at' 
     ];
 
-   public function category() {
+    public function category() {
         return $this->hasOne(Categories::class, 'id', 'category_id');
     }
 }

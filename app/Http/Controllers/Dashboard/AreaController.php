@@ -75,7 +75,6 @@ class AreaController extends Controller
             $area = new Area();
             $area->region_id = $request->input('region_id');
             $area->title = $request->input('title');
-            $area->title_fr = $request->input('title_fr');
             // $area->rate = $request->input('rate');
             $area->delivery_fee = $request->input('delivery_fee');
             $area->delivery_amount = $request->input('delivery_amount');
@@ -112,7 +111,6 @@ class AreaController extends Controller
             $brand = Area::where('id', $area_id)->update(array(
                 'region_id'=> $request->region_id,
                 'title' => $request->title,
-                'title_fr' => $request->title_fr,
                 // 'rate'=>$request->rate,
                 'delivery_fee'=>$request->delivery_fee,
                 'delivery_amount'=>$request->delivery_amount,
@@ -345,7 +343,6 @@ class AreaController extends Controller
                 // "id" => isset($data->id) ? $data->id : '',
                 "region_id"=> isset($data->region_name) ? $data->region_name : '',
                 "area_name" => isset($data->title) ? $data->title : '',
-                "area_title_fr" => isset($data->title_fr) ? $data->title_fr : '',
                 // "rate" => isset($data->rate) ? $data->rate : '',
                 "amount" => isset($data->delivery_amount) ? $data->delivery_amount : '',
                 "fee" => isset($data->delivery_fee) ? $data->delivery_fee : '',

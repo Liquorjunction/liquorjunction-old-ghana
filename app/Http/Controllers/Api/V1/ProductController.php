@@ -55,7 +55,7 @@ class ProductController extends Controller
                 'p.id as product_id',
                 'p.average_rating',
                 'p.product_name',
-                'p.product_name_fr',
+                
                 'pi.image',
                 'pv.final_price',
                 'pv.*',
@@ -190,11 +190,7 @@ class ProductController extends Controller
         // Transform offer products
         $offerProductArr = [];
         foreach ($offerProductData as $product) {
-            if ($request->language == 1 && !empty($product->product_name_fr)) {
-                $title = $product->product_name_fr;
-            } else {
-                $title = $product->product_name ?? '';
-            }
+            $title = $product->product_name ?? '';
 
             $unit = Helper::getUnitById(@$product->variant_uof);
             $size = ($product->variant_size) ? $product->variant_size . ' ' . $unit : '';
@@ -241,11 +237,7 @@ class ProductController extends Controller
         // Transform BOGO products
         $bogoProductArr = [];
         foreach ($bogoProductData as $product) {
-            if ($request->language == 1 && !empty($product->product_name_fr)) {
-                $title = $product->product_name_fr;
-            } else {
-                $title = $product->product_name ?? '';
-            }
+            $title = $product->product_name ?? '';
 
             $unit = Helper::getUnitById(@$product->variant_uof);
             $size = ($product->variant_size) ? $product->variant_size . ' ' . $unit : '';
@@ -325,20 +317,16 @@ class ProductController extends Controller
     //             'error'=>$validator->messages(),
     //             'data' => null
     //         ], 200);
-    //     }
         
     //     $brand_ids = array();
     //     $category_ids = array();
     //     $subcategory_ids = array();
     //     if($request->brand_ids){
     //         $brand_ids = explode(',',$request->brand_ids);
-    //     }        
     //     if($request->category_ids){
     //         $category_ids = explode(',',$request->category_ids);
-    //     }
     //     if($request->subcategory_ids){
     //         $subcategory_ids = explode(',',$request->subcategory_ids);
-    //     }
 
     //     $subcategory = array();
     //     $minprice = ($request->min_price)?$request->min_price:'';
@@ -347,7 +335,7 @@ class ProductController extends Controller
      
     //     $uniqid = $request->uniqid;
     //     $products =  DB::table('product as p')
-    //                 ->select('p.id as productId','p.average_rating','p.product_name','p.product_name_fr','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.offer','p.is_product_bestseller')
+    //                 ->select('p.id as productId','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.offer','p.is_product_bestseller')
     //                 ->join('product_image as pi', 'p.id', '=', 'pi.product_id')
     //                 ->where('pi.status', '=', 1)
     //                 ->join('categories as c', 'p.category_id', '=', 'c.id')                    
@@ -360,7 +348,6 @@ class ProductController extends Controller
     //                     DB::raw('(SELECT *,id as product_variant_id, COALESCE(NULLIF(variant_discounted_price, ""), variant_price) AS final_price FROM product_variants WHERE status = 1) as pv'),
     //                     function ($join) {
     //                         $join->on('p.id', '=', 'pv.product_id');
-    //                     }
     //                 )
     //                 ->leftjoin('most_viewed_product as mvp', 'mvp.product_id', '=', 'p.id')
     //                 ->where('p.status', '=', 1)
@@ -371,53 +358,36 @@ class ProductController extends Controller
                     
     //                 if($list_type==1){
     //                     $products = $products->where('p.offer',1);
-    //                 }elseif($list_type==2){
     //                     $products = $products->where('p.is_product_bestseller',1);
-    //                 }
                    
 
     //                 if($category_ids!=null && $subcategory_ids ==null){
     //                     $products->whereIn('sc.category_id', $category_ids);
-    //                 }else if($category_ids!=null && ($subcategory_ids && $subcategory_ids != null)){
     //                     //$products->whereIn('sc.id', $subcategory_ids)->orwhereIn('sc.category_id', $category_ids);
     //                     $products->where(function ($query) use ($subcategory_ids,$category_ids){
     //                         $query->whereIn('sc.id', $subcategory_ids)
     //                               ->orWhereIn('sc.category_id', $category_ids);
-    //                     });
-    //                 }else if($category_ids==null && ($subcategory_ids && $subcategory_ids != null)){
     //                     $products->whereIn('sc.id', $subcategory_ids);
-    //                 }
 
     //                 if($brand_ids && $brand_ids != null){
     //                     $products->whereIn('b.id', $brand_ids);
-    //                 }
 
     //                 if(($minprice && $minprice != null) && ($maxprice && $maxprice != null)){                
     //                    // $products->whereBetween('pv.final_price', [$minprice, $maxprice]);
     //                    $products->whereBetween('pv.final_price',array((string) $minprice, (string) $maxprice));
-    //                 }
 
     //                 $sort_by = $request->sort_by;
     //                 if($sort_by==1){
     //                     //$products = $products->orderBy('p.id', 'desc');
     //                     if($list_type==1 || $list_type==2 ){
     //                         $products = $products->orderBy('p.updated_at', 'desc');
-    //                     }else{
     //                         $products = $products->orderBy('p.id', 'desc');
-    //                     }
-    //                 }elseif($sort_by==2){
     //                     $products =  $products->orderBy('pv.final_price', 'desc');
-    //                 }elseif($sort_by==3){
     //                     $products = $products->orderBy('pv.final_price', 'asc');
-    //                 }elseif($sort_by==4){
     //                    $sorting_data =  ['mvp.count', 'desc'];
-    //                 }else{                        
     //                     if($list_type==1 || $list_type==2 ){
     //                         $products = $products->orderBy('p.updated_at', 'desc');
-    //                     }else{
     //                         $products = $products->orderBy('p.id', 'desc');
-    //                     }
-    //                 }
         
     //     $limit = 16;     
     //     $products  = $products->get(); 
@@ -427,33 +397,24 @@ class ProductController extends Controller
     //         if($page=='' || $page==1 ){
     //             $page = 1;
     //             $current_page_count = 0; 
-    //         }else{                
     //             $current_page_count = (($page - 1) * $limit); 
-    //         } 
     //        // dd($current_page_count);
     //         $productData = $products->skip($current_page_count)->take($limit);
                
-    //     // }else{
-    //     //       $productData  = $products;
-    //     // }       
-       
+    //    //     //       $productData  = $products;
+    //       
     //     $result = [];
     //     if($productData){
     //         $productDataArr = [];           
     //         foreach($productData as $data){
-    //             if ($request->language == 1) {
-    //                 $title = ($data->product_name_fr) ? $data->product_name_fr : $data->product_name;
-    //             } else {
+    //                 $title = $data->product_name;
     //                 $title = $data->product_name ?? '';
-    //             } 
     //             $product_image = $data->image;
     //             $product_unit = Helper::getUnitById(@$data->variant_uof);
     //             $product_size =  ($data->variant_size) ? $data->variant_size . ' ' . $product_unit : '' ;
     //             if(file_exists(public_path() . '/uploads/product/' . $product_image)){
     //                 $image_path =  asset('uploads/product/' . $product_image);
-    //             }else{
     //                 $image_path =  asset('assets/frontend/images/image-not-avilable.png');
-    //             }
     //             $is_favourite = 0;   
     //             if($request->uniqid != ''){
     //                 $userData = DB::table('main_users')->where('uniqid',$request->uniqid)->first();
@@ -462,9 +423,6 @@ class ProductController extends Controller
     //                     $favourite = FavoriteProduct::where('user_id', $userData->id)->where('product_id', $data->productId)->where('status', 1)->count();  
     //                     if($favourite ==1){
     //                         $is_favourite = 1;
-    //                     }
-    //                 }                    
-    //             }
 
     //             $original_price = ($data->variant_price) ? $data->variant_price :'';
     //             $discounted_price = ($data->variant_discounted_price!='' && $data->variant_discounted_price!=0.00)? $data->variant_discounted_price :NULL;
@@ -481,22 +439,18 @@ class ProductController extends Controller
     //                 'variant_id'=>strval(@$data->product_variant_id)
 
     //             ];
-    //         }        
 
     //         $result['code']     =    strval(1);
     //         $result['message']  =   'success';
     //         $result['result']  =   $productDataArr; 
     //         $result['total_product_count']  =  $total_product_count;
-    //     }else{
     //         $result['code']     =   strval(0);
     //         $result['message']  =   'no_data_found';
     //         $result['result']   =   [];
-    //     }
     
     //     $mainResult = $result;   
       
     //     return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));     
-    // }
    
 
     // 11th Aug 2025 new
@@ -512,20 +466,16 @@ class ProductController extends Controller
     //             'error'=>$validator->messages(),
     //             'data' => null
     //         ], 200);
-    //     }
         
     //     $brand_ids = array();
     //     $category_ids = array();
     //     $subcategory_ids = array();
     //     if($request->brand_ids){
     //         $brand_ids = explode(',',$request->brand_ids);
-    //     }        
     //     if($request->category_ids){
     //         $category_ids = explode(',',$request->category_ids);
-    //     }
     //     if($request->subcategory_ids){
     //         $subcategory_ids = explode(',',$request->subcategory_ids);
-    //     }
 
     //     $subcategory = array();
     //     $minprice = ($request->min_price)?$request->min_price:'';
@@ -534,7 +484,7 @@ class ProductController extends Controller
      
     //     $uniqid = $request->uniqid;
     //     $products =  DB::table('product as p')
-    //                 ->select('p.id as productId','p.average_rating','p.product_name','p.product_name_fr','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.offer','p.is_product_bestseller','p.category_id','p.subcategory_id','p.brand_id')
+    //                 ->select('p.id as productId','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.offer','p.is_product_bestseller','p.category_id','p.subcategory_id','p.brand_id')
     //                 ->join('product_image as pi', 'p.id', '=', 'pi.product_id')
     //                 ->where('pi.status', '=', 1)
     //                 ->join('categories as c', 'p.category_id', '=', 'c.id')                    
@@ -547,7 +497,6 @@ class ProductController extends Controller
     //                     DB::raw('(SELECT *,id as product_variant_id, COALESCE(NULLIF(variant_discounted_price, ""), variant_price) AS final_price FROM product_variants WHERE status = 1) as pv'),
     //                     function ($join) {
     //                         $join->on('p.id', '=', 'pv.product_id');
-    //                     }
     //                 )
     //                 ->leftjoin('most_viewed_product as mvp', 'mvp.product_id', '=', 'p.id')
     //                 ->where('p.status', '=', 1)
@@ -558,9 +507,7 @@ class ProductController extends Controller
                     
     //                 if ($list_type == 1) {
     //                     $products = $products->where('p.offer', 1);
-    //                 } elseif ($list_type == 2) {
     //                     $products = $products->where('p.is_product_bestseller', 1);
-    //                 } elseif ($list_type == 4) {
     //                     // Only offer products
     //                     $offer = Offers::where('status', 1)
     //                         ->whereDate('expiry_date', '>=', $today)
@@ -578,75 +525,44 @@ class ProductController extends Controller
     //                                 $query->orWhere(function ($q) use ($offer) {
     //                                     if (!empty($offer->product_id)) {
     //                                         $q->where('p.id', $offer->product_id);
-    //                                     } elseif (!empty($offer->brand_id)) {
     //                                         $q->where('b.id', $offer->brand_id);
-    //                                     } elseif (!empty($offer->subcategory_id)) {
     //                                         $q->where('sc.id', $offer->subcategory_id);
-    //                                     } elseif (!empty($offer->category_id)) {
     //                                         $q->where('c.id', $offer->category_id);
-    //                                     }
-    //                                 });
-    //                             }
 
     //                             if ($bogo) {
     //                                 $query->orWhere(function ($q) use ($bogo) {
     //                                     if (!empty($bogo->product_id)) {
     //                                         $q->where('p.id', $bogo->product_id);
-    //                                     } elseif (!empty($bogo->brand_id)) {
     //                                         $q->where('b.id', $bogo->brand_id);
-    //                                     } elseif (!empty($bogo->subcategory_id)) {
     //                                         $q->where('sc.id', $bogo->subcategory_id);
-    //                                     } elseif (!empty($bogo->category_id)) {
     //                                         $q->where('c.id', $bogo->category_id);
-    //                                     }
-    //                                 });
-    //                             }
-    //                         });
-    //                     } else {
     //                         // No active offers or bogo
     //                         $products = $products->whereRaw('0 = 1');
-    //                     }
-    //                 } 
 
     //                 if($category_ids!=null && $subcategory_ids ==null){
     //                     $products->whereIn('sc.category_id', $category_ids);
-    //                 }else if($category_ids!=null && ($subcategory_ids && $subcategory_ids != null)){
     //                     $products->where(function ($query) use ($subcategory_ids,$category_ids){
     //                         $query->whereIn('sc.id', $subcategory_ids)
     //                               ->orWhereIn('sc.category_id', $category_ids);
-    //                     });
-    //                 }else if($category_ids==null && ($subcategory_ids && $subcategory_ids != null)){
     //                     $products->whereIn('sc.id', $subcategory_ids);
-    //                 }
 
     //                 if($brand_ids && $brand_ids != null){
     //                     $products->whereIn('b.id', $brand_ids);
-    //                 }
 
     //                 if(($minprice && $minprice != null) && ($maxprice && $maxprice != null)){                
     //                    $products->whereBetween('pv.final_price',array((string) $minprice, (string) $maxprice));
-    //                 }
 
     //                 $sort_by = $request->sort_by;
     //                 if($sort_by==1){
     //                     if($list_type==1 || $list_type==2 ){
     //                         $products = $products->orderBy('p.updated_at', 'desc');
-    //                     }else{
     //                         $products = $products->orderBy('p.id', 'desc');
-    //                     }
-    //                 }elseif($sort_by==2){
     //                     $products =  $products->orderBy('pv.final_price', 'desc');
-    //                 }elseif($sort_by==3){
     //                     $products = $products->orderBy('pv.final_price', 'asc');
-    //                 }elseif($sort_by==4){
     //                    $sorting_data =  ['mvp.count', 'desc'];
-    //                 }else{                        
     //                     if($list_type==1 || $list_type==2 || $list_type==4){
     //                         $products = $products->orderBy('p.updated_at', 'desc');
-    //                     }else{
     //                         $products = $products->orderBy('p.id', 'desc');
-    //                     }
-    //                 }
         
     //     $limit = 16;     
     //     $products  = $products->get(); 
@@ -655,28 +571,21 @@ class ProductController extends Controller
     //         if($page=='' || $page==1 ){
     //             $page = 1;
     //             $current_page_count = 0; 
-    //         }else{                
     //             $current_page_count = (($page - 1) * $limit); 
-    //         } 
     //         $productData = $products->skip($current_page_count)->take($limit);
                
     //     $result = [];
     //     if($productData){
     //         $productDataArr = [];           
     //         foreach($productData as $data){
-    //             if ($request->language == 1) {
-    //                 $title = ($data->product_name_fr) ? $data->product_name_fr : $data->product_name;
-    //             } else {
+    //                 $title = $data->product_name;
     //                 $title = $data->product_name ?? '';
-    //             } 
     //             $product_image = $data->image;
     //             $product_unit = Helper::getUnitById(@$data->variant_uof);
     //             $product_size =  ($data->variant_size) ? $data->variant_size . ' ' . $product_unit : '' ;
     //             if(file_exists(public_path() . '/uploads/product/' . $product_image)){
     //                 $image_path =  asset('uploads/product/' . $product_image);
-    //             }else{
     //                 $image_path =  asset('assets/frontend/images/image-not-avilable.png');
-    //             }
     //             $is_favourite = 0;   
     //             if($request->uniqid != ''){
     //                 $userData = DB::table('main_users')->where('uniqid',$request->uniqid)->first();
@@ -685,9 +594,6 @@ class ProductController extends Controller
     //                     $favourite = FavoriteProduct::where('user_id', $userData->id)->where('product_id', $data->productId)->where('status', 1)->count();  
     //                     if($favourite ==1){
     //                         $is_favourite = 1;
-    //                     }
-    //                 }                    
-    //             }
 
     //             $inCart=0;
     //              if($request->uniqid != ''){
@@ -697,9 +603,6 @@ class ProductController extends Controller
     //                     $cartItem = DB::table('cart')->where('user_id',$userData->id)->where('product_id', $data->productId)->where('status', 1)->first();
     //                     if($cartItem){
     //                         $inCart = 1;
-    //                     }
-    //                 }                    
-    //             }
 
     //             $original_price = ($data->variant_price) ? $data->variant_price :'';
     //             $discounted_price = ($data->variant_discounted_price!='' && $data->variant_discounted_price!=0.00)? $data->variant_discounted_price :NULL;
@@ -724,7 +627,6 @@ class ProductController extends Controller
     //                 $offer_product_category_id=$data->category_id;
     //                 $offer_product_subcategory_id=$data->subcategory_id;
     //                 $offer_product_brand_id=$data->brand_id;
-    //             }
 
     //             $bogo_status = false;
     //             $bogo_product_category_id=null;
@@ -741,7 +643,6 @@ class ProductController extends Controller
     //                 $bogo_product_category_id=$data->category_id;
     //                 $bogo_product_subcategory_id=$data->subcategory_id;
     //                 $bogo_product_brand_id=$data->brand_id;
-    //             }
 
     //             $productArr = [
     //                 'product_id'=>strval(@$data->productId),
@@ -764,9 +665,7 @@ class ProductController extends Controller
 
     //                  if ($offer_type == 'flat') {
     //                     $offer_label = 'Flat ' . $formatted_discount  . ' GH₵ off';
-    //                  } elseif ($offer_type == 'percentage') {
     //                     $offer_label = $formatted_discount  . '% off';
-    //                  }
 
     //                  $productArr['offer_status'] = true;
     //                  $productArr['offer_type'] = $offer_type;
@@ -775,7 +674,6 @@ class ProductController extends Controller
     //                  $productArr['product_category_id'] =  $offer_product_category_id;
     //                  $productArr['product_subcategory_id'] =  $offer_product_subcategory_id;
     //                  $productArr['product_brand_id'] =  $offer_product_brand_id;
-    //             }
 
     //             if($bogo_status)
     //             {
@@ -786,25 +684,20 @@ class ProductController extends Controller
     //                   $productArr['product_category_id'] =  $bogo_product_category_id;
     //                   $productArr['product_subcategory_id'] =  $bogo_product_subcategory_id;
     //                   $productArr['product_brand_id'] =  $bogo_product_brand_id;
-    //             }
 
     //             $productDataArr[] = $productArr;
-    //         }        
 
     //         $result['code']     =    strval(1);
     //         $result['message']  =   'success';
     //         $result['result']  =   $productDataArr; 
     //         $result['total_product_count']  =  $total_product_count;
-    //     }else{
     //         $result['code']     =   strval(0);
     //         $result['message']  =   'no_data_found';
     //         $result['result']   =   [];
-    //     }
     
     //     $mainResult = $result;   
       
     //     return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));     
-    // }
 
     // 28 aug 2025
     public function getProductList(Request $request)
@@ -846,7 +739,7 @@ class ProductController extends Controller
         
             $uniqid = $request->uniqid;
             $products =  DB::table('product as p')
-                        ->select('p.id as productId','p.average_rating','p.product_name','p.product_name_fr','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.offer','p.is_product_bestseller','p.category_id','p.subcategory_id','p.brand_id')
+                        ->select('p.id as productId','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.offer','p.is_product_bestseller','p.category_id','p.subcategory_id','p.brand_id')
                         ->join('product_image as pi', 'p.id', '=', 'pi.product_id')
                         ->where('pi.status', '=', 1)
                         ->join('categories as c', 'p.category_id', '=', 'c.id')                    
@@ -940,7 +833,6 @@ class ProductController extends Controller
 
                         // if(($minprice && $minprice != null) && ($maxprice && $maxprice != null)){                
                         // $products->whereBetween('pv.final_price',array((string) $minprice, (string) $maxprice));
-                        // }
 
                         if (is_numeric($minprice) && is_numeric($maxprice)) { 
                             $products->whereBetween('pv.final_price', [$minprice, $maxprice]);
@@ -983,11 +875,7 @@ class ProductController extends Controller
             if($productData){
                 $productDataArr = [];           
                 foreach($productData as $data){
-                    if ($request->language == 1) {
-                        $title = ($data->product_name_fr) ? $data->product_name_fr : $data->product_name;
-                    } else {
-                        $title = $data->product_name ?? '';
-                    } 
+                    $title = $data->product_name ?? ''; 
                     $product_image = $data->image;
                     $product_unit = Helper::getUnitById(@$data->variant_uof);
                     $product_size =  ($data->variant_size) ? $data->variant_size . ' ' . $product_unit : '' ;
@@ -1248,11 +1136,7 @@ class ProductController extends Controller
             $productDataArr = [];
             $is_favourite = 0;
             foreach($products as $data){
-                if ($request->language == 1) {
-                    $title = ($data->product_name_fr) ? $data->product_name_fr : $data->product_name;
-                } else {
-                    $title = $data->product_name ?? '';
-                } 
+                    $title = $data->product_name ?? ''; 
                 $product_image = $data->get_product_images->first();
                 $product_variant = $data->get_product_variants->first();
                 $product_unit = Helper::getUnitById($product_variant->variant_uof);
@@ -1266,8 +1150,6 @@ class ProductController extends Controller
                 //     $favourite = FavoriteProduct::where('user_id', $user_id)->where('product_id', $data->id)->where('status', 1)->count();                  
                 //     if($favourite ==1){
                 //         $is_favourite = 1;
-                //     }
-                // }
                 $is_favourite = 0;   
                 if(!empty($uniqid)){
                     $userData = DB::table('main_users')->where('uniqid',$request->uniqid)->first();
@@ -1427,16 +1309,12 @@ class ProductController extends Controller
         //                         ->orWhere(function ($q) use ($common) {
         //                             $q->whereNotNull('subcategory_id')
         //                                 ->where('subcategory_id', $common->subcategory_id);
-        //                         })
         //                         ->orWhere(function ($q) use ($common) {
         //                             $q->whereNull('subcategory_id')
         //                                 ->where('category_id', $common->category_id);
-        //                         });
 
         //                     if (!empty($common->brand_id)) {
         //                         $query->orWhere('brand_id', $common->brand_id);
-        //                     }
-        //                 })
         //                 ->first();
 
         //             $common->bogo_status = $bogo ? true : false; 
@@ -1450,40 +1328,28 @@ class ProductController extends Controller
         //                 ->orWhere(function ($q) use ($common) {
         //                     $q->whereNotNull('subcategory_id')
         //                         ->where('subcategory_id', $common->subcategory_id);
-        //                 })
         //                 ->orWhere(function ($q) use ($common) {
         //                     $q->whereNull('subcategory_id')
         //                         ->where('category_id', $common->category_id);
-        //                 });
 
         //             if (!empty($common->brand_id)) {
         //                 $query->orWhere('brand_id', $common->brand_id);
-        //             }
-        //         })
         //         ->first();
 
         //         if ($offer) {
         //             $common->offer_status = true;
         //             $common->discount_amount = $offer->dis_amount;
         //             $common->offer_type = $offer->offer_type;
-        //         } else {
         //             $common->offer_status = false;
         //             $common->discount_amount = 0;
         //             $common->offer_type = null;
-        //         }
-        //     }
-        // }
  
         $result = [];
         if($products){
             $productDataArr = [];
             $is_favourite = 0;
             foreach($products as $data){
-                if ($request->language == 1) {
-                    $title = ($data->product_name_fr) ? $data->product_name_fr : $data->product_name;
-                } else {
-                    $title = $data->product_name ?? '';
-                } 
+                    $title = $data->product_name ?? ''; 
                 $product_image = $data->get_product_images->first();
                 $product_variant = $data->get_product_variants->first();
                 $product_unit = Helper::getUnitById($product_variant->variant_uof);
@@ -1497,8 +1363,6 @@ class ProductController extends Controller
                 //     $favourite = FavoriteProduct::where('user_id', $user_id)->where('product_id', $data->id)->where('status', 1)->count();                  
                 //     if($favourite ==1){
                 //         $is_favourite = 1;
-                //     }
-                // }
 
                 $is_favourite = 0;   
                 if(!empty($uniqid)){                   
@@ -1719,11 +1583,7 @@ class ProductController extends Controller
             $productDataArr = [];
             $is_favourite = 0;
             foreach($products as $data){
-                if ($request->language == 1) {
-                    $title = ($data->product_name_fr) ? $data->product_name_fr : $data->product_name;
-                } else {
-                    $title = $data->product_name ?? '';
-                } 
+                    $title = $data->product_name ?? ''; 
                 $product_image = $data->get_product_images->first();
                 $product_variant = $data->get_product_variants->first();
                 $product_unit = Helper::getUnitById($product_variant->variant_uof);
@@ -1737,8 +1597,6 @@ class ProductController extends Controller
                 //     $favourite = FavoriteProduct::where('user_id', $user_id)->where('product_id', $data->id)->where('status', 1)->count();                  
                 //     if($favourite ==1){
                 //         $is_favourite = 1;
-                //     }
-                // }
                 $is_favourite = 0;   
                 if(!empty($uniqid)){
                     $userData = DB::table('main_users')->where('uniqid',$request->uniqid)->first();
@@ -1854,19 +1712,11 @@ class ProductController extends Controller
                 return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
             }
 
-            if ($request->language == 1) {
-                $title = ($product_info->product_name_fr) ? $product_info->product_name_fr : $product_info->product_name;
-                $short_desp = ($product_info->short_description_fr) ? $product_info->short_description_fr : $product_info->short_description;
-                $long_descp = ($product_info->page_content_fr) ? $product_info->page_content_fr : $product_info->description;
-                $category_title = ($product_info->get_category->title_fr) ? $product_info->get_category->title_fr :$product_info->get_category->title;
-                $brand_title = ($product_info->get_brand_details->title_fr) ? $product_info->get_brand_details->title_fr :$product_info->get_brand_details->title;
-            } else {
-                $title = $product_info->product_name ?? '';
-                $short_desp = $product_info->short_description??'';
-                $long_descp = $product_info->description??'';
-                $category_title = $product_info->get_category->title??'';
-                $brand_title = $product_info->get_brand_details->title??'';
-            } 
+            $title = $product_info->product_name ?? '';
+            $short_desp = $product_info->short_description ?? '';
+            $long_descp = $product_info->description ?? '';
+            $category_title = $product_info->get_category->title ?? '';
+            $brand_title = $product_info->get_brand_details->title ?? ''; 
             $product_images = array();
             foreach($product_info->get_product_images as $result_image){
                 if(file_exists(public_path() . '/uploads/product/' . $result_image->image)){
@@ -2092,7 +1942,6 @@ class ProductController extends Controller
     //     {
     //         $categoryData  = Categories::with(['subcategory'=>function ($query){
     //             $query->where('status',1);
-    //         }])->where('status',1)->get();
     //         $brandData = Brand::where('status',1)->orderBy('title','asc')->get();
          
 
@@ -2100,49 +1949,35 @@ class ProductController extends Controller
     //         if (!empty($categoryData)) {
     //             $categoryArr = [];
     //             foreach ($categoryData as $category) {                    
-    //                 if ($request->language == 1) {
-    //                     $category_title = $category->title_fr ?? $category->title;
-    //                 } else {
+    //                     $category_title = $category->title;
     //                     $category_title = $category->title ?? '';
-    //                 }    
                     
     //                 $subcategory = [];
     //                 if(!empty($category->subcategory)){
     //                     foreach($category->subcategory as $sub_category){
-    //                         if ($request->language == 1) {
-    //                             $title = $sub_category->title_fr ?? $sub_category->title;
-    //                         } else {
+    //                             $title = $sub_category->title;
     //                             $title = $sub_category->title ?? '';
-    //                         } 
     //                         $subcategory[] = [
     //                             'id'=>strval(@$sub_category->id),
     //                             'title'=>strval(@$title)
     //                         ];
-    //                     }
-    //                 }
                     
     //                 $categoryArr['category_list'][] = [
     //                     'id'=>strval(@$category->id),
     //                     'title'=>strval(@$category_title),
     //                     'subcategory_list'=> $subcategory
     //                 ];
-    //             }
 
     //             if (!empty($brandData)) {
     //                 $brandArr = [];
     //                 foreach ($brandData as $brands) {                    
-    //                     if ($request->language == 1) {
-    //                         $title = $brands->title_fr ?? $brands->title;
-    //                     } else {
+    //                         $title = $brands->title;
     //                         $title = $brands->title ?? '';
-    //                     }
 
     //                     $brandArr['brand_list'][] = [
     //                         'id'=>strval(@$brands->id),
     //                         'title'=>strval(@$title),
     //                     ];
-    //                 }                    
-    //             }
                
     //             $product_val =  new Product;
     //             $product_price = [];
@@ -2151,13 +1986,10 @@ class ProductController extends Controller
     //             $product_price['min_price'] = "0";
     //             if (!empty($product_max_price)) {
     //                 $product_price['max_price'] = $product_max_price->max_price;
-    //             }               
     //             if (!empty($product_min_price->min_price)) {
     //                 $product_price['min_price'] = $product_min_price->min_price;
-    //             }
 
     //             $mainArr = array_merge($categoryArr,$brandArr,$product_price);
-    //         }
             
     //         $result['code']     =  strval(1);
     //         $result['message']  =  'success';
@@ -2165,14 +1997,11 @@ class ProductController extends Controller
     //         $mainResult   =   $result;
     //         return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
 
-    //     }else{
     //         $result['code']     =  strval(0);
     //         $result['message']  =   'something_went_wrong';
     //         $result['result']       =   [];
     //         $mainResult   =   $result;
     //         return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-    //     }
-    // }
 
         public function productsfiltter(Request $request){
         $result = [];
@@ -2208,7 +2037,7 @@ class ProductController extends Controller
             }
             
             $products =  DB::table('product as p')
-                        ->select('p.id as productId','p.average_rating','p.product_name','p.product_name_fr','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.offer','p.is_product_bestseller','p.category_id','p.subcategory_id','p.brand_id')
+                        ->select('p.id as productId','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.offer','p.is_product_bestseller','p.category_id','p.subcategory_id','p.brand_id')
                         ->join('product_image as pi', 'p.id', '=', 'pi.product_id')
                         ->where('pi.status', '=', 1)
                         ->join('categories as c', 'p.category_id', '=', 'c.id')                    
@@ -2269,20 +2098,12 @@ class ProductController extends Controller
             if (!empty($categoryData)) {
                 $categoryArr = [];
                 foreach ($categoryData as $category) {                    
-                    if ($request->language == 1) {
-                        $category_title = $category->title_fr ?? $category->title;
-                    } else {
-                        $category_title = $category->title ?? '';
-                    }    
+                        $category_title = $category->title ?? '';    
                     
                     $subcategory = [];
                     if(!empty($category->subcategory)){
                         foreach($category->subcategory as $sub_category){
-                            if ($request->language == 1) {
-                                $title = $sub_category->title_fr ?? $sub_category->title;
-                            } else {
-                                $title = $sub_category->title ?? '';
-                            } 
+                                $title = $sub_category->title ?? ''; 
                             $subcategory[] = [
                                 'id'=>strval(@$sub_category->id),
                                 'title'=>strval(@$title)
@@ -2300,11 +2121,7 @@ class ProductController extends Controller
                 if (!empty($brandData)) {
                     $brandArr = [];
                     foreach ($brandData as $brands) {                    
-                        if ($request->language == 1) {
-                            $title = $brands->title_fr ?? $brands->title;
-                        } else {
                             $title = $brands->title ?? '';
-                        }
 
                         $brandArr['brand_list'][] = [
                             'id'=>strval(@$brands->id),
@@ -2513,7 +2330,6 @@ class ProductController extends Controller
     //              'error'=>$validator->messages(),
     //              'data' => null
     //          ], 200);
-    //      } 
  
     //     $userData = DB::table('main_users')->join('favorite_product','main_users.id','favorite_product.user_id')->select(DB::raw('group_concat(favorite_product.product_id) as product_ids') )->where('main_users.uniqid',$request->uniqid)->groupBy('main_users.id')->where('favorite_product.status',1)->first();
         
@@ -2526,7 +2342,6 @@ class ProductController extends Controller
     //         $page = $request->page;
     //         if($page==''){
     //             $page = 1;
-    //         }
     //         $products = $products->paginate(8, ['*'], 'page', $page);
             
     //         $result = [];
@@ -2535,20 +2350,15 @@ class ProductController extends Controller
     //             $is_favourite = 0;
     //             foreach($products as $data){
     //                 $is_favourite = 1;
-    //                 if ($request->language == 1) {
-    //                     $title = ($data->product_name_fr) ? $data->product_name_fr : $data->product_name;
-    //                 } else {
+    //                     $title = $data->product_name;
     //                     $title = $data->product_name ?? '';
-    //                 } 
     //                 $product_image = $data->get_product_images->first();
     //                 $product_variant = $data->get_product_variants->first();
     //                 $product_unit = Helper::getUnitById($product_variant->variant_uof);
     //                 $product_size =  ($product_variant->variant_size) ? $product_variant->variant_size . ' ' . $product_unit : '' ;
     //                 if(file_exists(public_path() . '/uploads/product/' . $product_image->image)){
     //                     $image_path =  asset('uploads/product/' . $product_image->image);
-    //                 }else{
     //                     $image_path =  asset('assets/frontend/images/image-not-avilable.png');
-    //                 }
     
     //                 $original_price = ($product_variant->variant_price) ? $product_variant->variant_price :'';
                     
@@ -2565,23 +2375,17 @@ class ProductController extends Controller
     //                     'is_favourite' => $is_favourite,
     //                     'variant_id'=>strval(@$product_variant->id),
     //                 ];
-    //             }
     //             $result['code']     =    strval(1);
     //             $result['message']  =   'success';
     //             $result['result']   =   $productDataArr; 
-    //         }else{
     //             $result['code']     =   strval(0);
     //             $result['message']  =   'no_data_found';
     //             $result['result']   =   [];
-    //         }
-    //     }else{
     //             $result['code']     =   strval(-5);
     //             $result['message']  =   'no_data_found';
     //             // $result['result']   =   [];
-    //     }    
     //     $mainResult = $result;       
     //     return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));     
-    // }
 
     public function favoriteList(Request $request)
     {   
@@ -2694,11 +2498,7 @@ class ProductController extends Controller
                         }
                     }
 
-                    if ($request->language == 1) {
-                        $title = ($data->product_name_fr) ? $data->product_name_fr : $data->product_name;
-                    } else {
-                        $title = $data->product_name ?? '';
-                    } 
+                    $title = $data->product_name ?? ''; 
                     $product_image = $data->get_product_images->first();
                     $product_variant = $data->get_product_variants->first();
                     $product_unit = Helper::getUnitById($product_variant->variant_uof);
@@ -3084,7 +2884,6 @@ class ProductController extends Controller
         } 
         // $new = array_filter($product_variants, function ($var) use ($filterBy) {
         //     return ($var['name'] == $filterBy);
-        // });
 
         $productData = ProductVariants::getProductDetalsBasedOnVariant()->whereIn('id', $variantIds)->get(); 
         if(!empty($productData)){
@@ -3095,11 +2894,7 @@ class ProductController extends Controller
             foreach($productData as $data){
                 $get_qty = array_column($product_variants, $data->id);
                 $get_qty = implode('',$get_qty);
-                if ($language == 1) {
-                    $title = ($data->get_product_details->product_name_fr) ? $data->get_product_details->product_name_fr : $data->get_product_details->product_name;
-                } else {
-                    $title = $data->get_product_details->product_name?:'';
-                } 
+                $title = $data->get_product_details->product_name ?? ''; 
                 $product_image = $data->get_product_details->get_product_images->first();
                 //$product_variant = $data->get_product_details->get_product_variants->first();
                 $product_unit = Helper::getUnitById($data->variant_uof);
@@ -3209,7 +3004,6 @@ class ProductController extends Controller
     //                 'error'=>$validator->messages(),
     //                 'data' => null
     //             ], 200);
-    //         }
     //         $coupon_code = $request->coupon_code;
     //         if($request->is_guest==1){
     //             $validator = \Validator::make($request->all(), [
@@ -3222,12 +3016,10 @@ class ProductController extends Controller
     //                     'error'=>$validator->messages(),
     //                     'data' => null
     //                 ], 200);
-    //             }
     //             $product_variants =  $request->product_variants;  
     //             $response = $this->getCartData($request->language,$product_variants,$coupon_code);
     //             return response ()->json(new \App\Http\Resources\V1\SettingResource($response));               
                 
-    //         }else{
     //             $validator = \Validator::make($request->all(), [
     //                 'uniqid' => 'required',
     //                 'token' => 'required',
@@ -3239,12 +3031,10 @@ class ProductController extends Controller
     //                     'error'=>$validator->messages(),
     //                     'data' => null
     //                 ], 200);
-    //             }
     //             $response = \App\Helpers\ResponseHelper::userCheckStatus($request->uniqid,$request->token);
     //             if ($response['code'] != 1) {
     //                 $mainResult   =   $response;
     //                 return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-    //             }
                 
     //             $userData = DB::table('main_users')->where('uniqid',$request->uniqid)->first();
     //             $cartData = Cart::select(DB::raw('group_concat(product_variant_id) as variantIds'))->where('user_id', $userData->id)->groupBy('user_id')->where('status', 1)->first();
@@ -3256,7 +3046,6 @@ class ProductController extends Controller
                         
     //                 $mainResult   =   $result;
     //                 return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-    //             }
 
     //             $variantIds ="";
     //             if(!empty($cartData)){
@@ -3281,7 +3070,6 @@ class ProductController extends Controller
     //                         if($is_bogo)
     //                         {
     //                             $bogo_label = 'BOGO';
-    //                         }      
 
     //                         if($is_offer)
     //                         {
@@ -3289,26 +3077,18 @@ class ProductController extends Controller
 
     //                             if ($offer_type == 'flat') {
     //                                 $offer_label = 'Flat ' . $formatted_discount  . ' GH₵ off';
-    //                             } elseif ($offer_type == 'percentage') {
     //                                 $offer_label = $formatted_discount  . '% off';
-    //                             }
-    //                         }
 
                             
-    //                         if ($request->language == 1) {
-    //                             $title = ($data->get_product_details->product_name_fr) ? $data->get_product_details->product_name_fr : $data->get_product_details->product_name;
-    //                         } else {
+    //                             $title = $data->get_product_details->product_name;
     //                             $title = $data->get_product_details->product_name?:'';
-    //                         } 
     //                         $product_image = $data->get_product_details->get_product_images->first();
     //                         //$product_variant = $data->get_product_details->get_product_variants->first();
     //                         $product_unit = Helper::getUnitById($data->variant_uof);
     //                         $product_size =  ($data->variant_size) ? $data->variant_size . ' ' . $product_unit : '' ;
     //                         if(file_exists(public_path() . '/uploads/product/' . $product_image->image)){
     //                             $image_path =  asset('uploads/product/' . $product_image->image);
-    //                         }else{
     //                             $image_path =  asset('assets/frontend/images/image-not-avilable.png');
-    //                         }
     //                         $variant_org_price = $data->variant_price;
     //                         $original_price = ($data->variant_price) ? $data->variant_price * $get_qty:0;
     //                         $org_price += $original_price ;
@@ -3318,9 +3098,7 @@ class ProductController extends Controller
     //                             $variant_dis_price = $data->variant_discounted_price;                             
     //                             $discounted_price  = $data->variant_discounted_price  * $get_qty ;
     //                             $total_discount_price += $original_price - $discounted_price  ;
-    //                        }else{
     //                             $variant_dis_price = 0;
-    //                        }  
 
     //                         $product_variant_stock =  $data->available_qty;
                            
@@ -3343,14 +3121,11 @@ class ProductController extends Controller
     //                             'product_variant_stock'=>$product_variant_stock,  
 
     //                         ];            
-    //                     }
 
     //                     $total_products_price = $org_price;
     //                     if(in_array(true, $is_product_discount)){
     //                         $final_amount = ($total_products_price - $total_discount_price);
-    //                     }else{
     //                         $final_amount =  $total_products_price;
-    //                     }
             
                         
     //                     $productDataArr['coupon_discount_amount'] = NULL ;
@@ -3363,9 +3138,7 @@ class ProductController extends Controller
     //                             $coupon_code_price = round($coupon_code_price,2);
     //                             $total_amount = round(($final_amount - $coupon_code_price), 2);
     //                             $productDataArr['coupon_discount_amount'] = strval(@$coupon_code_price) ;
-    //                         }   
     //                         $productDataArr['coupon_status'] =  $coupon_info;             
-    //                     }
 
     //                     $tax_amount = 0;
     //                     $tax_percentage = 0;
@@ -3373,9 +3146,7 @@ class ProductController extends Controller
     //                         $tax_amount = (Helper::Settings('tax') / 100) * $final_amount;
     //                         $tax_percentage = Helper::Settings('tax');
     //                         $total_amount = $final_amount + $tax_amount;
-    //                     }else{
     //                         $total_amount = $final_amount;
-    //                     }            
                         
 
     //                     $productDataArr['total_orignal_price'] = strval(@$org_price) ;
@@ -3390,19 +3161,14 @@ class ProductController extends Controller
     //                     $result['result']   =   $productDataArr; 
     //                     $mainResult   =   $result;
     //                     return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-    //                 }else{
     //                     $result['code']     =  strval(1);
     //                     $result['message']  =  'no_data_found';
     //                     $result['result']   =  []; 
 
     //                     $mainResult   =   $result;
     //                     return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-    //                 }
-    //             } 
     //             $response = $this->getCartData($request->language,$variantIds);
     //             return response ()->json(new \App\Http\Resources\V1\SettingResource($response));
-    //         }
-    //     }else{
        
     //         $result['code']     =  strval(0);
     //         $result['message']  =  'something_went_wrong';
@@ -3410,8 +3176,6 @@ class ProductController extends Controller
                 
     //         $mainResult   =   $result;
     //         return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-    //     }
-    // }
 
     // 2 sep 2025
      public function cartList(Request $request){
@@ -3517,11 +3281,7 @@ class ProductController extends Controller
                             }
 
                             
-                            if ($request->language == 1) {
-                                $title = ($data->get_product_details->product_name_fr) ? $data->get_product_details->product_name_fr : $data->get_product_details->product_name;
-                            } else {
-                                $title = $data->get_product_details->product_name?:'';
-                            } 
+                                $title = $data->get_product_details->product_name ?? ''; 
                             $product_image = $data->get_product_details->get_product_images->first();
                             //$product_variant = $data->get_product_details->get_product_variants->first();
                             $product_unit = Helper::getUnitById($data->variant_uof);
@@ -4219,17 +3979,12 @@ class ProductController extends Controller
             //         if($pdd->discount_price != '0')
             //         {
             //             $sort = "product.discount_price";
-            //         }
             //         else
             //         {
             //             $sort = "product.retail_price";
-            //         }
-            //     }
-            // }
             // else
             // {
             //     $sort = "product.retail_price";
-            // }
 
             $sort = "product.retail_price";
 
@@ -4314,7 +4069,6 @@ class ProductController extends Controller
         //         'error'=>$validator->messages(),
         //         'data' => null
         //     ], 200);
-        // }
 
         // $post = $request->all();
 
@@ -4340,7 +4094,6 @@ class ProductController extends Controller
         // if (empty($storeMapData->toArray())) {
         //     // echo "string";exit();
         //     $storeMapData = DB::table('store_details')->leftjoin('main_users','main_users.id','=','store_details.wholesaler_id')->select('store_details.*','main_users.store_name','main_users.profile')->orderby('store_details.id','DESC')->get();
-        // }
 
         if ($current_lat) {
         // echo "string";exit;
@@ -4398,7 +4151,6 @@ class ProductController extends Controller
                     return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
         }
 
-        // }else{
             
         //         $result['code']     =  strval(0);
         //         $result['message']  =   'something_went_wrong';
@@ -4407,6 +4159,5 @@ class ProductController extends Controller
         //         $mainResult   =   $result;
         //         return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
 
-        // }   
     }
 }

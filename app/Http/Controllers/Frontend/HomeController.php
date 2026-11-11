@@ -180,7 +180,7 @@ class HomeController extends Controller
                 'p.id as product_id',
                 'p.average_rating',
                 'p.product_name',
-                'p.product_name_fr',
+                
                 'pi.image',
                 'pv.final_price',
                 'pv.*',
@@ -415,7 +415,7 @@ class HomeController extends Controller
         }
 
         $offerProductDataFilter=DB::table('product as p')
-                    ->select('p.id as product_id','p.average_rating','p.product_name','p.product_name_fr','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.category_id','p.subcategory_id','p.brand_id')
+                    ->select('p.id as product_id','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.category_id','p.subcategory_id','p.brand_id')
                     ->join('product_image as pi', 'p.id', '=', 'pi.product_id')
                     ->where('pi.status', '=', 1)
                     ->join('categories as c', 'p.category_id', '=', 'c.id')                    
@@ -575,7 +575,7 @@ class HomeController extends Controller
         }
 
         $bogoProductDataFilter=DB::table('product as p')
-                    ->select('p.id as product_id','p.average_rating','p.product_name','p.product_name_fr','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.category_id','p.subcategory_id','p.brand_id')
+                    ->select('p.id as product_id','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.category_id','p.subcategory_id','p.brand_id')
                     ->join('product_image as pi', 'p.id', '=', 'pi.product_id')
                     ->where('pi.status', '=', 1)
                     ->join('categories as c', 'p.category_id', '=', 'c.id')                    
@@ -677,11 +677,7 @@ class HomeController extends Controller
     }
 
 
-    public function changeLanguage(Request $request){
-        $language  = $request->language;
-        return session()->put('language', $language);
-    }
-
+    
     public function setTimeZone(Request $request){
         $timezone  = $request->timezone;
         return session()->put('timzone_in_session', $timezone);
@@ -784,17 +780,10 @@ class HomeController extends Controller
 
         $productQueryForCount = clone $productDataFilter;
 
-        if(session::get('language')==2){
-            $categoryData = $categoryData->where('title_fr', 'LIKE', '%'.$keyword.'%')->get();
-            $subcategoryData = $subcategoryData->where('title_fr', 'LIKE', '%'.$keyword.'%')->get();
-            $productDataFilter = $productDataFilter->where('product_name_fr', 'LIKE', '%'.$keyword.'%')->take(12)->get();
-            $productCount = $productQueryForCount->where('product_name_fr', 'LIKE', '%'.$keyword.'%')->count();
-        }else{            
-            $categoryData = $categoryData->where('title', 'LIKE', '%'.$keyword.'%')->get();
-            $subcategoryData = $subcategoryData->where('title', 'LIKE', '%'.$keyword.'%')->get();
-            $productDataFilter = $productDataFilter->where('product_name', 'LIKE', '%'.$keyword.'%')->take(12)->get();
-            $productCount = $productQueryForCount->where('product_name', 'LIKE', '%'.$keyword.'%')->count();
-        }
+        $categoryData = $categoryData->where('title', 'LIKE', '%'.$keyword.'%')->get();
+        $subcategoryData = $subcategoryData->where('title', 'LIKE', '%'.$keyword.'%')->get();
+        $productDataFilter = $productDataFilter->where('product_name', 'LIKE', '%'.$keyword.'%')->take(12)->get();
+        $productCount = $productQueryForCount->where('product_name', 'LIKE', '%'.$keyword.'%')->count();
 
         $data = compact('categoryData','subcategoryData','productDataFilter','settings','productCount','keyword');
         return view('frontend.searching', $data)->render();

@@ -58,28 +58,18 @@
                             <table class="table table-bordered m-a-0">
                                 <tr>
                                     <tbody>
-                                        <th>Question [EN]</th>
+                                        <th>Question</th>
                                         <td>{{isset($Faq->question_name)? $Faq->question_name : ''}}</td>
                                     </tbody>
                                 </tr>
+                                
                                 <tr>
                                     <tbody>
-                                        <th>Question [FR]</th>
-                                        <td>{{isset($Faq->question_name_fr)? $Faq->question_name_fr : ''}}</td>
-                                    <tbody>
-                                </tr>
-                                <tr>
-                                    <tbody>
-                                        <th>Answer [EN]</th>
+                                        <th>Answer</th>
                                         <td>{{isset($Faq->answer)? $Faq->answer : ''}}</td>
                                     </tbody>
                                 </tr>
-                                <tr>
-                                    <tbody>
-                                        <th>Answer [FR] </th>
-                                        <td>{{isset($Faq->answer_fr)? $Faq->answer_fr : ''}}</td>
-                                    </tbody>
-                                </tr>
+                                
                             </table>
                         </form>
                         <div class="form-group row">

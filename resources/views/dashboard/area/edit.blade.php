@@ -15,23 +15,15 @@
             </div>
         </div>
         <div class="form-group row">
-            <label class="col-sm-4 form-control-label">Title [EN]<span class="valid_field">*</span></label>
+            <label class="col-sm-4 form-control-label">Title<span class="valid_field">*</span></label>
             <div class="col-sm-8">
-                <input type="text" name="title" id="title" class="form-control" placeholder="Title [EN]" onkeypress="return isNumberKey(event)" value="{{$editData->title}}">
+                <input type="text" name="title" id="title" class="form-control" placeholder="Title" onkeypress="return isNumberKey(event)" value="{{$editData->title}}">
                 <span class="help-block" id="errorMessage" style="display:none">
                     <span style="color: red;display: none;" id="errorMsg" class='validate'></span>
                 </span>
             </div>
         </div>
-        <div class="form-group row">
-            <label class="col-sm-4 form-control-label">{!! __('Title [FR]') !!}<span class="valid_field">*</span></label>
-            <div class="col-sm-8">
-                <input type="text" name="title_fr" id="title_fr" class="form-control" placeholder="{!! __('Title [FR]') !!}" value="{{$editData->title_fr}}">
-                <span style="color: red;display: none;" id="errorMsgtitlefr" class='validate'></span>
-                <span class="help-block" id="errorMessagetitlefr" style="display:none">
-                </span>
-            </div>
-        </div>
+        
         <div class="form-group row">
             <label class="col-sm-4 form-control-label">Delivery Fee<span class="valid_field">*</span></label>
             <div class="col-sm-8">
@@ -74,10 +66,6 @@
                         maxlength: 30,
 
                     },
-                    title_fr: {
-                        required: true,
-                        maxlength: 30,
-                    },
                     delivery_fee: {                        
                         required: true,
                     },
@@ -93,10 +81,6 @@
                         required: "Title field is required.",
                         maxlength: "Title field cannot exceed {0} characters.",
 
-                    },
-                    title_fr: {
-                        required: "Title Fr field is required.",
-                        maxlength: "Title Fr field cannot exceed {0} characters."
                     },
                     delivery_fee:{
                         required:"Delivery Fee is required.",

@@ -11,21 +11,14 @@
         </div>
     </div>
     <div class="form-group row">
-        <label class="col-sm-2 form-control-label">{!! __('backend.title') !!} [EN]</label>
+        <label class="col-sm-2 form-control-label">{!! __('backend.title') !!}</label>
         <div class="col-sm-10">
 
             <div class="show_blade_div">{{@$subcategoryData->title}}</div>
 
         </div>
     </div>
-    <div class="form-group row">
-        <label class="col-sm-2 form-control-label">{!! __('backend.title') !!} [FR]</label>
-        <div class="col-sm-10">
 
-            <div class="show_blade_div">{{@$subcategoryData->title}}</div>
-
-        </div>
-    </div>
     
 
 </div>

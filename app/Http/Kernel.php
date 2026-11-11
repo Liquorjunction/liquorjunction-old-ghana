@@ -24,7 +24,6 @@ class Kernel extends HttpKernel
         \App\Http\Middleware\TrimStrings::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
         \Illuminate\Session\Middleware\StartSession::class,
-        \App\Http\Middleware\LanguageSwitcher::class,
         \Illuminate\View\Middleware\ShareErrorsFromSession::class,
         \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
 
@@ -72,8 +71,6 @@ class Kernel extends HttpKernel
         'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        // 'LanguageSwitcher' => \App\Http\Middleware\LanguageSwitcher::class,
-        'headerauth' => \App\Http\Middleware\headerauth::class,
         'SchoolUser' => \App\Http\Middleware\FrontEndUserMiddleware::class,
         'cors' => \Barryvdh\Cors\Middleware\HandleCors::class,
         'headerauthwithoutlogin' => \App\Http\Middleware\headerauthwithoutlogin::class,

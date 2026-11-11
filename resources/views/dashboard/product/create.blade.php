@@ -22,10 +22,6 @@
             /* border-bottom: 1px solid gray; */
         }
 
-        .product-single-variant:last-child {
-            /* border-top: 1px solid gray; */
-            border-bottom: 1px solid gray;
-        }
     </style>
     <link href="{{ asset('assets/dashboard/js/iconpicker/fontawesome-iconpicker.min.css') }}" rel="stylesheet">
 
@@ -63,7 +59,7 @@
 
                 <div class="personal_informations">
                     <div class="form-group row">
-                        <label class="col-sm-3 form-control-label">{!! __('backend.product_name') !!} [EN] <span
+                        <label class="col-sm-3 form-control-label">{!! __('backend.product_name') !!} <span
                                 class="valid_field">*</span></label>
                         <div class="col-sm-9">
                             <input type="text" name="product_name" id="product_name" class="form-control"
@@ -76,21 +72,7 @@
                         </div>
                     </div>
 
-                    <div class="form-group row">
-                        <label class="col-sm-3 form-control-label">{!! __('backend.product_name') !!} [FR] <span
-                                class="valid_field">*</span></label>
-                        {{-- <span class="valid_field">*</span> --}}
-                        <div class="col-sm-9">
-                            <input type="text" name="product_name_fr" id="product_name_fr" class="form-control"
-                                placeholder="Product Name" value="{{ old('product_name_fr') }}">
-                            @if ($errors->has('product_name_fr'))
-                                <span class="help-block">
-                                    <span style="color: red;"
-                                        class='validate'>{{ $errors->first('product_name_fr') }}</span>
-                                </span>
-                            @endif
-                        </div>
-                    </div>
+                    
 
                     <div class="form-group row">
                         <div class="col-sm-3 form-control-label">{!! __('backend.brand') !!}<span class="valid_field">*</span>
@@ -168,17 +150,7 @@
                             <div>
                                 <small>
                                     <i class="material-icons">&#xe8fd;</i>
-                                    Choose maximum of 5 images, .png, .jpg, .jpeg files only.
-                                </small>
-                                <br>
-                                <small>
-                                    <i class="material-icons">&#xe8fd;</i>
-                                    Recommended size 480(Width) x 520(Height).
-                                </small>
-                                <br>
-                                <small>
-                                    <i class="material-icons">&#xe8fd;</i>
-                                    You can select multiple images by pressing CTRL + Select Image.
+                                    Up to 5 images (.png, .jpg, .jpeg) &bull; Recommended size 480&times;520px &bull; Use CTRL+Click for multiple.
                                 </small>
                             </div>
 
@@ -238,10 +210,6 @@
 
                         @foreach ($product_variants as $key => $variantArr)
                             <div class="product-single-variant">
-                                @if ($k == 0)
-                                    <p style="font-size:11px; margin-bottom:4px;">This will show default unit & price for
-                                        product list & detail page</p>
-                                @endif
                                 <div class="form-group row">
                                     <label class="col-sm-3 form-control-label" style="display: flex;">Product Attributes
                                         <span class="valid_field">*</span></label>
@@ -331,13 +299,13 @@
 
                     </div>
 
-                    <div class="form-group row">
+                    {{-- <div class="form-group row">
                         <div class="col-sm-12 text-right">
                             <button type="button" class="addMoreVariantsBtn btn btn-info"
                                 data-target_multiplication=".product-multi-variant-class"
                                 onclick="return add_more_variant();">+ Add more variant</button>
                         </div>
-                    </div>
+                    </div> --}}
 
                     {{-- <div class="form-group row">
                         <label class="col-sm-3 form-control-label"
@@ -407,11 +375,15 @@
 
                     <div class="form-group row">
                         <label class="col-sm-3 form-control-label" style="display: flex;">Short {!! __('backend.description') !!}
-                            [EN]
                             <span class="valid_field">*</span></label>
                         <div class="col-sm-9">
                             <!-- <input type="text" name="description" id="description" class="form-control" placeholder="Category Description" value="{{ old('description') }}"> -->
-                            <textarea class="form-control" id="short_description" name="short_description" placeholder="Short Description">{{ old('short_description') }}</textarea>
+                            <div style="display: flex; justify-content: flex-end; margin-bottom: 4px;">
+                                <small id="short_desc_counter" style="color: #6c757d; font-size: 12px; font-weight: 500;">
+                                    <span id="short_desc_count">0</span> / 150
+                                </small>
+                            </div>
+                            <textarea class="form-control" id="short_description" name="short_description" maxlength="150" placeholder="Product Short Description">{{ old('short_description') }}</textarea>
                             @if ($errors->has('short_description'))
                                 <span class="help-block">
                                     <span style="color: red;"
@@ -422,22 +394,7 @@
                     </div>
 
 
-                    <div class="form-group row">
-                        <label class="col-sm-3 form-control-label" style="display: flex;">Short {!! __('backend.description') !!}
-                            [FR]<span class="valid_field">*</span>
-                        </label>
-                        <div class="col-sm-9">
-                            <!-- <input type="text" name="description" id="description" class="form-control" placeholder="Category Description" value="{{ old('description') }}"> -->
-                            <textarea class="form-control" id="short_description_fr" name="short_description_fr"
-                                placeholder="Short Description">{{ old('short_description_fr') }}</textarea>
-                            @if ($errors->has('short_description_fr'))
-                                <span class="help-block">
-                                    <span style="color: red;"
-                                        class='validate'>{{ $errors->first('short_description_fr') }}</span>
-                                </span>
-                            @endif
-                        </div>
-                    </div>
+                    
 
 
                     <div class="form-group row">
@@ -453,19 +410,7 @@
                         </div>
                     </div>
 
-                    <div class="form-group row">
-                        <div class="col-sm-3 form-control-cms">Long Description [FR]<span class="valid_field">*</span>
-                        </div>
-                        <div class="col-sm-9">
-                            <textarea class="form-control" id="page_content_fr" name="page_content_fr">{{ old('page_content_fr') }}</textarea>
-                            @if ($errors->has('page_content_fr'))
-                                <span class="help-block">
-                                    <span style="color: red;"
-                                        class='validate'>{{ $errors->first('page_content_fr') }}</span>
-                                </span>
-                            @endif
-                        </div>
-                    </div>
+                    
                     <div class="form-group row">
                         <label class="col-sm-3">Add product as Bestseller </label>
                         <div class="col-sm-9">
@@ -762,19 +707,6 @@
             }
         });
 
-        CKEDITOR.replace('page_content_fr', {
-            on: {
-                // focus: onFocus,
-                // blur: onBlur,
-                pluginsLoaded: function(evt) {
-                    var doc = CKEDITOR.document,
-                        ed = evt.editor;
-                    if (!ed.getCommand('bold')) doc.getById('exec-bold').hide();
-                    if (!ed.getCommand('link')) doc.getById('exec-link').hide();
-                }
-            }
-        });
-
         const empty_product_subcategory = () => $('#subcategory_id option:not(:first-child)').remove();
         var product_category = "{{ old('category_id') }}";
         var product_subcategory = "{{ old('subcategory_id') }}";
@@ -869,5 +801,23 @@
                 }
             });
         }
+
+        $(document).ready(function() {
+            function updateShortDescCount() {
+                var len = $('#short_description').val() ? $('#short_description').val().length : 0;
+                $('#short_desc_count').text(len);
+                if (len >= 150) {
+                    $('#short_desc_counter').css('color', '#dc3545');
+                } else {
+                    $('#short_desc_counter').css('color', '#6c757d');
+                }
+            }
+
+            $('#short_description').on('input keyup change paste', function() {
+                setTimeout(updateShortDescCount, 10);
+            });
+
+            updateShortDescCount();
+        });
     </script>
 @endpush

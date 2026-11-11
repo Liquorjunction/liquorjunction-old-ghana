@@ -12,7 +12,7 @@
         $product_title = $result->product_name;
         $image_not_found = 'Image not available';
     }else{
-        $product_title = $result->product_name_fr;
+        $product_title = $result->product_name;
         $image_not_found = 'Image non disponible';
     }   
     //$product_image = $result->get_product_images->first();

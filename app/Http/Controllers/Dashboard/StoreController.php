@@ -62,13 +62,10 @@ class StoreController extends Controller
         //   $this->validateRequest();
         $validator =Validator::make($request->all(), [
             'store_name' => 'required|max:60',
-            'store_name_fr' => 'required|max:60',
             'address' => 'required',
             'contact_number' => 'required|regex:/^[0-9]{8,15}$/'
         ],
         [            
-            'store_name_fr.required'=> "The store name fr field is required.",
-            'store_name_fr.max'=> "The store name should not be greater than 60 characters.",
             'store_name.max'=> "The store name fr should not be greater than 60 characters.",
             'contact_number.required' => "Phone number field is required",            
             'contact_number.digits_between' => "Phone number field should appear 8 to 15 digits"
@@ -87,7 +84,6 @@ class StoreController extends Controller
           $storeDetails->sub_admin_type = Auth::user()->user_type;
           $storeDetails->sub_admin_id = Auth::user()->id;
           $storeDetails->store_name = $request->store_name;
-          $storeDetails->store_name_fr = $request->store_name_fr;
           $storeDetails->address = $request->address;
           $storeDetails->phone_code = $request->phone_code;
           $storeDetails->contact_number = $request->contact_number;
@@ -179,14 +175,11 @@ class StoreController extends Controller
         {
             $validateData =request()->validate([
                 'store_name' => 'required|max:60',
-                'store_name_fr' => 'required|max:60',
                 'address' => 'required',
                  'contact_number' => 'required|regex:/^[0-9]{8,15}$/'
             ],
             [
                 'store_name.max'=> "The store name should not be greater than 60 characters.",
-                'store_name_fr.required'=> "The store name fr field is required.",
-                'store_name_fr.max'=> "The store name fr should not be greater than 60 characters.",
                 'contact_number.required' => "Phone number field is required",            
                 'contact_number.digits_between' => "Phone number field should appear 8 to 15 digits"
             ]
@@ -194,14 +187,11 @@ class StoreController extends Controller
         }else{
             $validateData =request()->validate([
                 'store_name' => 'required|max:60',
-                'store_name_fr' => 'required|max:60',
                 'address' => 'required',
                  'contact_number' => 'required|regex:/^[0-9]{8,15}$/'
             ],
             [
                 
-                'store_name_fr.required'=> "The store name fr field is required.",
-                'store_name_fr.max'=> "The store name should not be greater than 60 characters.",
                 'store_name.max'=> "The store name fr should not be greater than 60 characters.",
                 'contact_number.required' => "Phone number field is required",            
                 'contact_number.digits_between' => "Phone number field should appear 8 to 15 digits"
@@ -230,7 +220,6 @@ class StoreController extends Controller
         $product = StoreDetails::where('id', $store_id)->update(array(
                 
                 'store_name' => $request->store_name,
-                'store_name_fr' => $request->store_name_fr,
                 'address' => $request->address,
                 'phone_code' => $request->phone_code,
                 'contact_number' => $request->contact_number,

@@ -64,11 +64,8 @@ class BlogController extends Controller
 
         $blog = new Blog();
         $blog->title = $request->title;
-        $blog->title_fr = $request->title_fr;
         $blog->short_description = $request->short_description;
-        $blog->short_description_fr = $request->short_description_fr;
         $blog->long_description = $request->long_description;
-        $blog->long_description_fr = $request->long_description_fr;
         $blog->image = $fileFinalName_ar;
         $blog->status = 1;
         $blog->save();
@@ -81,11 +78,8 @@ class BlogController extends Controller
         if ($id != "") {
             $validateData = request()->validate([
                 'title' => 'required|max:40',
-                'title_fr' => 'required|max:40',
                 'short_description' => 'required|max:250',
-                'short_description_fr' => 'required|max:250',
                 'long_description' => 'required',
-                'long_description_fr' => 'required',
                 'image' =>'image|mimes:jpeg,png,jpg|max:2048',  
             ],
             [
@@ -99,11 +93,8 @@ class BlogController extends Controller
         } else {
             $validateData = request()->validate([
                 'title' => 'required|max:40',
-                'title_fr' => 'required|max:40',
                 'short_description' => 'required|max:250',
-                'short_description_fr' => 'required|max:250',
                 'long_description' => 'required',
-                'long_description_fr' => 'required',
                 'image' =>'required|image|mimes:jpeg,png,jpg|max:2048',                
             ],[
                 'image.required' => 'The image field is required.',
@@ -143,11 +134,8 @@ class BlogController extends Controller
                 $update_data['image'] = $fileFinalName_ar;
             }
             $update_data['title'] = $request->title;
-            $update_data['title_fr'] = $request->title_fr;
             $update_data['short_description'] = $request->short_description;
-            $update_data['short_description_fr'] = $request->short_description_fr;
             $update_data['long_description'] = $request->long_description;
-            $update_data['long_description_fr'] = $request->long_description_fr;
             $update_data['status'] = 1;
             $blogdata= Blog::where('id', $id)->update($update_data);
         }       

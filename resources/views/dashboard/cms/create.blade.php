@@ -46,7 +46,7 @@
                     <br>
                     <br> -->
                     <div class="form-group row">
-                        <cms class="col-sm-2 form-control-cms">Page Name [EN]</cms>
+                        <cms class="col-sm-2 form-control-cms">Page Name</cms>
                         <div class="col-sm-10">
                             <input type="text" name="page_name" id="page_name" class="form-control" placeholder="Name" value="{{old('page_name')}}">
                             @if ($errors->has('page_name'))
@@ -57,20 +57,10 @@
                         </div>
                     </div>
 
-                    <div class="form-group row">
-                        <cms class="col-sm-2 form-control-cms">Page Name [FR]</cms>
-                        <div class="col-sm-10">
-                            <input type="text" name="page_name_fr" id="page_name_fr" class="form-control" placeholder="Name" value="{{old('page_name_fr')}}">
-                            @if ($errors->has('page_name_fr'))
-                            <span class="help-block">
-                                <span  style="color: red;" class='validate'>{{ $errors->first('page_name_fr') }}</span>
-                            </span>
-                            @endif
-                        </div>
-                    </div>
+                    
 
                     <div class="form-group row">
-                        <cms class="col-sm-2 form-control-cms">Page Content [EN]</cms>
+                        <cms class="col-sm-2 form-control-cms">Page Content</cms>
                         <div class="col-sm-10">
                             <textarea class="form-control" id="page_content" name="page_content" autofocus >{{old('page_content')}}</textarea>
                             @if ($errors->has('page_content'))
@@ -80,17 +70,7 @@
                             @endif
                         </div>
                     </div>
-                    <div class="form-group row">
-                        <cms class="col-sm-2 form-control-cms">Page Content [FR]</cms>
-                        <div class="col-sm-10">
-                            <textarea class="form-control" id="page_content_fr" name="page_content_fr" autofocus >{{old('page_content_fr')}}</textarea>
-                            @if ($errors->has('page_content_fr'))
-                            <span class="help-block">
-                                <span  style="color: red;" class='validate'>{{ $errors->first('page_content_fr') }}</span>
-                            </span>
-                            @endif
-                        </div>
-                    </div>
+                    
                 </div>
 
                     <div class="form-group row m-t-md">

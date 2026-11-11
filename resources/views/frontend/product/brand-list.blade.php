@@ -213,7 +213,7 @@ aria-labelledby="offcanvasRightLabel" style="display: flex; flex-direction: colu
                                 value="{{ $category->id }}"
                                 id="category_id_{{ $category->id }}">
                             <label for="category_id_{{ $category->id }}" class="form-check-label">
-                                {{ session('language') == 1 ? $category->title : $category->title_fr }}
+                                {{ $category->title }}
                             </label>
                         </div>
         
@@ -229,7 +229,7 @@ aria-labelledby="offcanvasRightLabel" style="display: flex; flex-direction: colu
                                                 id="sub_category_{{ $category->id }}_{{ $sub->id }}"
                                                 data-parent="{{ $category->id }}">
                                             <label for="sub_category_{{ $category->id }}_{{ $sub->id }}" class="form-check-label">
-                                                {{ session('language') == 1 ? $sub->title : $sub->title_fr }}
+                                                {{ $sub->title }}
                                             </label>
                                         </div>
                                     </li>
@@ -253,11 +253,7 @@ aria-labelledby="offcanvasRightLabel" style="display: flex; flex-direction: colu
                     <ul id="brand-list">
                         @foreach ($brandData as $brand_result)
                             @php
-                                if (session::get('language') == 1) {
-                                    $brand_title = $brand_result->title;
-                                } else {
-                                    $brand_title = $brand_result->title_fr;
-                                }
+                                $brand_title = $brand_result->title;
                             @endphp
                            <li>
                             <div class="check-group">
@@ -473,40 +469,9 @@ aria-labelledby="offcanvasRightLabel" style="display: flex; flex-direction: colu
         }
 
         function productFav(product_id, status) {
-            var status = status;
-            var user_id = $("#user_id").val();
-            if (user_id) {
-                action_url = "{{ route('productfav') }}";
-            } else {
-                var url = "{{ route('websitelogin') }}";
-                window.location.href = url;
+            if (typeof toggleProductFav === 'function') {
+                return toggleProductFav(product_id, status);
             }
-            var csrf = "{{ csrf_token() }}";
-            $.ajax({
-                url: action_url,
-                data: {
-                    'user_id': user_id,
-                    'product_id': product_id,
-                    'status': status
-                },
-                headers: {
-                    'X-CSRF-TOKEN': csrf
-                },
-                type: "POST",
-
-                beforeSend: function() {
-                    $(".loader").fadeIn();
-                    $('.loader').css("visibility", "visible");
-                },
-                success: function(response) {
-                    $('.loader').css("visibility", "visible");
-                    if (user_id != '') {
-                        location.reload();
-                    } else {
-                        location.href = "{{ route('websitelogin') }}";
-                    }
-                },
-            });
         }
 
         var currency_type = "{{ Helper::Settings('currency_symbol') }}";

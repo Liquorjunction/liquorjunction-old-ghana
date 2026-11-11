@@ -439,10 +439,75 @@ class CheckoutController extends Controller
         }
 
         $buyNowData = Session::get('buy_now_info');
+        $variant_id = $buyNowData['variantId'];
+        $variant = \App\Models\ProductVariants::getProductDetalsBasedOnVariant()->where('id', $variant_id)->first();
+
+        $isStockCapped = false;
+        if ($variant && $variant->available_qty < $quantity) {
+            if ($variant->available_qty <= 0) {
+                return response()->json([
+                    'status' => false,
+                    'success' => 'false',
+                    'available_qty' => 0,
+                    'message' => 'This product is currently out of stock.'
+                ]);
+            }
+            $quantity = (int) $variant->available_qty;
+            $isStockCapped = true;
+        }
+
         $buyNowData['quantity'] = $quantity;
         Session::put('buy_now_info', $buyNowData);
 
-        return response()->json(['status' => true, 'message' => 'Quantity updated']);
+        // Calculate totals for Buy Now
+        $is_product_discount = false;
+        $original_price = 0;
+        $total_discount_price = 0;
+
+        if ($variant) {
+            $is_offer = $buyNowData['is_offer'] ?? 0;
+            $discount_amount = $buyNowData['discount_amount'] ?? null;
+            $offer_type = $buyNowData['offer_type'] ?? null;
+            $is_bogo = $buyNowData['is_bogo'] ?? 0;
+
+            $org_price = $variant->variant_price ? ($variant->variant_price * $quantity) : 0;
+            $original_price = $org_price;
+            $discount_price = $org_price;
+
+            if (!$is_bogo && $is_offer) {
+                if ($offer_type == 'flat') {
+                    $discount_price = max(0, $org_price - ($discount_amount * $quantity));
+                } elseif ($offer_type == 'percentage') {
+                    $discount_price = max(0, $org_price - ($org_price * $discount_amount / 100));
+                }
+                $is_product_discount = true;
+            } elseif ($variant->variant_discounted_price && $variant->variant_discounted_price != 0) {
+                $discount_price = $variant->variant_discounted_price * $quantity;
+                $is_product_discount = true;
+            }
+
+            $total_discount_price = $org_price - $discount_price;
+        }
+
+        $total_products_price = $original_price;
+        $final_amount = $is_product_discount ? ($total_products_price - $total_discount_price) : $total_products_price;
+
+        $tax_amount = (\App\Helpers\Helper::Settings('tax') / 100) * $final_amount;
+        $tax_amount = round($tax_amount, 2);
+        $total_amount = $final_amount + $tax_amount;
+
+        return response()->json([
+            'status' => true,
+            'success' => 'true',
+            'capped' => $isStockCapped,
+            'available_qty' => $variant ? $variant->available_qty : $quantity,
+            'capped_quantity' => $quantity,
+            'message' => $isStockCapped ? 'Only ' . $variant->available_qty . ' item(s) available in stock.' : 'Quantity updated',
+            'total_products_price' => $total_products_price,
+            'total_discount_price' => $total_discount_price,
+            'tax_amount' => $tax_amount,
+            'total_amount' => $total_amount
+        ]);
     }
 
 
@@ -499,6 +564,58 @@ class CheckoutController extends Controller
             ->json(['success' => true, 'html' => $html]);
     }
 
+    public function getCheckoutAddresses(Request $request)
+    {
+        $user_id = $this->user_id;
+        if (empty($user_id)) {
+            return response()->json(['error' => true, 'message' => 'Unauthorized'], 401);
+        }
+
+        $selectedShippingId = $request->input('selected_shipping_id');
+
+        $UserAddressData = UserAddress::withWhereHas('country', function ($query) {
+            $query->where('status', 1);
+        })->withWhereHas('region', function ($query) {
+            $query->where('status', 1);
+        })->withWhereHas('area', function ($query) {
+            $query->where('status', 1);
+        })->where([['user_id', $user_id], ['status', 1]])
+        ->orderBy('is_selected_address_id', 'desc')
+        ->orderBy('id', 'desc')
+        ->get();
+
+        $UserBillAddressData = UserBillAddress::withWhereHas('country', function ($query) {
+            $query->where('status', 1);
+        })->withWhereHas('region', function ($query) {
+            $query->where('status', 1);
+        })->withWhereHas('area', function ($query) {
+            $query->where('status', 1);
+        })->where([['user_id', $user_id], ['status', 1], ['default', 1]])
+        ->get();
+
+        $user = \DB::table('main_users')->where('id', $user_id)->where('status', 1)->first();
+
+        $shippingHtml = view('frontend.checkout.partials.shipping-address-list', [
+            'UserAddressData' => $UserAddressData,
+            'selectedId' => $selectedShippingId
+        ])->render();
+
+        $billingHtml = view('frontend.checkout.partials.billing-address-list', [
+            'UserBillAddressData' => $UserBillAddressData,
+            'user' => $user
+        ])->render();
+
+        return response()->json([
+            'success' => true,
+            'shipping_html' => $shippingHtml,
+            'billing_html' => $billingHtml,
+            'shipping_count' => $UserAddressData->count(),
+            'has_billing' => $UserBillAddressData->isNotEmpty(),
+            'default_shipping_id' => $UserAddressData->where('is_selected_address_id', 1)->value('id') ?? $UserAddressData->first()?->id,
+            'billing_id' => $UserBillAddressData->first()?->id
+        ]);
+    }
+
     public function checkouteditBillAddress($id)
     {
         $user_id = $this->user_id;
@@ -526,7 +643,6 @@ class CheckoutController extends Controller
         return response()
             ->json(['success' => true, 'html' => $html]);
     }
-
 
     public function geneateOrderId()
     {
@@ -1139,7 +1255,7 @@ class CheckoutController extends Controller
                 }
             }
         }
-        $data = ['message' => $msg, 'coupon_percentage' => $couponPercentage, 'coupon_code_price' => @Helper::numberFormat($coupon_code_price), 'delivery_fee' => @Helper::numberFormat($area_tax_rate), 'grand_total_amount' => @Helper::numberFormat($grand_total_amount), 'tax_amount' => @Helper::numberFormat($tax_amount), 'code_id' => $code_id];
+        $data = ['message' => $msg, 'coupon_percentage' => $couponPercentage, 'coupon_code_price' => @Helper::numberFormat($coupon_code_price), 'delivery_fee' => @Helper::numberFormat($area_tax_rate), 'grand_total_amount' => @Helper::numberFormat($grand_total_amount), 'tax_amount' => @Helper::numberFormat($tax_amount), 'code_id' => $code_id, 'minimum_amount' => $promocode_data ? (float)$promocode_data->minimum_amount : 0];
         // dd($data);
         return response()->json($data);
     }
@@ -2000,12 +2116,29 @@ class CheckoutController extends Controller
 
         if ($is_buy_now != 1) {
             $updatepsw = Cart::where('user_id', $user_id)->update(array('status' => 2));
+            Session::forget('cart_info');
         }
 
-        Session::forget('buy_now_info');
-        Session::forget('checkout_in_progress');
-        Session::forget('checkout_page_load_time');
+        Session::forget([
+            'buy_now_info',
+            'checkout_in_progress',
+            'checkout_page_load_time',
+            'checkout_value',
+            'pack_size',
+            'counter'
+        ]);
+
         if ($userData && $userData->is_guest_user == 1) {
+            Session::forget([
+                'id',
+                'first_name',
+                'email',
+                'phone_code',
+                'otp_phone',
+                'guest_otp_user_id',
+                'current_lat',
+                'current_long'
+            ]);
             Auth::guard('user')->logout();
         }
 

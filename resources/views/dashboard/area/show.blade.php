@@ -12,20 +12,14 @@
         </div>
     </div>
     <div class="form-group row">
-        <label class="col-sm-4 form-control-label">{!! __('Title [EN]') !!}</label>
+        <label class="col-sm-4 form-control-label">{!! __('Title') !!}</label>
         <div class="col-sm-8">
             <div class="show_blade_div">
                 {{ @$areaData->title }}
             </div>
         </div>
     </div>
-    <div class="form-group row">
-        <label class="col-sm-4 form-control-label">{!! __('Title [FR]') !!}</label>
-        <div class="col-sm-8">
-            <div class="show_blade_div">
-                {{ @$areaData->title_fr }}
-            </div>
-        </div>
+    
     </div>
     <div class="form-group row">
         <label class="col-sm-4 form-control-label">Delivery Fee</label>

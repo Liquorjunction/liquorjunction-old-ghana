@@ -67,9 +67,9 @@
                     </div>
                 </div>
 
-                {{-- Page Name EN --}}
+                {{-- Page Name --}}
                 <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">{!! __('backend.newpage') !!} [EN] <span class="valid_field">*</span></label>
+                    <label class="col-sm-2 form-control-label">{!! __('backend.newpage') !!} <span class="valid_field">*</span></label>
                     <div class="col-sm-10">
                         <input
                             type="text"
@@ -85,27 +85,11 @@
                     </div>
                 </div>
 
-                {{-- Page Name FR --}}
-                <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">{!! __('backend.newpage') !!} [FR] <span class="valid_field">*</span></label>
-                    <div class="col-sm-10">
-                        <input
-                            type="text"
-                            name="page_name_fr"
-                            id="page_name_fr"
-                            class="form-control"
-                            placeholder="Name"
-                            value="{{ old('page_name_fr', $cms->page_name_fr) }}"
-                        >
-                        @error('page_name_fr')
-                            <span class="help-block text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-                </div>
+                
 
-                {{-- Page Content EN --}}
+                {{-- Page Content --}}
                 <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">{!! __('backend.pagecontent') !!} [EN] <span class="valid_field">*</span></label>
+                    <label class="col-sm-2 form-control-label">{!! __('backend.pagecontent') !!} <span class="valid_field">*</span></label>
                     <div class="col-sm-10">
                         <textarea
                             class="form-control"
@@ -119,25 +103,11 @@
                     </div>
                 </div>
 
-                {{-- Page Content FR --}}
-                <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">{!! __('backend.pagecontent') !!} [FR] <span class="valid_field">*</span></label>
-                    <div class="col-sm-10">
-                        <textarea
-                            class="form-control"
-                            id="page_content_fr"
-                            name="page_content_fr"
-                            autofocus
-                        >{{ old('page_content_fr', urldecode($cms->page_content_fr)) }}</textarea>
-                        @error('page_content_fr')
-                            <span class="help-block text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-                </div>
+                
 
-                {{-- Mobile Page Content EN --}}
+                {{-- Mobile Page Content --}}
                 <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">Mobile {!! __('backend.pagecontent') !!} [EN] <span class="valid_field">*</span></label>
+                    <label class="col-sm-2 form-control-label">Mobile {!! __('backend.pagecontent') !!} <span class="valid_field">*</span></label>
                     <div class="col-sm-10">
                         <textarea
                             class="form-control"
@@ -151,21 +121,7 @@
                     </div>
                 </div>
 
-                {{-- Mobile Page Content FR --}}
-                <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">Mobile {!! __('backend.pagecontent') !!} [FR] <span class="valid_field">*</span></label>
-                    <div class="col-sm-10">
-                        <textarea
-                            class="form-control"
-                            id="mobile_page_content_fr"
-                            name="mobile_page_content_fr"
-                            autofocus
-                        >{{ old('mobile_page_content_fr', urldecode($cms->mobile_page_content_fr)) }}</textarea>
-                        @error('mobile_page_content_fr')
-                            <span class="help-block text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-                </div>
+                
 
             </div>
 
@@ -231,7 +187,7 @@
             });
 
             // Initialize CKEditor for textareas
-            ['page_content', 'page_content_fr', 'mobile_page_content', 'mobile_page_content_fr'].forEach(function(id) {
+            ['page_content', 'mobile_page_content'].forEach(function(id) {
                 CKEDITOR.replace(id, {
                     height: 400,
                     on: {

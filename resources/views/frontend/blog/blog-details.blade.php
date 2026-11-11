@@ -19,15 +19,7 @@
     @php        
         $blog_title='';
         $image_not_found = '';
-        if(session::get('language')==2){
-            $blog_title = ($blog_details->title_fr)?$blog_details->title_fr:$blog_details->title ;
-            $blog_short_desp = ($blog_details->short_description_fr)?$blog_details->short_description_fr:$blog_details->short_description;
-            $blog_long_desp = ($blog_details->long_description_fr)?$blog_details->long_description_fr:$blog_details->long_description;
-        }else{
-            $blog_title = $blog_details->title;
-            $blog_short_desp = $blog_details->short_description;
-            $blog_long_desp = $blog_details->long_description;
-        } 
+        $blog_title = $blog_details->title; $blog_short_desp = $blog_details->short_description; $blog_long_desp = $blog_details->long_description; 
     @endphp
     <section class="blog pt-40 pb-60">
         <div class="container">

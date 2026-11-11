@@ -339,16 +339,14 @@ class MyProfileController extends Controller
 
     public function statusUpdate(Request $request)
     {
-        if ($request->id != "") {
-          
-            
-            $fav_product=FavoriteProduct::where('product_id', $request->id)->where('user_id', $request->user_id)->update(['status' => 2]);
-
-            // dd($fav_product);
+        $user_id = $request->user_id ?: (auth()->guard('user')->check() ? auth()->guard('user')->user()->id : null);
+        if ($request->id != "" && $user_id) {
+            $fav_product = FavoriteProduct::where('product_id', $request->id)->where('user_id', $user_id)->update(['status' => 2]);
         }
 
+        $favCount = $user_id ? DB::table('favorite_product')->where('user_id', $user_id)->where('status', 1)->count() : 0;
         Alert::success(\Helper::language('success'), __('backend.product_unfav_successfully'));
-        return response()->json(['success' => 'true']);
+        return response()->json(['success' => true, 'count' => $favCount]);
     }
 
     public function myaddress()
@@ -497,7 +495,7 @@ class MyProfileController extends Controller
 
         $add_address->save();
         Alert::success(\Helper::language('success'), __('backend.user_address_added_successfully'));
-        return response()->json(['success' => 'true']);
+        return response()->json(['success' => 'true', 'id' => $add_address->id, 'type' => 'shipping', 'action' => 'add']);
     }
 
     public function storeBillAddress(Request $request)
@@ -547,7 +545,7 @@ class MyProfileController extends Controller
 
         $add_address->save();
         Alert::success(\Helper::language('success'), __('backend.user_address_added_successfully'));
-        return response()->json(['success' => 'true']);
+        return response()->json(['success' => 'true', 'id' => $add_address->id, 'type' => 'billing', 'action' => 'add']);
     }
 
     public function updateAddress(Request $request)
@@ -593,7 +591,7 @@ class MyProfileController extends Controller
         $edit_address->save();
 
         Alert::success(\Helper::language('success'), __('backend.user_address_update_successfully'));
-        return response()->json(['success' => 'true']);
+        return response()->json(['success' => 'true', 'id' => $edit_address->id, 'type' => 'shipping', 'action' => 'edit']);
     }
 
     public function updateBillAddress(Request $request)
@@ -647,7 +645,7 @@ class MyProfileController extends Controller
         $edit_address->save();
 
         Alert::success(\Helper::language('success'), __('backend.user_address_update_successfully'));
-        return response()->json(['success' => 'true']);
+        return response()->json(['success' => 'true', 'id' => $edit_address->id, 'type' => 'billing', 'action' => 'edit']);
     }
 
     public function getAddressDetails($type, $id)
@@ -792,6 +790,26 @@ class MyProfileController extends Controller
         } else {
             Auth::guard('user')->logout();
         }
+
+        // 🧹 Clear extra user/checkout/otp temporary session keys on logout
+        Session::forget([
+            'id',
+            'first_name',
+            'email',
+            'phone_code',
+            'otp_phone',
+            'forgot_email',
+            'guest_otp_user_id',
+            'buy_now_info',
+            'checkout_in_progress',
+            'checkout_page_load_time',
+            'checkout_value',
+            'pack_size',
+            'counter',
+            'current_lat',
+            'current_long',
+            'user_id'
+        ]);
         if($userdata->is_guest_user != 1){
                     if($userdata->remember_token == null){
             $remember_token = \Str::random(64);

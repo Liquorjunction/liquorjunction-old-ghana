@@ -84,11 +84,7 @@
     @include('sweetalert::alert')
     <div class="loader" id="loader"></div>
     <?php
-    if (session::get('language') == 1) {
-        $category_title = $categoryDetails->title;
-    } else {
-        $category_title = $categoryDetails->title_fr ? $categoryDetails->title_fr : $categoryDetails->title;
-    }
+    $category_title = $categoryDetails->title;
     ?>
     <!-- Title Banner -->
     @if ($categoryDetails->photo)
@@ -100,13 +96,7 @@
                     <div class="col-12">
                         @if (!empty($subCategoryDetails))
                             @php
-                                if (session::get('language') == 1) {
-                                    $sub_title = $subCategoryDetails->title;
-                                } else {
-                                    $sub_title = $subCategoryDetails->title_fr
-                                        ? $subCategoryDetails->title_fr
-                                        : $subCategoryDetails->title;
-                                }
+                                $sub_title = $subCategoryDetails->title;
                             @endphp
                             <h1 class="mb-0">{{ $sub_title }}</h1>
                         @else
@@ -279,7 +269,7 @@ style="display: flex; flex-direction: column; height: 100%;">
                                   value="{{ $category->id }}"
                                   id="category_id_{{ $category->id }}">
                            <label for="category_id_{{ $category->id }}" class="form-check-label">
-                               {{ session('language') == 1 ? $category->title : $category->title_fr }}
+                               {{ $category->title }}
                            </label>
                        </div>
 
@@ -295,7 +285,7 @@ style="display: flex; flex-direction: column; height: 100%;">
                                                   id="sub_category_{{ $category->id }}_{{ $sub->id }}"
                                                   data-parent="{{ $category->id }}">
                                            <label for="sub_category_{{ $category->id }}_{{ $sub->id }}" class="form-check-label">
-                                               {{ session('language') == 1 ? $sub->title : $sub->title_fr }}
+                                               {{ $sub->title }}
                                            </label>
                                        </div>
                                    </li>
@@ -320,7 +310,7 @@ style="display: flex; flex-direction: column; height: 100%;">
                    <ul id="brand-list">
                        @foreach ($brandData as $brand_result)
                            @php
-                               $brand_title = session::get('language') == 1 ? $brand_result->title : $brand_result->title_fr;
+                               $brand_title = $brand_result->title;
                            @endphp
                            <li>
                                <div class="check-group">
@@ -565,41 +555,9 @@ clearButton.addEventListener('mouseleave', () => {
         }
 
         function productFav(product_id, status) {
-            var status = status;
-            var user_id = $("#user_id").val();
-            if (user_id) {
-                action_url = "{{ route('productfav') }}";
-            } else {
-                var url = "{{ route('websitelogin') }}";
-                window.location.href = url;
+            if (typeof toggleProductFav === 'function') {
+                return toggleProductFav(product_id, status);
             }
-            var csrf = "{{ csrf_token() }}";
-            $.ajax({
-                url: action_url,
-                data: {
-                    'user_id': user_id,
-                    'product_id': product_id,
-                    'status': status
-                },
-                headers: {
-                    'X-CSRF-TOKEN': csrf
-                },
-                type: "POST",
-
-                beforeSend: function() {
-                    $(".loader").fadeIn();
-                    $('.loader').css("visibility", "visible");
-                },
-                success: function(response) {
-                    $('.loader').css("visibility", "visible");
-                    // return false;
-                    if (user_id != '') {
-                        location.reload();
-                    } else {
-                        location.href = "{{ route('websitelogin') }}";
-                    }
-                },
-            });
         }
 
         var currency_type = "{{ Helper::Settings('currency_symbol') }}";

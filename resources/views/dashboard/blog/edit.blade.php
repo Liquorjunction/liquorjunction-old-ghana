@@ -38,7 +38,7 @@
                     <br>
                     <br> -->
                 <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">{!! __('backend.title') !!} [EN] <span class="valid_field">*</span></label>
+                    <label class="col-sm-2 form-control-label">{!! __('backend.title') !!} <span class="valid_field">*</span></label>
                     <div class="col-sm-10">
                         <input type="text" name="title" id="title" class="form-control" placeholder="Enter Title" value="{{@$blogData->title}}">
                         @if ($errors->has('title'))
@@ -48,20 +48,10 @@
                         @endif
                     </div>
                 </div>
-                <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">{!! __('backend.title') !!} [FR] <span class="valid_field">*</span></label>
-                    <div class="col-sm-10">
-                        <input type="text" name="title_fr" id="title_fr" class="form-control" placeholder="Enter Title" value="{{@$blogData->title_fr}}">
-                        @if ($errors->has('title_fr'))
-                        <span class="help-block">
-                            <span style="color: red;" class='validate'>{{ $errors->first('title_fr') }}</span>
-                        </span>
-                        @endif
-                    </div>
-                </div>
+                
 
                 <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">{!! __('backend.short_description') !!} [EN]<span class="valid_field">*</span></label>
+                    <label class="col-sm-2 form-control-label">{!! __('backend.short_description') !!}<span class="valid_field">*</span></label>
                     <div class="col-sm-10">
                         <textarea class="form-control" name="short_description" id="short_description" placeholder="Enter Short Description">{{@$blogData->short_description}}</textarea>
                         @if ($errors->has('short_description'))
@@ -71,17 +61,7 @@
                         @endif
                     </div>
                 </div>
-                <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">{!! __('backend.short_description') !!} [FR]<span class="valid_field">*</span></label>
-                    <div class="col-sm-10">
-                        <textarea class="form-control" name="short_description_fr" id="short_description" placeholder="Enter Short Description">{{@$blogData->short_description_fr}}</textarea>
-                        @if ($errors->has('short_description_fr'))
-                        <span class="help-block">
-                            <span style="color: red;" class='validate'>{{ $errors->first('short_description_fr') }}</span>
-                        </span>
-                        @endif
-                    </div>
-                </div>
+                
                 <div class="form-group row">
                     <label class="col-sm-2 form-control-label">Image <span class="valid_field">*</span></label>
                     <div class="col-sm-10">
@@ -115,7 +95,7 @@
                     </div>
                 </div>
                 <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">Long Description [EN]<span class="valid_field">*</span></label>
+                    <label class="col-sm-2 form-control-label">Long Description<span class="valid_field">*</span></label>
                     <div class="col-sm-10">
                         <textarea class="form-control" id="long_description" name="long_description" @if ($errors->has('long_description')) autofocus @endif >{{@$blogData->long_description}}</textarea>
                         @if ($errors->has('long_description'))
@@ -126,17 +106,7 @@
                     </div>
                 </div>
 
-                <div class="form-group row">
-                    <label class="col-sm-2 form-control-label">Long Description [FR]<span class="valid_field">*</span></label>
-                    <div class="col-sm-10">
-                        <textarea class="form-control" id="long_description_fr" name="long_description_fr" @if ($errors->has('long_description_fr'))autofocus @endif >{{@$blogData->long_description_fr}}</textarea>
-                        @if ($errors->has('long_description_fr'))
-                        <span class="help-block">
-                            <span style="color: red;" class='validate'>{{ $errors->first('long_description_fr') }}</span>
-                        </span>
-                        @endif
-                    </div>
-                </div>
+                
 
             </div>
 
@@ -281,19 +251,7 @@
             }
         }
     });
-    CKEDITOR.replace('long_description_fr', {
-        on: {
-          ///  focus: onFocus,
-            blur: onBlur,
-            pluginsLoaded: function(evt) {
-                var doc = CKEDITOR.document,
-                    ed = evt.editor;
-                if (!ed.getCommand('bold')) doc.getById('exec-bold').hide();
-                if (!ed.getCommand('link')) doc.getById('exec-link').hide();
-            }
-        }
-    });
-</script>
+    </script>
 <script type="text/javascript">
     CKEDITOR.config.height = '400px';
 </script>

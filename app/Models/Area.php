@@ -15,7 +15,6 @@ class Area extends Model
         'id',
         'region_id',
         'title',
-        'title_fr',
         'delivery_fee',
         'delivery_amount',
         'status', 

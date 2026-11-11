@@ -13,7 +13,6 @@ class InquiryReason extends Model
 
     protected $fillable = [
         'title', 
-        'title_fr', 
         'status'
     ];
 }

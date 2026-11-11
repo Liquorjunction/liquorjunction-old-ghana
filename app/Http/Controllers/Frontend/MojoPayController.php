@@ -185,9 +185,17 @@ class MojoPayController extends Controller
 
     private function clearCheckoutSession(): void
     {
-        Session::forget('buy_now_info');
-        Session::forget('checkout_in_progress');
-        Session::forget('checkout_page_load_time');
+        Session::forget([
+            'buy_now_info',
+            'checkout_in_progress',
+            'checkout_page_load_time',
+            'checkout_value',
+            'pack_size',
+            'counter',
+            'cart_info',
+            'guest_otp_user_id',
+            'otp_phone'
+        ]);
     }
 
     private function earnedPoints(int $orderId): int

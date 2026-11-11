@@ -140,23 +140,15 @@
                         </div>
                     </div>
                     <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">{{ __('backend.title') }} [EN]<span class="valid_field">*</span></label>
+                        <label class="col-sm-2 form-control-label">{{ __('backend.title') }} <span class="valid_field">*</span></label>
                         <div class="col-sm-10">
-                            <input type="text" name="title" id="title" onkeypress="return isNumberKey(event)" class="form-control" placeholder="Subcategory [EN]" value="{{ old('title') }}">
+                            <input type="text" name="title" id="title" onkeypress="return isNumberKey(event)" class="form-control" placeholder="Subcategory" value="{{ old('title') }}">
                             <span class="help-block" id="errorMessage" style="display:none">
                                 <span style="color: red;display: none;" id="errorMsg" class='validate'></span>
                             </span>
                         </div>
                     </div>
-                    <div class="form-group row">
-                        <label class="col-sm-2 form-control-label">{{ __('backend.title') }} [FR]<span class="valid_field">*</span></label>
-                        <div class="col-sm-10">
-                            <input type="text" name="title_fr" id="title_fr" onkeypress="return isNumberKey(event)" class="form-control" placeholder="Subcategory [FR]" value="{{ old('title_fr') }}">
-                            <span class="help-block" id="errorMessage" style="display:none">
-                                <span style="color: red;display: none;" id="errorMsgTitlefr" class='validate'></span>
-                            </span>
-                        </div>
-                    </div>
+                    
                 </div>
 
                 <div class="modal-footer">
@@ -330,13 +322,11 @@
             // in 'rules' user have to specify all the constraints for respective fields
             rules: {
                 title: "required",
-                title_fr: "required",
                 category_id: "required",
             },
             // in 'messages' user have to specify message as per rules
             messages: {
                 title: "Title field is required",
-                title_fr: "Title Fr field is required",
                 category_id: "Category field is required",
             },
             submitHandler: function() {

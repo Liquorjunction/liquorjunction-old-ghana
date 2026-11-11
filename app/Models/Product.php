@@ -33,9 +33,6 @@ class Product extends Model
         'brand_id',
         'video',
         'sku',
-        'product_name_fr',
-        'short_description_fr',
-        'page_content_fr',
         'product_qty',
     ];
 

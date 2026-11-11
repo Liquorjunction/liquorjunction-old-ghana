@@ -101,11 +101,7 @@
 
 
 @php
-if(session::get('language')==2){
-    $no_data_found = "Aucune donnée disponible";
-}else{
-    $no_data_found = "No data found";
-}
+$no_data_found = "No data found";
 $user_id = isset(auth()->guard('user')->user()->id) ? auth()->guard('user')->user()->id : '';
 
 @endphp
@@ -121,13 +117,7 @@ $user_id = isset(auth()->guard('user')->user()->id) ? auth()->guard('user')->use
             $banner_description='';
             $image_not_found = '';
             
-            if(session::get('language')==2){                
-                $banner_title = ($banner_result->title_fr)?$banner_result->title_fr:$banner_result->title;
-                $banner_description= ($banner_result->description_fr)?$banner_result->description_fr:$banner_result->description;         
-            }else{               
-                $banner_title = $banner_result->title;
-                $banner_description= $banner_result->description;;  
-            }
+            $banner_title = $banner_result->title; $banner_description = $banner_result->description;
             @endphp
             <div class="swiper-slide">
                 <div class="banner-wrapper">
@@ -192,11 +182,7 @@ $user_id = isset(auth()->guard('user')->user()->id) ? auth()->guard('user')->use
                 <div class="swiper-wrapper">
                     @foreach ( $categories as $categories_result)
                     @php
-                    if(session::get('language')==2){                    
-                        $category_title = ($categories_result->title_fr)?$categories_result->title_fr:$categories_result->title;                     
-                    }else{
-                        $category_title = $categories_result->title;               
-                    }
+                    $category_title = $categories_result->title;
                     @endphp
                     <div class="swiper-slide">
                         <a href="{{route('productlist',['id'=>Helper::encodeUrl($categories_result->id)]);}}" class="product-wrapper">
@@ -231,13 +217,7 @@ $user_id = isset(auth()->guard('user')->user()->id) ? auth()->guard('user')->use
 <!-- Free Shipping -->
 @if(!empty($banners_offer))
 @php
-if(session::get('language')==2){
-    $boffer_title = ($banners_offer->title_fr)?$banners_offer->title_fr:$banners_offer->title;
-    $boffer_description= ($banners_offer->description_fr)?$banners_offer->description_fr:$banners_offer->description;
-}else{
-    $boffer_title = $banners_offer->title;
-    $boffer_description= $banners_offer->description;
-}
+$boffer_title = $banners_offer->title; $boffer_description = $banners_offer->description;
 @endphp
 <section class="free-shipping" style="background-image: url('{{ asset('uploads/banners/'.$banners_offer->photo) }}');">
     <!-- <div class="container">
@@ -277,11 +257,7 @@ if(session::get('language')==2){
                     @foreach ($offer_product as $key1=>$offer_result )
                     @php
                     $product_title='';
-                    if(session::get('language')==2){
-                        $product_title = ($offer_result->product_name_fr)?$offer_result->product_name_fr:$offer_result->product_name;
-                    }else{
-                        $product_title = $offer_result->product_name;
-                    }
+                    $product_title = $offer_result->product_name;
                     $product_image = $offer_result->get_product_images->first();
                     $product_variant = $offer_result->get_product_variants->first();
                     $product_unit = Helper::getUnitById($product_variant->variant_uof);
@@ -451,13 +427,7 @@ if(session::get('language')==2){
                     $banner_title='';
                     $banner_description='';
                     $image_not_found = '';
-                    if(session::get('language')==1){
-                    $banner_title = $highlight_result->title;
-                    $banner_description= $highlight_result->description;
-                    }else{
-                    $banner_title = ($highlight_result->title_fr)?$highlight_result->title_fr:$highlight_result->title;
-                    $banner_description= ($highlight_result->description_fr)?$highlight_result->description_fr:$highlight_result->description;
-                    }
+                    $banner_title = $highlight_result->title; $banner_description = $highlight_result->description;
                     @endphp
                     <div class="swiper-slide custom-sizing">
                         <div class="our-highlights-box">
@@ -520,11 +490,7 @@ if(session::get('language')==2){
                     @foreach ($best_seller_product as $key2=>$best_result )
                     @php
                     $product_title='';
-                    if(session::get('language')==2){                        
-                        $product_title = ($best_result->product_name_fr)?$best_result->product_name_fr:$best_result->product_name;
-                    }else{
-                        $product_title = $best_result->product_name;
-                    }
+                    $product_title = $best_result->product_name;
                     $product_image = $best_result->get_product_images->first();
                     $product_variant = $best_result->get_product_variants->first();
                     $product_unit = Helper::getUnitById($product_variant->variant_uof);
@@ -692,11 +658,7 @@ if(session::get('language')==2){
                 @foreach ($blogs as $blogs_result )
                 @php
                 $blog_title='';
-                if(session::get('language')==2){                    
-                    $blog_title = ($blogs_result->title_fr)?$blogs_result->title_fr:$blogs_result->title;
-                }else{
-                    $blog_title = $blogs_result->title;
-                }
+                $blog_title = $blogs_result->title;
                 @endphp
                 <div class="col-md-4 col-sm-6 blog-col">
                     <div class="blog-box">
@@ -744,49 +706,10 @@ if(session::get('language')==2){
 
 <script>
     function productFavTest(product_id, status) {
-        // alert('')
-        var status = status;
-        var user_id = $("#user_id").val();
-        // alert(user_id);
-        if (user_id) {
-            // alert('ttt')
-            action_url = "{{ route('productfav') }}";
-        } else {
-            // alert('ttt25')
-            var url = "{{route('websitelogin')}}";
-            window.location.href = url;
-
+        if (typeof toggleProductFav === 'function') {
+            return toggleProductFav(product_id, status);
         }
-        var csrf = "{{ csrf_token() }}";
-        $.ajax({
-            url: action_url,
-            data: {
-                'user_id': user_id,
-                'product_id': product_id,
-                'status': status
-            },
-            headers: {
-                'X-CSRF-TOKEN': csrf
-            },
-            type: "POST",
-
-            beforeSend: function() {
-                $(".loader").fadeIn();
-                $('.loader').css("visibility", "visible");
-            },
-            success: function(response) {
-                $('.loader').css("visibility", "visible");
-                // return false;
-                if(user_id != ''){
-                    location.reload();
-                }else{
-                    location.href="{{route('websitelogin')}}";
-                }
-                },
-                error:function(){
-                    
-            }
-        });
+    }
 
     }
 </script>

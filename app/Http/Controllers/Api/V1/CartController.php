@@ -1361,7 +1361,6 @@ class CartController extends Controller
             $longitude = $request->longitude;   
             $latitude = $request->latitude; 
             $keywords = $request->keywords;
-            $language = $request->language;
 
             $mainArr = [];
             $result = [];
@@ -1403,11 +1402,7 @@ class CartController extends Controller
                         $store_time = $start_time.' to '.$end_time;
                     }
                     $distance = number_format(@$data->distance,2) ;
-                    if($language==1){
-                        $store_name  = ($data->store_name_fr)?$data->store_name_fr:$data->store_name;
-                    }else{
-                        $store_name  = $data->store_name;
-                    }
+                    $store_name = $data->store_name;
 
                     $contactNumber = '';
                     if($data->phone_code){

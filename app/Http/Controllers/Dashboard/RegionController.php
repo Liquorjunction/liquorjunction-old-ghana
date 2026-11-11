@@ -75,7 +75,6 @@ class RegionController extends Controller
             $region = new Region();
             $region->country_id = $request->input('country_id');
             $region->title = $request->input('title');
-            $region->title_fr = $request->input('title_fr');
             $region->status = 1;
             $region->save();
 
@@ -108,7 +107,6 @@ class RegionController extends Controller
             $region = Region::where('id', $region_id)->update(array(
                 'country_id'=>$request->country_id,
                 'title' => $request->title,
-                'title_fr' => $request->title_fr,
               
             ));
             Alert::success('Success', __('backend.region_has_been_updated_successfully'));
@@ -278,9 +276,7 @@ class RegionController extends Controller
             $sort = 'countries.id';
         } elseif ($columnIndex == 2) {
             $sort = 'title';
-        } elseif ($columnIndex == 3) {
-            $sort = 'title_fr';
-        } else {
+                } else {
             $sort = 'id';
         }
 
@@ -330,7 +326,6 @@ class RegionController extends Controller
                 "region_id" => isset($data->id) ? $data->id : '',
                 "country_id" => isset($data->country_name) ? $data->country_name : '',
                 "region_name" => isset($data->title) ? $data->title : '',
-                "region_title_fr" => isset($data->title_fr) ? $data->title_fr : '',
                 "status" =>   isset($status) ? $status : '',
                 "options" => isset($options) ? $options : '',
             );

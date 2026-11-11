@@ -4,16 +4,7 @@
     </div>
     <div class="p-a-sm col-md-12">
         <div class="row">
-            {{-- 
-                <div class="col-sm-6">
-				<div class="form-group">
-					<label>{{ __('backend.defaultLanguage') }} : </label>
-                    <div>
-                        <select name="languages_by_default" class="form-control c-select"> @foreach (Helper::languagesList() as $ActiveLanguage) @if ($ActiveLanguage->box_status) <option value="{{ $ActiveLanguage->code }}" {{ ($WebmasterSetting->languages_by_default==$ActiveLanguage->code)?"selected='selected'":"" }}>{{ $ActiveLanguage->title }}</option> @endif @endforeach </select>
-                    </div>
-                </div>
-                </div> 
-            --}} 
+             
             {{-- 
                 <div class="col-sm-6">
                     <div class="form-group">

@@ -15,7 +15,6 @@ class Region extends Model
         'id',
         'country_id',
         'title',
-        'title_fr',
         'status', 
         'created_at', 
         'updated_at'

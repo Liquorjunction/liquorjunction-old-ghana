@@ -193,8 +193,7 @@
                     @include('dashboard.webmaster.settings.webinfo')
                 </div>
                 {{Form::close()}}
-                {{-- @include('dashboard.webmaster.settings.languages') --}}
-            </div>
+                            </div>
         </div>
     </div>
 @endsection

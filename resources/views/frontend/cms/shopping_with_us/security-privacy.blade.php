@@ -1,14 +1,6 @@
 {{-- {{$pageInfo}} --}}
 @php
-if(\Session::get('language')==1){
-    $page_title = $pageInfo->page_name;
-    $page_content = $pageInfo->page_content;
-    $photo = $pageInfo->photo;
-}else{
-    $page_title = ($pageInfo->page_name_fr)?$pageInfo->page_name_fr:$pageInfo->page_name;
-    $page_content = ($pageInfo->page_content_fr)?$pageInfo->page_content_fr:$pageInfo->page_content;
-    $photo = $pageInfo->photo;
-}
+$page_title = $pageInfo->page_name; $page_content = $pageInfo->page_content; $photo = $pageInfo->photo;
 @endphp
 @extends('frontend.layouts.app')
 @section('title',$page_title )

@@ -151,7 +151,7 @@ class ProductController extends Controller
         )');
 
         $products =  DB::table('product as p')
-                    ->select('p.id as product_id','p.average_rating','p.product_name','p.product_name_fr','pi.image', 'pv.*', 'pv.final_price','p.category_id','p.subcategory_id','p.brand_id','first_variant.variant_price as product_price','first_variant.variant_size as product_size','first_variant.variant_uof as product_uof')
+                    ->select('p.id as product_id','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','p.category_id','p.subcategory_id','p.brand_id','first_variant.variant_price as product_price','first_variant.variant_size as product_size','first_variant.variant_uof as product_uof')
                     ->join('product_image as pi', 'p.id', '=', 'pi.product_id')
                     ->where('pi.status', '=', 1)
                     ->join('categories as c', 'p.category_id', '=', 'c.id')                    
@@ -307,7 +307,7 @@ class ProductController extends Controller
             'p.id as product_id',
             'p.average_rating',
             'p.product_name',
-            'p.product_name_fr',
+            
             'pi.image',
             // DB::raw('COALESCE(NULLIF(pv.variant_discounted_price, ""), pv.variant_price) AS final_price'),
             'pv.final_price',
@@ -352,15 +352,9 @@ class ProductController extends Controller
         ->groupBy('p.id');
 
 
-        if(session::get('language')==2){
-            $categoryData = $categoryData->where('title_fr', 'LIKE', '%'.$keyword.'%')->get();
-            $subcategoryData = $subcategoryData->where('title_fr', 'LIKE', '%'.$keyword.'%')->get();
-            $productDataFilter = $productDataFilter->where('p.product_name_fr', 'LIKE', '%'.$keyword.'%');
-        }else{            
-            $categoryData = $categoryData->where('title', 'LIKE', '%'.$keyword.'%')->get();
-            $subcategoryData = $subcategoryData->where('title', 'LIKE', '%'.$keyword.'%')->get();
-            $productDataFilter = $productDataFilter->where('p.product_name', 'LIKE', '%'.$keyword.'%');
-        }
+        $categoryData = $categoryData->where('title', 'LIKE', '%'.$keyword.'%')->get();
+        $subcategoryData = $subcategoryData->where('title', 'LIKE', '%'.$keyword.'%')->get();
+        $productDataFilter = $productDataFilter->where('p.product_name', 'LIKE', '%'.$keyword.'%');
 
         $productDataFilter = $productDataFilter->orderBy('p.id', 'desc')->get();
 
@@ -514,7 +508,7 @@ class ProductController extends Controller
             'p.id as product_id',
             'p.average_rating',
             'p.product_name',
-            'p.product_name_fr',
+            
             'pi.image',
             'pv.final_price',
             'pv.*',
@@ -595,11 +589,7 @@ class ProductController extends Controller
             $productDataFilter = $productDataFilter->orderBy('p.id', 'desc');
         }
 
-        if(session::get('language')==2){
-            $productDataFilter = $productDataFilter->where('p.product_name_fr', 'LIKE', '%'.$keyword.'%');
-        }else{            
-            $productDataFilter = $productDataFilter->where('p.product_name', 'LIKE', '%'.$keyword.'%');
-        }
+        $productDataFilter = $productDataFilter->where('p.product_name', 'LIKE', '%'.$keyword.'%');
 
         $limit = 16;
         $current_page_count = $request->current_page_count;
@@ -698,13 +688,7 @@ class ProductController extends Controller
 
         $myBrand = Brand::where('status', 1)->where('id', $brand_id)->first();
 
-        if(session::get('language')==2){
-            $keyword = $myBrand ? $myBrand->title_fr : ''; 
-        }
-        else
-        {
-            $keyword = $myBrand ? $myBrand->title : ''; 
-        }
+        $keyword = $myBrand ? $myBrand->title : '';
 
          $firstVariant = DB::table('product_variants as pv1')
         ->select('pv1.product_id', 'pv1.variant_price','pv1.variant_size','pv1.variant_uof')
@@ -721,7 +705,7 @@ class ProductController extends Controller
             'p.id as product_id',
             'p.average_rating',
             'p.product_name',
-            'p.product_name_fr',
+            
             'pi.image',
             'pv.final_price',
             'pv.*',
@@ -915,7 +899,7 @@ class ProductController extends Controller
             'p.id as product_id',
             'p.average_rating',
             'p.product_name',
-            'p.product_name_fr',
+            
             'pi.image',
             'pv.final_price',
             'pv.*',
@@ -1138,7 +1122,7 @@ class ProductController extends Controller
         )');
         
         $products =  DB::table('product as p')
-                    ->select('p.id as product_id','p.average_rating','p.product_name','p.product_name_fr','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.category_id','p.subcategory_id','p.brand_id','first_variant.variant_price as product_price','first_variant.variant_size as product_size','first_variant.variant_uof as product_uof')
+                    ->select('p.id as product_id','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.category_id','p.subcategory_id','p.brand_id','first_variant.variant_price as product_price','first_variant.variant_size as product_size','first_variant.variant_uof as product_uof')
                     ->join('product_image as pi', 'p.id', '=', 'pi.product_id')
                     ->where('pi.status', '=', 1)
                     ->join('categories as c', 'p.category_id', '=', 'c.id')                    
@@ -1719,6 +1703,7 @@ class ProductController extends Controller
             'orignal_price' => $original_price,
             'discounted_price' => $discounted_price,
             'product_stock' => $instock,
+            'available_qty' => (int) $varinat_info->available_qty,
             'is_in_cart' => $is_in_cart
         ]);
 
@@ -1731,6 +1716,9 @@ class ProductController extends Controller
         // echo "<pre>";print_r($request->toArray());exit();
         $product_id = $request->product_id;
         $user_id = $request->user_id;
+        if (empty($user_id) && auth()->guard('user')->check()) {
+            $user_id = auth()->guard('user')->user()->id;
+        }
         $status = $request->status;
         if ($status==0) {
             // echo "string";
@@ -1749,15 +1737,25 @@ class ProductController extends Controller
                 $fav_product->save();
             }
             
-            // Alert::success('Success',__('backend.product_fav_successfully'));
-        return response()->json(['success' => 'true']);
+            $favCount = DB::table('favorite_product')->where('user_id', $user_id)->where('status', 1)->count();
+            return response()->json([
+                'success' => true,
+                'status' => 1,
+                'count' => $favCount,
+                'message' => __('backend.product_fav_successfully')
+            ]);
         }else{
             // echo "string4";
             $updatepsw = FavoriteProduct::where('user_id', $user_id)->where('product_id',$product_id)->update(array(
                    'status' => 2,
                 ));
-            // Alert::success('Success',__('backend.product_unfav_successfully'));
-        return response()->json(['success' => 'true']);
+            $favCount = DB::table('favorite_product')->where('user_id', $user_id)->where('status', 1)->count();
+            return response()->json([
+                'success' => true,
+                'status' => 0,
+                'count' => $favCount,
+                'message' => __('backend.product_unfav_successfully')
+            ]);
         }
     }        
 
@@ -1777,6 +1775,11 @@ class ProductController extends Controller
         $quantity = (int) $request->quantity;
         $bogo_status = (int) $request->bogo_status;
         $offer_status = (int) $request->offer_status;
+
+        $variant_check = ProductVariants::find($variant_id);
+        if ($variant_check && $variant_check->available_qty > 0 && $quantity > $variant_check->available_qty) {
+            $quantity = (int) $variant_check->available_qty;
+        }
 
         // Get current Offer
         $today = Carbon::now()->toDateString();
@@ -1920,12 +1923,19 @@ class ProductController extends Controller
 
     public function checkProductQty(Request $request){
         $variant_id = $request->variant_id;
-        $currentVal = $request->currentVal;
-        $product_variant = ProductVariants::where('id',$variant_id)->first();
-       // dd($product_variant);
-        if($product_variant->available_qty <=$currentVal){
-            return response()->json(['message' => 'Product variant is now same qty','is_equal'=>'1']);
+        $currentVal = (int) $request->currentVal;
+        $product_variant = ProductVariants::where('id', $variant_id)->first();
+        if ($product_variant && $product_variant->available_qty <= $currentVal) {
+            return response()->json([
+                'message' => 'Only ' . $product_variant->available_qty . ' item(s) available in stock.',
+                'is_equal' => '1',
+                'available_qty' => $product_variant->available_qty
+            ]);
         }
+        return response()->json([
+            'is_equal' => '0',
+            'available_qty' => $product_variant ? $product_variant->available_qty : null
+        ]);
     }
 
     

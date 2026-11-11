@@ -51,14 +51,8 @@ class CommonController extends Controller
         if (!empty($banner_info)) {
             $banner_data = [];
             foreach ($banner_info as $value) {
-                /*---Language 1 for french--*/
-                if ($request->language == 1) {
-                    $banner_title = $value->title_fr ?? $value->title;
-                    $banner_description = $value->description_fr ?? $value->description;
-                } else {
-                    $banner_title = $value->title ?? '';
-                    $banner_description = $value->description ?? '';
-                }
+                $banner_title = $value->title ?? '';
+                $banner_description = $value->description ?? '';
                 $type = "";
                 $custom_url = "";
                 if ($value->type == 1) {
@@ -114,11 +108,7 @@ class CommonController extends Controller
             $categoryArr = [];
             if (!empty($categoryData)) {
                 foreach ($categoryData as $category) {
-                    if ($request->language == 1) {
-                        $title = $category->title_fr ?? $category->title;
-                    } else {
-                        $title = $category->title ?? '';
-                    }
+                    $title = $category->title ?? '';
                     $categoryArr['category_list'][] = [
                         'category_id' => strval(@$category->id),
                         'category_name' => strval(@$title),
@@ -187,12 +177,6 @@ class CommonController extends Controller
 
     //         $productQueryForCount = clone $productDataFilter;
 
-    //         if($request->language==1){
-    //             $categoryData = $categoryData->where('title_fr', 'LIKE', '%'.$keyword.'%')->get();
-    //             $subcategoryData = $subcategoryData->where('title_fr', 'LIKE', '%'.$keyword.'%')->get();
-    //             $productDataFilter = $productDataFilter->where('product_name_fr', 'LIKE', '%'.$keyword.'%')->get();
-    //             $productCount = $productQueryForCount->where('product_name_fr', 'LIKE', '%'.$keyword.'%')->count();
-    //         }else{
     //             $categoryData = $categoryData->where('title', 'LIKE', '%'.$keyword.'%')->get();
     //             $subcategoryData = $subcategoryData->where('title', 'LIKE', '%'.$keyword.'%')->get();
     //             $productDataFilter = $productDataFilter->where('product_name', 'LIKE', '%'.$keyword.'%')->get();
@@ -203,11 +187,9 @@ class CommonController extends Controller
     //         // $categoryArr = [];
     //         // if (!empty($categoryData)) {
     //         //     foreach ($categoryData as $category) {                    
-    //         //         if ($request->language == 1) {
-    //         //             $title = ($category->title_fr) ? $category->title_fr : $category->title;
+    //    //         //             $title = $category->title;
 
-    //         //         } else {
-    //         //             $title = $category->title ?? '';
+    //    //         //             $title = $category->title ?? '';
     //         //         }  
 
     //         //         $categoryArr[] = [
@@ -220,10 +202,8 @@ class CommonController extends Controller
     //         // $subCategoryArr = [];
     //         // if (!empty($subcategoryData)) {
     //         //     foreach ($subcategoryData as $sub_category) {                    
-    //         //         if ($request->language == 1) {
-    //         //             $title = ($sub_category->title_fr) ? $sub_category->title_fr : $sub_category->title;
-    //         //         } else {
-    //         //             $title = $sub_category->title ?? '';
+    //    //         //             $title = $sub_category->title;
+    //    //         //             $title = $sub_category->title ?? '';
     //         //         }  
 
     //         //         $subCategoryArr[] = [
@@ -236,10 +216,8 @@ class CommonController extends Controller
     //         $productDataArr = [];
     //         if (!empty($productDataFilter)) {
     //             foreach ($productDataFilter as $product) {                    
-    //                 if ($request->language == 1) {
-    //                     $title = ($product->product_name_fr) ? $product->product_name_fr : $product->product_name;
+    //                     $title = $product->product_name;
     //                     $image_not_found = 'Image non disponible';
-    //                 } else {
     //                     $title = $product->product_name ?? '';
     //                     $image_not_found = 'Image not available';
     //                 }  
@@ -279,7 +257,6 @@ class CommonController extends Controller
 
     //         $mainResult   =   $result;
     //         return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-    //     }else{
 
     //             $result['code']     =  strval(0);
     //             $result['message']  =   'something_went_wrong';
@@ -296,7 +273,6 @@ class CommonController extends Controller
         $finalArr = [];
 
         $keyword = $request->query('keywords');
-        $language = $request->query('language', 0);
 
         if (empty($keyword)) {
             $result['code'] = strval(0);
@@ -323,24 +299,15 @@ class CommonController extends Controller
 
         $productQueryForCount = clone $productDataFilter;
 
-        if ($language == 1) {
-            $categoryData = $categoryData->where('title_fr', 'LIKE', '%' . $keyword . '%')->get();
-            $subcategoryData = $subcategoryData->where('title_fr', 'LIKE', '%' . $keyword . '%')->get();
-            $productDataFilter = $productDataFilter->where('product_name_fr', 'LIKE', '%' . $keyword . '%')->get();
-            $productCount = $productQueryForCount->where('product_name_fr', 'LIKE', '%' . $keyword . '%')->count();
-        } else {
-            $categoryData = $categoryData->where('title', 'LIKE', '%' . $keyword . '%')->get();
+        $categoryData = $categoryData->where('title', 'LIKE', '%' . $keyword . '%')->get();
             $subcategoryData = $subcategoryData->where('title', 'LIKE', '%' . $keyword . '%')->get();
             $productDataFilter = $productDataFilter->where('product_name', 'LIKE', '%' . $keyword . '%')->get();
             $productCount = $productQueryForCount->where('product_name', 'LIKE', '%' . $keyword . '%')->count();
-        }
 
         $productDataArr = [];
         if (!empty($productDataFilter)) {
             foreach ($productDataFilter as $product) {
-                $title = $language == 1
-                    ? ($product->product_name_fr ?: $product->product_name)
-                    : ($product->product_name ?? '');
+                $title = $product->product_name ?? '';
 
                 $image = asset('uploads/product/default.png');
                 if (!empty($product->get_product_images) && $product->get_product_images->count() > 0) {
@@ -385,15 +352,9 @@ class CommonController extends Controller
             $blogArr = [];
 
             foreach ($blogData as $blog) {
-                if ($request->language == 1) {
-                    $title = $blog->title_fr ?? $blog->title;
-                    $short_description = $blog->short_description_fr ?? $blog->short_description;
-                    $long_description = $blog->long_description_fr ?? $blog->long_description;
-                } else {
-                    $title = $blog->title ?? '';
-                    $short_description = $blog->short_description ?? '';
-                    $long_description = $blog->long_description ?? '';
-                }
+                $title = $blog->title ?? '';
+                $short_description = $blog->short_description ?? '';
+                $long_description = $blog->long_description ?? '';
                 $blogList['id'] = strval(@$blog->id);
                 $blogList['title'] = strval(@$title);
                 $blogList['short_description'] = strval(@$short_description);
@@ -446,15 +407,9 @@ class CommonController extends Controller
             $blogData = Blog::where('id', $blog_id)->where('status', 1)->first();
             if (!empty($blogData)) {
 
-                if ($request->language == 1) {
-                    $title = $blogData->title_fr ?? $blogData->title;
-                    $short_description = $blogData->short_description_fr ?? $blogData->short_description;
-                    $long_description = $blogData->long_description_fr ?? $blogData->long_description;
-                } else {
-                    $title = $blogData->title ?? '';
-                    $short_description = $blogData->short_description ?? '';
-                    $long_description = $blogData->long_description ?? '';
-                }
+                $title = $blogData->title ?? '';
+                $short_description = $blogData->short_description ?? '';
+                $long_description = $blogData->long_description ?? '';
 
                 $mainArr = [];
                 $mainArr['id'] = strval(@$blogData->id);
@@ -498,13 +453,8 @@ class CommonController extends Controller
             $faqArr = [];
 
             foreach ($faqData as $faq) {
-                if ($request->language == 1) {
-                    $question_name = $faq->question_name_fr ?? $faq->question_name;
-                    $answer = $faq->answer_fr ?? $faq->answer;
-                } else {
-                    $question_name = $faq->question_name ?? '';
-                    $answer = $faq->answer ?? '';
-                }
+                $question_name = $faq->question_name ?? '';
+                $answer = $faq->answer ?? '';
 
                 $faqList['id'] = strval(@$faq->id);
                 $faqList['question_name'] = strval(@$question_name);
@@ -541,15 +491,9 @@ class CommonController extends Controller
             // dd($cms);
 
 
-            if ($request->language == 1) {
-                $cms_title = $cms->page_name_fr ?? $cms->page_name;
-                $cms_description = $cms->mobile_page_content_fr ?? $cms->mobile_page_content;
-                $cms_photo = $cms->photo ?? $cms->photo;
-            } else {
-                $cms_title = $cms->page_name ?? '';
-                $cms_description = $cms->mobile_page_content ?? '';
-                $cms_photo = $cms->photo ?? $cms->photo;
-            }
+            $cms_title = $cms->page_name ?? '';
+            $cms_description = $cms->mobile_page_content ?? '';
+            $cms_photo = $cms->photo ?? '';
             $response[] =
                 [
                     'id'   =>   isset($cms->id) ? strval($cms->id) : '',
@@ -563,15 +507,9 @@ class CommonController extends Controller
             ])->get();
 
             foreach ($cms as $item) {
-                if ($request->language == 1) {
-                    $cms_title = $item->page_name_fr ?? $item->page_name;
-                    $cms_description = $item->mobile_page_content_fr ?? $item->mobile_page_content;
-                    $cms_photo = $cms->photo ?? $cms->photo;
-                } else {
-                    $cms_title = $item->page_name ?? '';
+                $cms_title = $item->page_name ?? '';
                     $cms_description = $item->mobile_page_content ?? '';
-                    $cms_photo = $cms->photo ?? $cms->photo;
-                }
+                    $cms_photo = $item->photo ?? '';
 
                 $response[] =
                     [
@@ -655,11 +593,7 @@ class CommonController extends Controller
                 $regionArr = [];
 
                 foreach ($regionData as $region) {
-                    if ($request->language == 1) {
-                        $title = $region->title_fr ?? $region->title;
-                    } else {
-                        $title = $region->title ?? '';
-                    }
+                    $title = $region->title ?? '';
                     $regionList['id'] = strval(@$region->id);
                     $regionList['name'] = strval(@$region->title);
                     $regionArr[] = $regionList;
@@ -716,11 +650,7 @@ class CommonController extends Controller
                     $areaArr = [];
 
                     foreach ($areaData as $area) {
-                        if ($request->language == 1) {
-                            $title = $area->title_fr ?? $area->title;
-                        } else {
-                            $title = $area->title;
-                        }
+                        $title = $area->title ?? '';
                         $areaList['id'] = strval(@$area->id);
                         $areaList['name'] = strval(@$area->title);
                         $areaArr[] = $areaList;
@@ -760,17 +690,12 @@ class CommonController extends Controller
     public function getInquiryReason(Request $request)
     {
         $inqReasonData = InquiryReason::where('status', 1)->get();
-        $language = $request->language;
         if (!empty($inqReasonData)) {
             $mainArr = [];
             $reasonArr = [];
 
             foreach ($inqReasonData as $data) {
-                if ($language == 1) {
-                    $title = $data->title_fr ?? $data->title;
-                } else {
-                    $title = $data->title;
-                }
+                $title = $data->title ?? '';
 
                 $reasonData['id'] = strval(@$data->id);
                 $reasonData['name'] = strval(@$title);

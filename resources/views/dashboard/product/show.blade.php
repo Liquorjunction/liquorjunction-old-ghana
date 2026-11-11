@@ -59,16 +59,11 @@
 
                             <tr>
                                 <tbody>
-                                    <th>{!! __('backend.product_name') !!} [EN]</th>
+                                    <th>{!! __('backend.product_name') !!}</th>
                                     <td> {{ @$productData->product_name?:"-" }}</td>
                                 </tbody>
                             </tr>
-                            <tr>
-                                <tbody>
-                                    <th>{!! __('backend.product_name') !!} [FR]</th>
-                                    <td>{{ @$productData->product_name_fr?:"-" }}</td>
-                                </tbody>
-                            </tr>
+                            
                             <tr>
                                 <tbody>
                                     <th>Brand</th>
@@ -182,32 +177,22 @@
 
                             <tr>
                                 <tbody>
-                                    <th>Short Description [EN]</th>
+                                    <th>Short Description</th>
                                     <td colspan="4">{{ @$productData->short_description?:"-" }}</td>
                                 </tbody>
                             </tr>
 
 
-                            <tr>
-                                <tbody>
-                                    <th>Short Description [FR]</th>
-                                    <td colspan="4">{{ @$productData->short_description_fr?:"-" }}</td>
-                                </tbody>
-                            </tr>
+                            
 
                             <tr>
                                 <tbody>
-                                    <th>Long Description [EN]</th>
+                                    <th>Long Description</th>
                                     <td colspan="4">{!! @$productData->description?:"-" !!}</td>
                                 </tbody>
                             </tr>
 
-                            <tr>
-                                <tbody>
-                                    <th>Long Description [FR]</th>
-                                    <td colspan="4">{!! @$productData->page_content_fr?:"-" !!}</td>
-                                </tbody>
-                            </tr>
+                            
                             <tr>
                                 <tbody>
                                     <th>Created Date</th>
