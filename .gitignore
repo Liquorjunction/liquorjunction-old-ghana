@@ -1,11 +1,23 @@
-/public
+# Core Composer Vendor & Storage
 /vendor
 /storage/framework/
+/storage/logs/
 .env
 
+# Public: Uploads & Local Generated Files (Ignore All Local Uploads)
+/public/uploads/*
+!/public/uploads/.gitkeep
+/public/uploadsCategory/*
+!/public/uploadsCategory/.gitkeep
+/public/profileimage/*
+!/public/profileimage/.gitkeep
+/public/storage
+/public/error_log
+/public/*.log
+/public/*.zip
+/public/*.tar.gz
+
+# Sensitive Credentials & Database Backups
 AuthKey_*.p8
 liquor-junction.json
 *.sql
-error_log
-
-/storage/logs/
