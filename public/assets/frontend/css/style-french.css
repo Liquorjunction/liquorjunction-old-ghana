@@ -1,0 +1,33 @@
+.fr-FR .icon-border-btn {
+	padding-left: 21px;
+	padding-right: 21px;
+}
+.fr-FR .newsletter-wrapper {
+	max-width: 980px;
+}
+.fr-FR .newsletter-wrapper form {
+	max-width: 310px;
+}
+
+@media only screen and (max-width: 1199px) {
+
+}
+@media only screen and (max-width: 991px) {
+    /* Header */
+    .fr-FR .middle-header-link-nav li a {
+        font-size: 14px;
+        line-height: 21px;
+    }
+    .fr-FR .middle-header-link-nav li::after {
+        top: 6px;
+    }
+}
+@media only screen and (max-width: 767px) {
+
+}
+@media only screen and (max-width: 575px) {
+
+}
+@media only screen and (max-width: 480px) {
+
+}

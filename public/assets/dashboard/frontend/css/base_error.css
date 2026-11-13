@@ -1,0 +1,87 @@
+    /* Error Page */
+    .content-text {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+    }
+    .error-page {
+        text-align: center;
+        margin: 0 auto;
+    }
+    .error-page .image-center {
+        margin-bottom: 30px;
+    }
+    .error-page h2 {
+        max-width: 670px;
+        color: #695F70;
+    }
+    .largest-text h1 {
+        font-size: 150px;
+        line-height: 190px;
+        font-weight: 600;
+    }
+    /* Error Page End */
+    /* Button */
+    .common-btn {
+        font-size: 16px;
+        font-weight: 400;
+        line-height: 24px;
+        color: #232B44;
+        text-align: center;
+        background: linear-gradient(90deg, #FE9901 -0.09%, #FFD93B 99.91%);
+        border: 1px solid transparent;
+        border-radius: 45px;
+        padding: 11px 30px;
+        display: inline-block;    
+        text-decoration: none;
+        text-transform: uppercase;
+    }
+    
+    .common-btn:focus, .common-btn:hover {
+        color: linear-gradient(90deg, #FE9901 -0.09%, #FFD93B 99.91%);
+    }
+    .hvr-radial-out {
+        display: inline-block;
+        vertical-align: middle;
+        -webkit-transform: perspective(1px) translateZ(0);
+        transform: perspective(1px) translateZ(0);
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(90deg, #FE9901 -0.09%, #FFD93B 99.91%);
+        -webkit-transition-property: color;
+        transition-property: color;
+        -webkit-transition-duration: 0.3s;
+        transition-duration: 0.3s;
+    }
+    
+    .hvr-radial-out:before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #232B44;
+        border-radius: 45px;
+        -webkit-transform: scale(0);
+        transform: scale(0);
+        -webkit-transition-property: transform;
+        transition-property: transform;
+        -webkit-transition-duration: 0.3s;
+        transition-duration: 0.3s;
+        -webkit-transition-timing-function: ease-out;
+        transition-timing-function: ease-out;
+    }
+    
+    .hvr-radial-out:hover, .hvr-radial-out:focus, .hvr-radial-out:active {
+        color: #FE9901;
+        border: 1px solid #FE9901;
+    }
+    
+    .hvr-radial-out:hover:before, .hvr-radial-out:focus:before, .hvr-radial-out:active:before {
+        -webkit-transform: scale(2);
+        transform: scale(2);
+    }
+    /* Button */
