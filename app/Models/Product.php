@@ -91,23 +91,74 @@ class Product extends Model
     }
     /*---This function is using for getting min price from product variant.
     It is using on product details page for price range. */
-    public function getproductMinPrice()
+    public function getproductMinPrice($category_id = null, $subcategory_id = null, $brand_id = null)
     {
-        return \DB::table('product')
-        ->select(\DB::raw("MIN(product_variants.variant_price) AS min_price"))
-        ->join('product_variants', 'product.id', '=', 'product_variants.product_id')
-        ->groupBy('product.id')
-        ->orderBy('product_variants.variant_price','asc')->first();
+        $query = \DB::table('product')
+            ->join('product_variants', 'product.id', '=', 'product_variants.product_id')
+            ->where('product.status', 1)
+            ->where('product_variants.status', 1)
+            ->where('product_variants.variant_price', '>', 0);
+
+        if (!empty($category_id)) {
+            $query->where('product.category_id', $category_id);
+        }
+        if (!empty($subcategory_id)) {
+            $query->where('product.subcategory_id', $subcategory_id);
+        }
+        if (!empty($brand_id)) {
+            $query->where('product.brand_id', $brand_id);
+        }
+
+        $min = $query->min('product_variants.variant_price');
+
+        // Fallback to global active min price if no products found in filter
+        if ($min === null && (!empty($category_id) || !empty($subcategory_id) || !empty($brand_id))) {
+            $min = \DB::table('product')
+                ->join('product_variants', 'product.id', '=', 'product_variants.product_id')
+                ->where('product.status', 1)
+                ->where('product_variants.status', 1)
+                ->where('product_variants.variant_price', '>', 0)
+                ->min('product_variants.variant_price');
+        }
+
+        $obj = new \stdClass();
+        $obj->min_price = $min !== null ? floor((float) $min) : 0;
+        return $obj;
     }
-     /*---This function is using for getting max price from product varinat.
+
+    /*---This function is using for getting max price from product variant.
     It is using on product details page for price range. */
-    public function getproductMaxPrice()
+    public function getproductMaxPrice($category_id = null, $subcategory_id = null, $brand_id = null)
     {
-        return \DB::table('product')
-        ->select(\DB::raw("MAX(product_variants.variant_price) AS max_price"))
-        ->join('product_variants', 'product.id', '=', 'product_variants.product_id')
-        ->groupBy('product.id')
-        ->orderBy('product_variants.variant_price','desc')->first();
+        $query = \DB::table('product')
+            ->join('product_variants', 'product.id', '=', 'product_variants.product_id')
+            ->where('product.status', 1)
+            ->where('product_variants.status', 1);
+
+        if (!empty($category_id)) {
+            $query->where('product.category_id', $category_id);
+        }
+        if (!empty($subcategory_id)) {
+            $query->where('product.subcategory_id', $subcategory_id);
+        }
+        if (!empty($brand_id)) {
+            $query->where('product.brand_id', $brand_id);
+        }
+
+        $max = $query->max('product_variants.variant_price');
+
+        // Fallback to global active max price if no products found in filter
+        if ($max === null && (!empty($category_id) || !empty($subcategory_id) || !empty($brand_id))) {
+            $max = \DB::table('product')
+                ->join('product_variants', 'product.id', '=', 'product_variants.product_id')
+                ->where('product.status', 1)
+                ->where('product_variants.status', 1)
+                ->max('product_variants.variant_price');
+        }
+
+        $obj = new \stdClass();
+        $obj->max_price = $max !== null ? ceil((float) $max) : 0;
+        return $obj;
     }
 
     public function mostViewProduct(){

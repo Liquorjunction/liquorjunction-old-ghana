@@ -75,7 +75,7 @@ $urlAfterRoot = substr($fullPagePath, strpos($fullPagePath, env('BACKEND_PATH'))
                     @php
                         $store_module_permission = @Helper::GetRolePermission(Auth::user()->user_type,23,'read');                                                 
                     @endphp
-                    @if(isset($store_module_permission) && $store_module_permission==true && Auth::user()->user_type!=1)
+                    @if(isset($store_module_permission) && $store_module_permission==true)
                     <li class="{{ (\Request::route()->getName() == 'store' || Request::is('admin/store*') ) ? 'active' : ' ' }}">
                         <a href="{{ route('store') }}" onclick="location.href='{{ route('store') }}'">
                             <span class="nav-icon">

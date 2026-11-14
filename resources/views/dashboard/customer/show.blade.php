@@ -73,7 +73,7 @@
                                         <th>{!! __('backend.customer_phone') !!}</th>
                                         <td>
                                             @if($customerData->phonecode)
-                                                +{{ $customerData->phonecode }} {{ $customerData->phone }}
+                                                +{{ ltrim($customerData->phonecode, '+') }} {{ $customerData->phone }}
                                             @else
                                                 {{ $customerData->phone }}
                                             @endif

@@ -262,7 +262,7 @@
                   @endif
 
                   @if (!empty($orderData->phone_code) && !empty($orderData->phone))
-                      <strong>Phone</strong> - + ({{ $orderData->phone_code }}) {{ $orderData->phone }}<br />
+                      <strong>Phone</strong> - +{{ ltrim($orderData->phone_code, '+') }} {{ $orderData->phone }}<br />
                   @elseif (!empty($orderData->phone))
                       <strong>Phone</strong> - {{ $orderData->phone }}<br />
                   @endif

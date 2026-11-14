@@ -2099,20 +2099,22 @@ input[type="checkbox"]:checked ~ .favs-button:before {
 
 /* Product Listing Filter */
 .filteroffcanvas .offcanvas-header {
-  padding: 6px 20px;
-  justify-content: center;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   position: relative;
   background-color: #f1f1f1;
 }
 .filteroffcanvas .offcanvas-header h5 {
-  font-size: 20px;
-  line-height: 30px;
+  font-size: 18px;
+  line-height: 24px;
   color: #242424;
+  margin: 0;
 }
 .filteroffcanvas .offcanvas-header .btn-close {
-  position: absolute;
-  top: 22px;
-  left: 24px;
+  position: static;
+  margin: 0;
   padding: 0;
   color: #858584;
 }

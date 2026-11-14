@@ -18,6 +18,7 @@ class StoreDetails extends Model
         'country', 
         'state', 
         'contact_number',
+        'email',
         'zip_code', 
         'street_address', 
         'address', 
@@ -25,4 +26,12 @@ class StoreDetails extends Model
         'longitude', 
         'status'
     ];
+
+    public function timings()
+    {
+        return $this->hasMany(StoreTimingWeek::class, 'store_id', 'id')
+            ->leftJoin('week_list', 'week_list.id', '=', 'store_timing_week.week_id')
+            ->select('store_timing_week.*', 'week_list.name as day_name')
+            ->orderBy('store_timing_week.week_id', 'ASC');
+    }
 }

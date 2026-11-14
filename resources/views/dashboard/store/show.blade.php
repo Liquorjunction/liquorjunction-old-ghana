@@ -60,6 +60,22 @@
                                 value="{{ @$StoreDetails->store_name }}" readonly>
                         </div>
                     </div>
+
+                    <div class="form-group row">
+                        <label class="col-sm-2 form-control-label">{!! __('backend.store_contact_number') !!}</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control"
+                                value="{{ $StoreDetails->phone_code ? '+'.$StoreDetails->phone_code.' ' : '' }}{{ @$StoreDetails->contact_number }}" readonly>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <label class="col-sm-2 form-control-label">Store Email</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control"
+                                value="{{ @$StoreDetails->email ?: '-' }}" readonly>
+                        </div>
+                    </div>
                     
                     <div class="form-group row">
                         <label class="col-sm-2 form-control-label">{!! __('backend.address') !!} </label>

@@ -126,6 +126,9 @@ Route::middleware(['PreventBackHistory'])->group(function () {
     Route::get('/brand-list', [ProductController::class, 'filterbrandlist'])->name('filterbrandlist');
     Route::get('/load-brand-list', [ProductController::class, 'loadbrandlist'])->name('loadbrandlist');
 
+    // New Advanced Faceted Products Catalog
+    Route::get('/products', [\App\Http\Controllers\Frontend\ProductCatalogController::class, 'index'])->name('products');
+
     Route::get('/products-list/{id?}/', [ProductController::class, 'productListview'])->name('productlistview');
     Route::post('/product-filter', [ProductController::class, 'productFilterCategory'])->name('productfilter');
     Route::post('/product-mostviewfilter', [ProductController::class, 'productFilterMostView'])->name('mostviewfilter');

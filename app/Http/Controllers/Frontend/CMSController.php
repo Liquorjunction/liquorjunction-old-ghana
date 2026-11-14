@@ -27,6 +27,7 @@ use RealRashid\SweetAlert\Facades\Alert;
 use Helper;
 use App\Models\AdminNotifications;
 use App\Models\Transactions;
+use App\Models\StoreDetails;
 
 class CMSController extends Controller
 {
@@ -448,8 +449,11 @@ class CMSController extends Controller
     public function ourStore()
     {
         $pageInfo = Cms::find(28);
-        // dd($pageInfo);
-        return view("frontend.cms.our_shops.our_shop", compact('pageInfo'));
+        $stores = StoreDetails::with(['timings'])
+            ->where('status', 1)
+            ->orderBy('id', 'ASC')
+            ->get();
+        return view("frontend.cms.our_shops.our_shop", compact('pageInfo', 'stores'));
     }
 
 }

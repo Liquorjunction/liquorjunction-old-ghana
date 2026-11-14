@@ -10,13 +10,14 @@
 ## 📑 Table of Contents
 1. [Executive Summary & Concept](#1-executive-summary--concept)
 2. [The Core Mechanism: Dynamic Dependent Facets (Faceted Search)](#2-the-core-mechanism-dynamic-dependent-facets)
-3. [Complete Catalog Facets & Controls Breakdown](#3-complete-catalog-facets--controls-breakdown)
-4. [Interdependence Matrix (How Filters Affect Each Other)](#4-interdependence-matrix)
-5. [UI / UX Architecture & Layout Wireframe](#5-ui--ux-architecture--layout-wireframe)
-6. [Backend Data & Query Architecture (Laravel & MySQL)](#6-backend-data--query-architecture)
-7. [Frontend Interaction & State Engine (AJAX + URL Sync)](#7-frontend-interaction--state-engine)
-8. [Step-by-Step Implementation Roadmap](#8-step-by-step-implementation-roadmap)
-9. [Design System Compliance & Native Styling Rules](#9-design-system-compliance--native-styling-rules)
+3. [Complete Catalog Facets & Controls Breakdown (Existing & Advanced Filters)](#3-complete-catalog-facets--controls-breakdown)
+4. [Admin Product Add/Edit Audit & Missing Attributes Gap Analysis](#4-admin-product-addedit-audit--missing-attributes-gap-analysis)
+5. [Interdependence Matrix (360° Bidirectional Facet Synchronization)](#5-interdependence-matrix-360-bidirectional-facet-synchronization)
+6. [UI / UX Architecture & Layout Wireframe](#6-ui--ux-architecture--layout-wireframe)
+7. [Backend Data & Query Architecture (Laravel & MySQL)](#7-backend-data--query-architecture)
+8. [Frontend Interaction & State Engine (AJAX + URL Sync)](#8-frontend-interaction--state-engine)
+9. [Step-by-Step Implementation Roadmap](#9-step-by-step-implementation-roadmap)
+10. [Design System Compliance & Native Styling Rules](#10-design-system-compliance--native-styling-rules)
 
 ---
 
@@ -112,22 +113,178 @@ Every time any filter changes (Category, Price, Brand, Size, Rating, or Availabi
 ### Facet 7: Promotions & Availability Toggles
 * Special ecommerce badges mapped directly to database columns:
   - `[ ] ⭐ Bestsellers` (`product.is_product_bestseller = 1`) - Shows products curated and flagged as top sellers.
-  - `[ ] 🔥 Special Offers (On Offer)` (`product.offer = 1`) - Shows products specifically tagged on promotional offer.
+  - `[ ] 🔥 Special Offers (On Offer)` (`product.offer = 1` or active in `offers` table) - Shows products specifically tagged on promotional offer.
   - `[ ] 🎁 BOGO Deals` (`bogo` table active matching) - Buy 1 Get 1 Free products.
   - `[ ] 📦 In Stock Only` (`pv.available_qty > 0`) - Hides out-of-stock items.
-  - `[ ] 🏬 Store Pickup / Express Delivery` (`product.in_store = 1` / `product.in_online = 1`)
+  - `[ ] 🏬 Store Pickup Available` (`product.in_store = 1`)
+  - `[ ] 🚚 Express Online Delivery` (`product.in_online = 1`)
 
-### Facet 8: Sort By Controls (Top Right Bar)
+### Facet 8: Alcohol by Volume (ABV Strength Bands)
+* Fundamental filter for all liquor and beverage retail:
+  - `[ ] 🚫 Alcohol-Free / 0.0% ABV` (Non-alcoholic beers, spirits, mocktails)
+  - `[ ] 🍺 Low Alcohol (< 5% ABV)` (Ciders, light beers, coolers)
+  - `[ ] 🍷 Medium Alcohol (5% – 15% ABV)` (Wines, sparkling wines, craft ales)
+  - `[ ] 🍸 High / Fortified (15% – 30% ABV)` (Port, Sherry, Liqueurs, Aperitifs, Soju)
+  - `[ ] 🥃 Full Strength Spirits (35% – 50%+ ABV)` (Whisky, Rum, Gin, Vodka, Tequila, Brandy)
+
+### Facet 9: Country of Origin & Wine/Whisky Region
+* Leverages existing `countries` & `regions` tables in database:
+  - **Countries:** Scotland, France, Italy, Ireland, United States, Ghana, Mexico, South Africa, Japan, Spain.
+  - **Regions:** Speyside, Islay, Highlands, Bordeaux, Champagne, Tuscany, Kentucky, Tequila (Jalisco), Western Cape.
+
+### Facet 10: Flavour / Taste Profile & Aroma Notes
+* Essential for helping shoppers choose by taste preference:
+  - `[ ] Peaty & Smoky` (e.g. Islay single malts, mezcal)
+  - `[ ] Sweet & Fruity` (e.g. fruit liqueurs, sweet wines, blended scotch)
+  - `[ ] Crisp & Refreshing` (e.g. sauvignon blanc, pilsners, dry gins)
+  - `[ ] Rich, Woody & Oaky` (e.g. aged bourbons, barrel-aged rums, cabernet sauvignon)
+  - `[ ] Floral & Botanical` (e.g. artisanal gins, vermouths)
+  - `[ ] Spiced & Warm` (e.g. spiced rums, spiced whiskeys)
+
+### Facet 11: Vintage / Age Statement
+* Premium classification for whiskeys, cognacs, and fine wines:
+  - `[ ] Non-Vintage / No Age Statement (NAS)`
+  - `[ ] 10 - 12 Years Old`
+  - `[ ] 15 - 18 Years Old`
+  - `[ ] 21+ Years Old`
+  - `[ ] Vintage Year Selection` (e.g. 2016, 2018, 2020)
+
+### Facet 12: Popularity & Most Viewed
+* Integrates directly with `most_viewed_product` table (`mvp.count`) and existing session tracking (`most_view`):
+  - `[ ] Trending / Most Viewed Items` (products with top views)
+
+### Facet 13: Store Location / Wholesaler Outlet
+* Integrates with `store_details` and `product.supplier_id`:
+  - Filter products available at specific Liquor Junction branches / physical outlets (e.g. Accra Mall branch, Kumasi branch, Osu outlet).
+
+### Facet 14: Dietary & Lifestyle Tags
+* Modern beverage preferences:
+  - `[ ] Vegan Certified`
+  - `[ ] Organic / Bio`
+  - `[ ] Gluten-Free`
+  - `[ ] Zero Sugar / Low Calorie`
+
+### Facet 15: Sort By Controls (Top Right Bar)
 * `Featured / Recommended` (Default)
 * `Price: Low to High`
 * `Price: High to Low`
 * `Customer Rating: Highest First`
 * `Newest Arrivals`
 * `Best Sellers / Popular`
+* `Biggest Discount / Savings`
 
 ---
 
-## 4. Interdependence Matrix (360° Bidirectional Facet Synchronization)
+## 4. Admin Product Add/Edit Audit & Missing Attributes Gap Analysis
+
+An end-to-end audit was conducted across the Admin Dashboard controllers and views:
+- `resources/views/dashboard/product/create.blade.php`
+- `resources/views/dashboard/product/edit.blade.php`
+- `app/Http/Controllers/Dashboard/ProductController.php`
+- `app/Models/Product.php` & `app/Models/ProductVariants.php`
+
+### 4.1 What Currently Exists on the Add/Edit Form
+| Field Name | Type | Stored In | Description |
+|---|---|---|---|
+| `product_name` | Text Input | `product.product_name` | Product Title |
+| `brand_id` | Select Dropdown | `product.brand_id` | Foreign key to `brand` table |
+| `category_id` | Select Dropdown | `product.category_id` | Foreign key to `categories` table |
+| `subcategory_id` | AJAX Dependent Select | `product.subcategory_id` | Foreign key to `sub_categories` table |
+| `property_images[]` | File Upload (Multiple, max 5) | `product_image` table | Image gallery |
+| `video` | File Upload (MP4, max 20MB) | `product.video` | Showcase video |
+| `prod_variant.*.variant_uof` | Select Dropdown | `product_variants.variant_uof` | Unit of measure (`uofs` table) |
+| `prod_variant.*.variant_size` | Number Input | `product_variants.variant_size` | Size numeric value (e.g. 750) |
+| `prod_variant.*.variant_price` | Number Input | `product_variants.variant_price` | Original retail price |
+| `prod_variant.*.variant_qty` | Number Input | `product_variants.variant_qty` & `available_qty` | Inventory quantity |
+| `short_description` | Textarea (max 150 chars) | `product.short_description` | Short excerpt |
+| `page_content` | Summernote WYSIWYG | `product.description` | Detailed description |
+| `is_product_bestseller` | Checkbox (0 / 1) | `product.is_product_bestseller` | Curated bestseller flag |
+| `offer` | Checkbox (0 / 1) | `product.offer` | Special offer badge flag |
+
+---
+
+### 4.2 Critical Gaps & Missing Features in Product Add/Edit
+
+#### 🔴 Gap 1: Variant Discounted Price is Commented Out in HTML
+* In both `create.blade.php` (lines 266-278) and `edit.blade.php` (lines 321-333), the input `<input name="prod_variant[][variant_discounted_price]">` is commented out (`{{-- ... --}}`).
+* **Consequence:** The admin has no UI to provide variant-specific sale prices. In the database, `product_variants.variant_discounted_price` already exists!
+* **Fix:** Re-enable the discounted price field in the variant repeater with validation ensuring `variant_discounted_price < variant_price`.
+
+#### 🔴 Gap 2: Fulfilment Toggles (`in_store` & `in_online`) Missing from Form
+* The `product` table and model `$fillable` already define `in_store` and `in_online` (and backend controllers reference them).
+* **Consequence:** There are no checkboxes on the Add/Edit form for "Available for In-Store Pickup" and "Available for Online Delivery".
+* **Fix:** Add two toggle checkboxes in the product form:
+  - `[x] Available for Online Express Delivery` (`in_online`)
+  - `[x] Available for In-Store Pickup` (`in_store`)
+
+#### 🔴 Gap 3: Missing Liquor-Specific Attributes (ABV, Country, Region, Flavour, Age)
+Liquor e-commerce relies heavily on specialized product parameters that are currently absent from the form and table:
+1. **Alcohol by Volume (`abv`):** e.g., `40.0%`, `12.5%`, `0.0%`. Crucial for strength filters.
+2. **Country of Origin (`country_id`):** The `countries` table already exists in the project (`Country.php` model), but is not connected to products.
+3. **Region / Appellation (`region_id`):** The `regions` table already exists (`Region.php` model), but is not linked to products.
+4. **Flavour / Taste Profile (`taste_profile`):** Tags or multi-select for Sweet, Smoky, Peaty, Fruity, Crisp, Oaky, Dry, etc.
+5. **Vintage / Age Statement (`vintage_year` / `age_statement`):** Age number (e.g. 12, 18) or harvest year.
+6. **Container Type (`container_type`):** Glass Bottle, Aluminum Can, Cask/Keg, Gift Box Set.
+7. **Dietary / Lifestyle Tags (`dietary_tags`):** Vegan, Gluten-Free, Organic, Sugar-Free.
+
+#### 🔴 Gap 4: Missing Low-Stock Alert Threshold
+* Currently only `variant_qty` exists. There is no `min_stock_alert` threshold to notify admin when stock drops below 5 bottles, or to trigger "Only 3 left in stock!" urgency badges on the frontend.
+
+#### 🔴 Gap 5: Physical Barcode / EAN / UPC Field
+* `sku` is currently auto-generated from product name. However, physical liquor retail uses scanned EAN-13 / UPC barcodes for inventory and point-of-sale alignment.
+
+---
+
+### 4.3 Database Schema Migration Blueprint for Missing Attributes
+
+To support both advanced product filtering and complete admin catalog management, create a new Laravel migration:
+
+```php
+// database/migrations/xxxx_xx_xx_add_liquor_attributes_to_product_table.php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up()
+    {
+        Schema::table('product', function (Blueprint $table) {
+            // Liquor Specific Characteristics
+            $table->decimal('abv', 5, 2)->nullable()->after('brand_id')->comment('Alcohol By Volume % e.g. 40.00');
+            $table->unsignedBigInteger('country_id')->nullable()->after('abv')->index();
+            $table->unsignedBigInteger('region_id')->nullable()->after('country_id')->index();
+            $table->string('taste_profile', 255)->nullable()->after('region_id')->comment('Comma-separated: smoky, peaty, fruity');
+            $table->integer('age_statement')->nullable()->after('taste_profile')->comment('Years aged, e.g. 12, 18');
+            $table->year('vintage_year')->nullable()->after('age_statement')->comment('Wine vintage year e.g. 2018');
+            $table->string('container_type', 50)->nullable()->after('vintage_year')->default('Bottle')->comment('Bottle, Can, Keg, Gift Set');
+            $table->string('dietary_tags', 255)->nullable()->after('container_type')->comment('Comma-separated: vegan, gluten_free, organic');
+            
+            // Operational & Retail Enhancements
+            $table->string('barcode', 50)->nullable()->after('sku')->index();
+            $table->integer('min_stock_alert')->default(5)->after('product_qty');
+            $table->boolean('is_featured')->default(0)->after('is_product_bestseller')->index();
+            $table->boolean('is_new_arrival')->default(0)->after('is_featured')->index();
+        });
+    }
+
+    public function down()
+    {
+        Schema::table('product', function (Blueprint $table) {
+            $table->dropColumn([
+                'abv', 'country_id', 'region_id', 'taste_profile',
+                'age_statement', 'vintage_year', 'container_type',
+                'dietary_tags', 'barcode', 'min_stock_alert',
+                'is_featured', 'is_new_arrival'
+            ]);
+        });
+    }
+};
+```
+
+---
+
+## 5. Interdependence Matrix (360° Bidirectional Facet Synchronization)
 
 > ⚡ **CRITICAL RULE:** Applying ANY filter must update NOT ONLY the product list, but **THE FILTER BAR ITSELF**!
 > If an option in Category, Subcategory, Brand, Size, Bestseller, or Offer has `0` products under the current selection, **it must be automatically removed from the filter bar** (or disabled/hidden). The customer must **NEVER** encounter a "0 Products Found" dead-end.
@@ -188,7 +345,7 @@ When the AJAX response arrives, the JavaScript engine performs an **instant DOM 
 
 ---
 
-## 5. UI / UX Architecture & Layout Wireframe
+## 6. UI / UX Architecture & Layout Wireframe
 
 ### Desktop View (Width >= 992px)
 ```
@@ -234,7 +391,7 @@ When the AJAX response arrives, the JavaScript engine performs an **instant DOM 
 
 ---
 
-## 6. Backend Data & Query Architecture
+## 7. Backend Data & Query Architecture
 
 ### Unified Controller Method: `ProductController@facetedFilter`
 The server handles both initial page load and AJAX requests through a single high-performance query pipeline:
@@ -282,14 +439,22 @@ public function getFacetedProducts(Request $request)
     $this->applySorting($products, $request->get('sort_by', 'featured'));
 
     // 7. Pagination / Limit:
-    $limit = 18;
+    $limit = 16;
     $totalCount = $products->count();
     $productData = $products->paginate($limit);
 
-    // 8. Return JSON for AJAX, or View for Full Page
+    // 8. Bulk Eager-Loading (Zero N+1 Query Overhead):
+    $productIds = $productData->pluck('id')->toArray();
+    $activeBogos = $this->getBulkBogos($productIds);
+    $activeOffers = $this->getBulkOffers($productIds);
+    $userFavorites = auth()->guard('user')->check() 
+        ? FavoriteProduct::where('user_id', auth()->guard('user')->id())->whereIn('product_id', $productIds)->where('status', 1)->pluck('product_id')->toArray() 
+        : [];
+
+    // 9. Return JSON for AJAX, or View for Full Page
     if ($request->ajax()) {
         return response()->json([
-            'html' => view('frontend.product.ajax_product', compact('productData'))->render(),
+            'html' => view('frontend.product.ajax_filter_product', compact('productData', 'activeBogos', 'activeOffers', 'userFavorites'))->render(),
             'total_count' => $totalCount,
             'price_bounds' => [
                 'min' => floor($priceStats->min_price ?? 0),
@@ -309,9 +474,21 @@ public function getFacetedProducts(Request $request)
 }
 ```
 
+### ⚡ Critical Query Optimization & Database Indexing Rules
+To guarantee sub-100ms faceted responses even with thousands of catalog items:
+1. **Eliminate N+1 Loop Queries:** The current `ajax_filter_product.blade.php` executes individual `Helper::userFavoriteProduct()`, `Bogo::where()`, and `Offers::where()` queries inside `@foreach ($productData)`. In the new engine, all Bogos, Offers, and User Favorites **MUST be pre-fetched in bulk** using `whereIn('product_id', $productIds)`.
+2. **Compound Database Indexes:**
+   ```sql
+   ALTER TABLE `product` ADD INDEX `idx_prod_cat_status` (`category_id`, `status`);
+   ALTER TABLE `product` ADD INDEX `idx_prod_subcat_status` (`subcategory_id`, `status`);
+   ALTER TABLE `product` ADD INDEX `idx_prod_brand_status` (`brand_id`, `status`);
+   ALTER TABLE `product` ADD INDEX `idx_prod_bestseller` (`is_product_bestseller`, `status`);
+   ALTER TABLE `product_variants` ADD INDEX `idx_variant_prod_avail` (`product_id`, `status`, `available_qty`);
+   ```
+
 ---
 
-## 7. Frontend Interaction & State Engine
+## 8. Frontend Interaction & State Engine
 
 ### Live Debounced AJAX + Browser URL Sync
 Instead of relying on an "Apply" button or full page reload, the client-side engine uses **Instant Debounced Reactive Updates**:
@@ -324,22 +501,69 @@ Instead of relying on an "Apply" button or full page reload, the client-side eng
    - **Benefit:** If the user bookmarks the page, refreshes, or sends the link to a friend, the exact filtered list opens!
 4. **Skeleton Loading:** Product cards show a sleek animated placeholder shimmer while AJAX fetches, avoiding jarring screen jumps.
 
+### 🛡️ Production Edge-Case Handling Rules
+
+#### 1. Pagination & "Show More" State Management:
+* **Filter Change Reset:** Whenever ANY filter (category, brand, price, sort) changes, `current_page_count` MUST reset to `0`, and the grid container `#table_data` must be **replaced** (`.html(response.html)`), NOT appended.
+* **Show More Click:** Clicking "Show More" leaves active filters intact, increments `current_page_count` by 16, and **appends** (`.append(response.html)`) the new cards to `#table_data`.
+* **Counter Badge Sync:** `#p-current-count` and `#p-total-count` update dynamically with each page increment.
+
+#### 2. Search Keyword Coexistence (`?search=...`):
+* When shoppers search from the top global search bar (e.g., `?search=vodka`), the keyword is retained in the filter state engine.
+* The keyword renders as an active pill: `Search: "vodka" [✕]`.
+* Clicking `[✕]` on the search pill clears the search query while preserving any other selected filters (e.g. Price or Brand).
+
+#### 3. Delegated Event Handlers (No Broken Cart / Wishlist Actions):
+* Re-rendering `#table_data` via AJAX destroys previous DOM nodes.
+* **Rule:** All interactive click events on product cards MUST use jQuery event delegation on `document`:
+  ```javascript
+  // Delegated Add-to-Cart
+  $(document).on('click', '.add-bucket', function(e) {
+      e.preventDefault();
+      const productId = $(this).data('product-id');
+      const variantId = $(this).data('variant-id');
+      addToCartAjax(productId, variantId);
+  });
+
+  // Delegated Wishlist / Favorite
+  $(document).on('change', '.favs-icon', function() {
+      const productId = $(this).data('product-id');
+      const isFav = $(this).is(':checked') ? 1 : 0;
+      productFav(productId, isFav);
+  });
+  ```
+
+#### 4. Mobile Drawer UX ("View Results" Sticky Action):
+* On mobile screens (< 992px), users should not have the offcanvas drawer snap shut on every single checkbox tap.
+* A sticky bottom action bar sits at the bottom of `#filteroffcanvas`:
+  - `[ Clear All ]` (White outline button)
+  - `[ View 18 Products ]` (Solid gold button)
+* Tapping checkboxes live-updates the count inside `View (N) Products` in the background, and tapping "View Products" closes the drawer to reveal the refreshed catalog.
+
+#### 5. Graceful Empty State (Zero Results Fallback):
+* If a customer manually tampers with URL parameters or chooses contradictory filters, avoid displaying an ugly broken layout.
+* Render a branded empty state with:
+  - 🍷 Friendly graphic: *"We couldn't find any products matching your exact filters."*
+  - CTA Button: `[ Reset All Filters ]`
+  - Carousel: *"Here are some of our all-time Bestsellers instead:"* (renders 4 top bestseller cards).
+
 ---
 
-## 8. Step-by-Step Implementation Roadmap
+## 9. Step-by-Step Implementation Roadmap
 
 | Phase | Milestone | Actions & Deliverables |
 |---|---|---|
-| **Phase 1** | **Query & Controller Engine** | Refactor `ProductController::list` & `filterData` into a unified faceted query service that returns products + real-time facet counts + price bounds. |
-| **Phase 2** | **Desktop Sidebar Component** | Create reusable blade partial `resources/views/frontend/product/components/filter-sidebar.blade.php` containing Accordion Categories, Price Slider, Searchable Brands, Variants, Ratings, and Offer toggles. |
-| **Phase 3** | **Grid Layout Refactoring** | Update `product-list.blade.php` and `filtered-product-list.blade.php` from `col-12` to `col-lg-3` (Sidebar) + `col-lg-9` (Products Grid), keeping `d-lg-none` offcanvas for mobile. |
-| **Phase 4** | **Reactive JS Engine** | Build `faceted-filter.js`: Real-time facet DOM syncing, URL history sync (`pushState`), debounced price slider, active tag removal, and dynamic facet pruning. |
-| **Phase 5** | **Header & Navigation polish** | Ensure `/product-list` without category ID opens a full catalog view with all categories available in the sidebar. |
-| **Phase 6** | **Quality Verification** | Test responsive breakpoints (Mobile 375px, Tablet 768px, Desktop 1200px+), verify 0-count facet hiding, test browser back/forward URL synchronization. |
+| **Phase 1** | **Database & Admin Add/Edit Enhancement** | Add migration for missing liquor attributes (`abv`, `country_id`, `region_id`, `taste_profile`, `age_statement`, `vintage_year`, `dietary_tags`, `in_store`, `in_online`), re-enable `variant_discounted_price` in product add/edit forms. |
+| **Phase 2** | **Query & Controller Engine** | Refactor `ProductController::list` & `filterData` into a unified faceted query service that returns products + real-time facet counts + price bounds + new liquor facets. |
+| **Phase 3** | **Desktop Sidebar Component** | Create reusable blade partial `resources/views/frontend/product/components/filter-sidebar.blade.php` containing Accordion Categories, Price Slider, Searchable Brands, ABV strength bands, Country/Region, Variants, Ratings, and Offer toggles. |
+| **Phase 4** | **Grid Layout Refactoring** | Update `product-list.blade.php` and `filtered-product-list.blade.php` from `col-12` to `col-lg-3` (Sidebar) + `col-lg-9` (Products Grid), keeping `d-lg-none` offcanvas for mobile. |
+| **Phase 5** | **Reactive JS Engine** | Build `faceted-filter.js`: Real-time facet DOM syncing, URL history sync (`pushState`), debounced price slider, active tag removal, and dynamic facet pruning. |
+| **Phase 6** | **Header & Navigation polish** | Ensure `/product-list` without category ID opens a full catalog view with all categories available in the sidebar. |
+| **Phase 7** | **Quality Verification** | Test responsive breakpoints (Mobile 375px, Tablet 768px, Desktop 1200px+), verify 0-count facet hiding, test browser back/forward URL synchronization. |
 
 ---
 
-## 9. Design System Compliance & Native Styling Rules
+## 10. Design System Compliance & Native Styling Rules
 
 To guarantee that the new filter perfectly matches Liquor Junction's existing UI and looks 100% native (not like an alien plugin), the implementation strictly follows the existing styling guidelines extracted directly from `style.css` and `head.blade.php`:
 

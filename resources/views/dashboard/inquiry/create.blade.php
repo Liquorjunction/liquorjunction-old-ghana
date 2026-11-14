@@ -86,7 +86,7 @@ $title_var2 = "title_" . env('DEFAULT_LANGUAGE');
                     <div class="form-group row">
                         <label class="col-sm-2 form-control-label">Phone</label>
                         <div class="col-sm-10">
-                            <input type="text" name="phone" id="phone" class="form-control" placeholder="Phone" value="{{old('phone')}}">
+                            <input type="text" name="phone" id="phone" maxlength="15" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeypress="return (event.charCode >= 48 && event.charCode <= 57)" class="form-control" placeholder="Phone" value="{{old('phone')}}">
                             @if ($errors->has('phone'))
                             <span class="help-block">
                                 <span  style="color: red;" class='validate'>{{ $errors->first('phone') }}</span>

@@ -45,8 +45,8 @@ class ProductController extends Controller
 
         $user_id = $this->user_id;
         $product_val =  new Product;
-        $product_max_price = $product_val->getproductMaxPrice();
-        $product_min_price = $product_val->getproductMinPrice();
+        $product_max_price = $product_val->getproductMaxPrice($category_id, $subcategory_id);
+        $product_min_price = $product_val->getproductMinPrice($category_id, $subcategory_id);
         
         $categoryDetails = Categories::where('id',$category_id)->where('status',1)->first();
         // dd($categoryDetails);
@@ -115,8 +115,8 @@ class ProductController extends Controller
 
         $user_id = $this->user_id;
         $product_val =  new Product;
-        $product_max_price = $product_val->getproductMaxPrice();
-        $product_min_price = $product_val->getproductMinPrice();
+        $product_max_price = $product_val->getproductMaxPrice($category_id, $subcategory_id);
+        $product_min_price = $product_val->getproductMinPrice($category_id, $subcategory_id);
         
         $categoryDetails = Categories::where('id',$category_id)->where('status',1)->first();
         $subCategoryDetails = SubCategories::where('id',$subcategory_id)->where('status',1)->where('category_id',$category_id)->first();
@@ -190,13 +190,18 @@ class ProductController extends Controller
                         ->orderBy('title', 'asc')
                         ->get();
 
-                    // Maximum and minimum price from the list
+                    // Maximum price dynamically from active product variants
                     if (!$products->isEmpty()) {
-                        // $max_price_value = $products->pluck('variant_price')->filter()->max();
-                        $max_price_value = $products->pluck('product_price')->filter()->max();
-                        $max_price_obj = new \stdClass();
-                        $max_price_obj->max_price = number_format((float) $max_price_value, 2, '.', '');
-                        $product_max_price=$max_price_obj;
+                        $productIds = $products->pluck('product_id')->unique()->filter()->toArray();
+                        $maxVariantPrice = DB::table('product_variants')
+                            ->whereIn('product_id', $productIds)
+                            ->where('status', 1)
+                            ->max('variant_price');
+                        if ($maxVariantPrice !== null) {
+                            $max_price_obj = new \stdClass();
+                            $max_price_obj->max_price = ceil((float) $maxVariantPrice);
+                            $product_max_price = $max_price_obj;
+                        }
                     }
 
                     $limit = 16;
@@ -381,13 +386,18 @@ class ProductController extends Controller
         ->where('id', $categoryIds)
         ->where('status',1)->get();
 
-        // Maximum and minimum price from the list
+        // Maximum price dynamically from active product variants
         if (!$productDataFilter->isEmpty()) {
-            // $max_price_value = $productDataFilter->pluck('variant_price')->filter()->max();
-             $max_price_value = $productDataFilter->pluck('product_price')->filter()->max();
-            $max_price_obj = new \stdClass();
-            $max_price_obj->max_price = number_format((float) $max_price_value, 2, '.', '');
-            $product_max_price=$max_price_obj;
+            $filteredProductIds = $productDataFilter->pluck('product_id')->unique()->filter()->toArray();
+            $maxVariantPrice = DB::table('product_variants')
+                ->whereIn('product_id', $filteredProductIds)
+                ->where('status', 1)
+                ->max('variant_price');
+            if ($maxVariantPrice !== null) {
+                $max_price_obj = new \stdClass();
+                $max_price_obj->max_price = ceil((float) $maxVariantPrice);
+                $product_max_price = $max_price_obj;
+            }
         }
 
         foreach ($productData as $product) {
@@ -683,8 +693,8 @@ class ProductController extends Controller
         })->where('status', 1)->orderBy('id', 'ASC');
 
         $product_val =  new Product;
-        $product_max_price = $product_val->getproductMaxPrice();
-        $product_min_price = $product_val->getproductMinPrice();
+        $product_max_price = $product_val->getproductMaxPrice(null, null, $brand_id);
+        $product_min_price = $product_val->getproductMinPrice(null, null, $brand_id);
 
         $myBrand = Brand::where('status', 1)->where('id', $brand_id)->first();
 
@@ -769,13 +779,18 @@ class ProductController extends Controller
         ->where('id', $categoryIds)
         ->where('status',1)->get();
 
-        // Maximum and minimum price from the list
+        // Maximum price dynamically from active product variants
         if (!$productDataFilter->isEmpty()) {
-            // $max_price_value = $productDataFilter->pluck('variant_price')->filter()->max();
-            $max_price_value = $productDataFilter->pluck('product_price')->filter()->max();
-            $max_price_obj = new \stdClass();
-            $max_price_obj->max_price = number_format((float) $max_price_value, 2, '.', '');
-            $product_max_price=$max_price_obj;
+            $filteredProductIds = $productDataFilter->pluck('product_id')->unique()->filter()->toArray();
+            $maxVariantPrice = DB::table('product_variants')
+                ->whereIn('product_id', $filteredProductIds)
+                ->where('status', 1)
+                ->max('variant_price');
+            if ($maxVariantPrice !== null) {
+                $max_price_obj = new \stdClass();
+                $max_price_obj->max_price = ceil((float) $maxVariantPrice);
+                $product_max_price = $max_price_obj;
+            }
         }
 
         foreach ($productData as $product) {

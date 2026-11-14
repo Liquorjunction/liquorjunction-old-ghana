@@ -36,12 +36,12 @@
             <div class="col-sm-3">
                 <select style="font-size:15px !important;" name="phone_code" id="phone_code" class="form-control">
                     @foreach ($phonecode as $value)
-                    <option value="{{$value->phonecode}}" {{ ($customerData->phone_code == $value->phonecode) ? 'selected' : ''}}>+{{$value->phonecode.' ('.$value->shortname.')' }}</option>
+                    <option value="{{$value->phonecode}}" {{ ($customerData->phone_code == $value->phonecode) ? 'selected' : ''}}>+{{$value->phonecode}}</option>
                     @endforeach
                 </select>
             </div>
             <div class="col-sm-7">
-                <input type="text" name="phone" id="phone" class="form-control" placeholder="Phone Number" value="{{@$customerData->phone}}">
+                <input type="text" name="phone" id="phone" maxlength="15" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeypress="return (event.charCode >= 48 && event.charCode <= 57)" class="form-control" placeholder="Phone Number" value="{{@$customerData->phone}}">
                 <span class="help-block" id="errorMessagePhone" style="display:none">
                     <span style="color: red;display: none;" id="errorMsgPhone" class='validate'></span>
                 </span>
@@ -110,7 +110,7 @@
         $(document).ready(function() {
 
             $('#phone').on("input", function() {
-                this.value = this.value.replace(/[^0-9\.]/g, '');
+                this.value = this.value.replace(/[^0-9]/g, '');
                 $(this).val($(this).val().replace(/^\s+/g, ''));
             });
 

@@ -60,7 +60,7 @@
                                     @php
                                         $phone_code = \Helper::country($inquiry->phone_code);
                                     @endphp
-                                    <td>+{{$phone_code->phonecode?:''}} {{isset($inquiry->phone)?$inquiry->phone:''}}</td>
+                                    <td>@if(!empty($phone_code->phonecode))+{{ ltrim($phone_code->phonecode, '+') }} @endif{{isset($inquiry->phone)?$inquiry->phone:''}}</td>
                                 </tbody>
                             </tr>
                             <tr>

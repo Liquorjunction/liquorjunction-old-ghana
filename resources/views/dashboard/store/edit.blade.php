@@ -72,12 +72,12 @@
                     <div class="col-sm-2">
                         <select style="font-size:15px !important;" name="phone_code" id="phone_code" class="form-control">
                             @foreach ($countryData as $value)
-                            <option value="{{$value->phonecode}}"  {{ ($StoreDetails->phone_code == $value->phonecode) ? 'selected' : ''}}>+{{$value->phonecode.' ('.$value->shortname.')' }}</option>
+                            <option value="{{$value->phonecode}}"  {{ ($StoreDetails->phone_code == $value->phonecode) ? 'selected' : ''}}>+{{$value->phonecode}}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="col-sm-7">
-                        <input type="text" name="contact_number" id="contact_number" class="form-control" placeholder="{!! __('backend.store_contact_number') !!}"  value="{{ @$StoreDetails->contact_number}}">
+                        <input type="text" name="contact_number" id="contact_number" maxlength="15" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeypress="return (event.charCode >= 48 && event.charCode <= 57)" class="form-control" placeholder="{!! __('backend.store_contact_number') !!}"  value="{{ @$StoreDetails->contact_number}}">
                         @if ($errors->has('contact_number'))
                         <span class="help-block">
                             <span style="color: red;" class='validate'>{{ $errors->first('contact_number') }}</span>
@@ -87,31 +87,70 @@
                 </div>
 
                 <div class="form-group row">
-                    <label class="col-sm-3 form-control-label">{!! __('backend.address') !!} <span class="valid_field">*</span></label>
+                    <label class="col-sm-3 form-control-label">Store Email <span class="valid_field">*</span></label>
                     <div class="col-sm-9">
-                        <input type="text" name="address" id="address" class="form-control" placeholder="Address" value="{{ @$StoreDetails->address }}">
-                        @if ($errors->has('address'))
+                        <input type="email" name="email" id="email" class="form-control" placeholder="Store Email (e.g. sales@liquorjunction.co)" value="{{ old('email', @$StoreDetails->email) }}">
+                        @if ($errors->has('email'))
                         <span class="help-block">
-                            <span style="color: red;" class='validate'>{{ $errors->first('address') }}</span>
+                            <span style="color: red;" class='validate'>{{ $errors->first('email') }}</span>
                         </span>
-                        @endif
-                        <?php
-                        // dd(empty(@$StoreDetails)); 
-                        ?>
-                        @if(@$StoreDetails == "")
-                        <input type="hidden" name="property_latitude" id="property_latitude" value="{{ old('property_latitude') }}">
-                        <input type="hidden" name="property_longitude" id="property_longitude" value="{{ old('property_longitude') }}">
-                        @else
-                        <input type="hidden" name="property_latitude" id="property_latitude" value="{{ @$StoreDetails->latitude }}">
-                        <input type="hidden" name="property_longitude" id="property_longitude" value="{{ @$StoreDetails->longitude }}">
                         @endif
                     </div>
                 </div>
-                <div class="form-group row">
-                    <label class="col-sm-3 "></label>
-                    <div class="col-sm-9">
-                        <div id="myMapaaa">
 
+                <div class="form-group row">
+                    <label class="col-sm-3 form-control-label">{!! __('backend.address') !!} <span class="valid_field">*</span></label>
+                    <div class="col-sm-9">
+                        <input type="text" name="address" id="address" class="form-control" placeholder="Search location in {{ $countryDisplayNames }} or enter full address" value="{{ old('address', @$StoreDetails->address) }}">
+                        @if ($errors->has('address'))
+                        <span class="help-block" id="serverErrorMessageAddress">
+                            <span style="color: red;" class='validate'>{{ $errors->first('address') }}</span>
+                        </span>
+                        @endif
+                        <span class="help-block" id="errorMessageAddress1" style="display:none">
+                            <span style="color: red;display: none;" id="errorMsgAddress" class='validate'></span>
+                        </span>
+                        <input type="hidden" name="property_latitude" id="property_latitude" value="{{ old('property_latitude', @$StoreDetails->latitude) }}">
+                        <input type="hidden" name="property_longitude" id="property_longitude" value="{{ old('property_longitude', @$StoreDetails->longitude) }}">
+                        <input type="hidden" name="country_code" id="country_code" value="{{ old('country_code') }}">
+                        <input type="hidden" name="country" id="country_name" value="{{ old('country', @$StoreDetails->country) }}">
+                    </div>
+                </div>
+
+                <div class="form-group row">
+                    <label class="col-sm-3 form-control-label">Location on Map</label>
+                    <div class="col-sm-9">
+                        <!-- Interactive Map Card with Center Pin -->
+                        <div class="store-map-card" style="position: relative; width: 100%; height: 380px; border-radius: 12px; overflow: hidden; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.06); background-color: #f8fafc;">
+                            <!-- Floating Locate Me Button (GPS button) -->
+                            <button type="button" class="btn btn-white shadow" id="btn_locate_me" 
+                                    title="Locate Current Position" 
+                                    style="position: absolute; right: 12px; top: 12px; z-index: 10; width: 38px; height: 38px; border-radius: 8px; padding: 0; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; background: #fff; cursor: pointer;">
+                                <i class="fa fa-crosshairs text-primary" id="locate_icon" style="font-size: 18px;"></i>
+                            </button>
+
+                            <!-- Google Map Canvas -->
+                            <div id="myMapaaa" style="width: 100%; height: 100%;"></div>
+
+                            <!-- Fixed Center Pin Marker -->
+                            <div class="map-center-pin" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); pointer-events: none; z-index: 5; text-align: center;">
+                                <div class="pin-icon" style="transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                                    <svg width="42" height="42" viewBox="0 0 24 24" fill="#dc2626" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));">
+                                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                    </svg>
+                                </div>
+                                <div class="pin-shadow" style="width: 12px; height: 5px; background: rgba(0,0,0,0.25); border-radius: 50%; margin: -4px auto 0; filter: blur(1px);"></div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom Status Bar Below Map -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12px; color: #64748b;">
+                            <span id="map_status_text">
+                                <i class="fa fa-info-circle text-info"></i> Drag map to set pin or search location in {{ $countryDisplayNames }}
+                            </span>
+                            <span id="map_coords_badge" class="badge" style="background: #e2e8f0; color: #334155; font-family: monospace; font-size: 11px; padding: 4px 8px; border-radius: 6px;">
+                                Lat: <span id="badge_lat">{{ old('property_latitude', @$StoreDetails->latitude ?: '5.6037') }}</span>, Lng: <span id="badge_lng">{{ old('property_longitude', @$StoreDetails->longitude ?: '-0.1870') }}</span>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -155,254 +194,349 @@
         </div>
     </div>
     @endsection
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ env('GOOGLE_MAPS_API_KEY', 'AIzaSyC3ksZwnrjrnMtiZXZJ7cx9YEckAlt3vh4') }}&libraries=places&callback=initialize1" async defer></script>
     @push('after-scripts')
     <script type="text/javascript">
-        $('#address').on('keyup', function() {
-            $('#property_latitude').val('');
-            $('#property_longitude').val('');
-        });
-
-        $("#address").on('change', function(e) {
-            var geocoder = new google.maps.Geocoder();
-            var address = $("#address").val();
-
-
-            if ($(this).val()) {
-                show_address_fetching();
-
-                geocoder.geocode({
-                    'address': address
-                }, function(results, status) {
-
-                    if (status == google.maps.GeocoderStatus.OK) {
-                        var latitude = results[0].geometry.location.lat();
-                        var longitude = results[0].geometry.location.lng();
-
-                        $('#property_latitude').val(latitude);
-                        $('#property_longitude').val(longitude);
-                    }
-
-                    hide_address_fetching();
-                });
-            }
-        });
-
-        function show_address_fetching(latitude, longitude) {
-            initialize(latitude, longitude);
-
-        }
-
-        function hide_address_fetching() {
-
-        }
-
-
-        function showmapView(latitude, longitude, flag) {
-            // alert('heeloo')
-            var address = $("#address").val();
-            // alert(latitude)
-            // alert(longitude)
-            if (address) {
-                // alert('show')
-                // loader_show();
-                initialize(latitude, longitude, flag);
-
-            } else {
-                $('#myMapaaa').parents('.col-md-12').hide();
-            }
-        }
-        window.onload = function() {
-            initialize1();
-        };
-
-
-        function initialize1() {
-            const center = {
-                lat: 50.064192,
-                lng: -130.605469
-            };
-
-            // Create a bounding box with sides ~10km away from the center point
-            const defaultBounds = {
-                north: center.lat + 0.1,
-                south: center.lat - 0.1,
-                east: center.lng + 0.1,
-                west: center.lng - 0.1,
-            };
-
-            var autocomplete = new google.maps.places.Autocomplete($("#address")[0], {
-                bounds: defaultBounds,
-            });
-            google.maps.event.addListener(autocomplete, 'place_changed', function() {
-                var place = autocomplete.getPlace();
-                var latitude = place.geometry.location.lat();
-                var longitude = place.geometry.location.lng();
-                showmapView(latitude, longitude, 0);
-                $("#property_latitude").val(latitude);
-                $("#property_longitude").val(longitude);
-                console.log(place.address_components);
-            });
-        }
-
-        function initialize(lat, long, flag) {
-            // alert(lat)
-            // alert(long)
-            var map;
-            var marker;
-            if (lat != '' && long != '') {
-                var lat = lat;
-                var long = long;
-            } else if (lat == '' && lat != undefined && long == '' && long != undefined) {
-                var lat = $("#property_latitude").val();
-                var long = $("#property_longitude").val();
-
-                if (lat != '' && long != '') {
-                    xyz(lat, long);
-                } else {
-                    const center = {
-                        lat: 50.064192,
-                        lng: -130.605469
-                    };
-                    var lat = center.lat;
-                    var long = center.lng;
-                }
-            } else {
-
-                const center = {
-                    lat: 50.064192,
-                    lng: -130.605469
-                };
-
-                var lat = center.lat;
-                var long = center.lng;
-            }
-
-
-            // if (!isNaN(lat) && !isNaN(long)) {
-            var myLatlng = new google.maps.LatLng(lat, long);
-            // }
-            // Create a bounding box with sides ~10km away from the center point
-            console.log('myLatlng', myLatlng);
-            const defaultBounds = {
-                north: lat + 0.1,
-                south: lat - 0.1,
-                east: long + 0.1,
-                west: long - 0.1,
-            };
-            var geocoder = new google.maps.Geocoder();
-            var infowindow = new google.maps.InfoWindow();
-
-            var originalMapCenter = new google.maps.LatLng(50.064192, -130.605469);
-            const KUWAIT_BOUNDS = {
-                east: 52.0997041,
-                west: 42.9700654,
-                north: 30.8894920,
-                south: 27.5340847,
-            };
-
-            var mapOptions = {
-                zoom: 18,
-                center: myLatlng,
-                mapTypeId: google.maps.MapTypeId.ROADMAP,
-                componentRestrictions: {
-                    country: "kw"
-                },
-                bounds: defaultBounds,
-                useMapTypeControl: false,
-                // restriction: {
-                //     latLngBounds: KUWAIT_BOUNDS,
-                //     strictBounds: false,
-                // },
-            };
-
-            // map.setMapTypeId('terrain');
-            // var map = new google.maps.Map(document.getElementById('map_with_pin'), {
-            //     zoom: 7,
-            //     useMapTypeControl: false,
-            //     center: originalMapCenter,
-            //     restriction: {
-            //         latLngBounds: KUWAIT_BOUNDS,
-            //         strictBounds: false,
-            //     },
-            // });
-
-            map = new google.maps.Map(document.getElementById("myMapaaa"), mapOptions);
-
-            marker = new google.maps.Marker({
-                map: map,
-                position: myLatlng,
-                draggable: true
-            });
-
-
-
-            geocoder.geocode({
-                'latLng': myLatlng
-            }, function(results, status) {
-                if (status == google.maps.GeocoderStatus.OK) {
-                    if (results[0]) {
-                        // $('#latitude,#longitude').show();
-                        // $('#address').val(results[0].formatted_address);
-                        $('#property_latitude').val(marker.getPosition().lat());
-                        $('#property_longitude').val(marker.getPosition().lng());
-                        infowindow.setContent(results[0].formatted_address);
-                        infowindow.open(map, marker);
-                        // if (flag != 1) {
-
-                        //     getRegions(marker.getPosition().lat(), marker.getPosition().lng());
-                        // }
-
-                    }
-                }
-            });
-
-
-            google.maps.event.addListener(marker, 'dragend', function() {
-                // alert('helloo')
-                $('#property_latitude').val(marker.getPosition().lat());
-                $('#property_longitude').val(marker.getPosition().lng());
-                xyz(marker.getPosition().lat(), marker.getPosition().lng());
-            });
-
-            function xyz(latitude, longitude) {
-                // alert('hello')
-                // loader_show();
-                $.ajax({
-
-                    url: "{{route('getAddress')}}",
-                    type: 'post',
-                    data: 'latitude=' + latitude + '&longitude=' + longitude,
-                    success: function(data) {
-                        $("#address").val(data);
-                        // loader_hide();
-                        initialize(latitude, longitude);
-                    }
-                });
-            }
-
-            $('#myMapaaa').css({
-                'display': 'block',
-                'width': '100%',
-                'height': '350px',
-                'border': '0',
-                'border-radius': '10px',
-                'position': 'relative',
-                'overflow': 'hidden',
-                'background-color': 'whitesmoke'
-            });
-
-            $('#myMapaaa').parents('.col-md-12').css({
-                'display': 'block'
-            });
-
-        }
+        // Store Map Logic (Interactive center pin & country serviceability matching admin/country)
+        var storeMap, storeGeocoder, isMapDragging = false, isProgrammaticMovement = false;
+        var isStoreLocationAllowed = true;
+        var allowedCountryCodes = {!! json_encode(array_values(array_map('strtolower', $allowedCountryCodes))) !!};
+        var allowedCountryNames = {!! json_encode(array_values($allowedCountryNames)) !!};
+        var allowedNamesStr = {!! json_encode($countryDisplayNames) !!};
 
         $(document).ready(function() {
-            if ($('#address').val()) {
-                showmapView($('#property_latitude').val(), $('#property_longitude').val());
+            $('#storeForm').on('submit', function(e) {
+                if (!isStoreLocationAllowed) {
+                    e.preventDefault();
+                    var alertMsg = $('#errorMsgAddress').text() || ('Stores can only be added in: ' + allowedNamesStr + '.');
+                    $('#errorMessageAddress1').show();
+                    $('#errorMsgAddress').show().text(alertMsg);
+                    $('html, body').animate({
+                        scrollTop: $('#address').offset().top - 120
+                    }, 300);
+                    return false;
+                }
+            });
+        });
 
+        // Helper: Extract country code & name from Google geocoder / autocomplete address components across all results
+        function extractCountryFromResults(results) {
+            if (!results || !results.length) return null;
+            for (var r = 0; r < results.length; r++) {
+                var comps = results[r].address_components || [];
+                for (var i = 0; i < comps.length; i++) {
+                    var comp = comps[i];
+                    if (comp.types && comp.types.indexOf('country') !== -1) {
+                        return {
+                            code: (comp.short_name || '').toUpperCase().trim(),
+                            name: (comp.long_name || '').trim()
+                        };
+                    }
+                }
             }
-        })
+            return null;
+        }
+
+        // Robust country resolution (handles Google components, Plus Codes, Indian PIN codes, coordinates, and fallback)
+        function resolveLocationCountry(results, lat, lng, fullAddress, onDone) {
+            var countryInfo = extractCountryFromResults(results);
+            if (countryInfo && countryInfo.code) {
+                onDone(countryInfo, fullAddress);
+                return;
+            }
+
+            // Check if any result has an Indian postal code (6 digits starting with 1-9)
+            if (results && results.length) {
+                for (var r = 0; r < results.length; r++) {
+                    var comps = results[r].address_components || [];
+                    for (var i = 0; i < comps.length; i++) {
+                        if (comps[i].types && comps[i].types.indexOf('postal_code') !== -1) {
+                            var pc = (comps[i].short_name || '').trim();
+                            if (/^[1-9][0-9]{5}$/.test(pc)) {
+                                onDone({ code: 'IN', name: 'India' }, fullAddress);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Coordinate bounding box checks (India: ~8.0-37.5 N, ~68.0-97.5 E; Ghana: ~4.5-11.5 N, ~-3.5-1.5 E)
+            if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+                if (lat >= 8.0 && lat <= 37.5 && lng >= 68.0 && lng <= 97.5) {
+                    onDone({ code: 'IN', name: 'India' }, fullAddress);
+                    return;
+                } else if (lat >= 4.5 && lat <= 11.5 && lng >= -3.5 && lng <= 1.5) {
+                    onDone({ code: 'GH', name: 'Ghana' }, fullAddress);
+                    return;
+                }
+            }
+
+            // Fallback: Query Nominatim reverse geocode using lat, lng
+            if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+                $.ajax({
+                    url: 'https://nominatim.openstreetmap.org/reverse',
+                    type: 'GET',
+                    data: {
+                        format: 'json',
+                        lat: lat,
+                        lon: lng,
+                        zoom: 10,
+                        addressdetails: 1
+                    },
+                    dataType: 'json',
+                    timeout: 4000,
+                    success: function(nomData) {
+                        if (nomData && nomData.address && nomData.address.country_code) {
+                            var nomCountry = {
+                                code: (nomData.address.country_code || '').toUpperCase().trim(),
+                                name: (nomData.address.country || '').trim()
+                            };
+                            onDone(nomCountry, nomData.display_name || fullAddress);
+                        } else {
+                            onDone(null, fullAddress);
+                        }
+                    },
+                    error: function() {
+                        onDone(null, fullAddress);
+                    }
+                });
+                return;
+            }
+
+            onDone(null, fullAddress);
+        }
+
+        // Check country serviceability against countries configured in admin/country
+        function handleStoreServiceability(countryInfo, fullAddress) {
+            if (!countryInfo || !countryInfo.code) {
+                isStoreLocationAllowed = false;
+                $('#country_code').val('');
+                $('#country_name').val('');
+                var errorMsg = 'Could not verify country for this location. Stores can only be added in: ' + allowedNamesStr + '.';
+                $('#errorMessageAddress1').show();
+                $('#errorMsgAddress').show().text(errorMsg);
+                $('#map_status_text').html('<span class="text-muted"><i class="fa fa-info-circle"></i> Drag map to set pin or search location in ' + allowedNamesStr + '</span>');
+                return;
+            }
+
+            var codeLower = countryInfo.code.toLowerCase();
+            var isAllowed = (allowedCountryCodes.indexOf(codeLower) !== -1);
+
+            if (isAllowed) {
+                isStoreLocationAllowed = true;
+                $('#country_code').val(countryInfo.code);
+                $('#country_name').val(countryInfo.name);
+                $('#errorMessageAddress1').hide();
+                $('#errorMsgAddress').hide().empty();
+                $('#serverErrorMessageAddress').hide();
+                $('#map_status_text').html('<span class="text-success"><i class="fa fa-check-circle"></i> Serviceable Country: ' + (countryInfo.name || countryInfo.code) + '</span>');
+            } else {
+                isStoreLocationAllowed = false;
+                $('#country_code').val(countryInfo.code);
+                $('#country_name').val(countryInfo.name);
+                var blockedCountryName = countryInfo.name || countryInfo.code;
+                var errorMsg = 'Store cannot be added in ' + blockedCountryName + '. Stores can only be added in: ' + allowedNamesStr + '.';
+                
+                // Show single error under Address field
+                $('#errorMessageAddress1').show();
+                $('#errorMsgAddress').show().text(errorMsg);
+                $('#map_status_text').html('<span class="text-muted"><i class="fa fa-info-circle"></i> Drag map to set pin or search location in ' + allowedNamesStr + '</span>');
+            }
+        }
+
+        function initStoreMap() {
+            var rawLat = parseFloat($('#property_latitude').val());
+            var rawLng = parseFloat($('#property_longitude').val());
+            
+            // Default center based on allowed countries (Ghana: 5.6037, -0.1870; India: 20.5937, 78.9629)
+            var defaultLat = (allowedCountryCodes.indexOf('gh') !== -1) ? 5.603714 : ((allowedCountryCodes.indexOf('in') !== -1) ? 20.5937 : 5.603714);
+            var defaultLng = (allowedCountryCodes.indexOf('gh') !== -1) ? -0.186964 : ((allowedCountryCodes.indexOf('in') !== -1) ? 78.9629 : -0.186964);
+
+            var initialLat = (!isNaN(rawLat) && rawLat !== 0) ? rawLat : defaultLat;
+            var initialLng = (!isNaN(rawLng) && rawLng !== 0) ? rawLng : defaultLng;
+            var initialLatLng = new google.maps.LatLng(initialLat, initialLng);
+
+            var mapOptions = {
+                zoom: (!isNaN(rawLat) && rawLat !== 0) ? 16 : 14,
+                center: initialLatLng,
+                mapTypeId: google.maps.MapTypeId.ROADMAP,
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false,
+                zoomControl: true,
+                zoomControlOptions: {
+                    position: google.maps.ControlPosition.RIGHT_BOTTOM
+                }
+            };
+
+            storeMap = new google.maps.Map(document.getElementById('myMapaaa'), mapOptions);
+            storeGeocoder = new google.maps.Geocoder();
+
+            // Map drag start: lift the center pin up
+            google.maps.event.addListener(storeMap, 'dragstart', function() {
+                isMapDragging = true;
+                $('.map-center-pin .pin-icon').css('transform', 'translateY(-12px) scale(1.08)');
+                $('#map_status_text').html('<i class="fa fa-arrows text-warning"></i> Moving map to set pin...');
+            });
+
+            // Map idle (after drag or pan): drop pin and reverse geocode center location
+            google.maps.event.addListener(storeMap, 'idle', function() {
+                $('.map-center-pin .pin-icon').css('transform', 'translateY(0) scale(1)');
+                
+                var center = storeMap.getCenter();
+                var cLat = center.lat();
+                var cLng = center.lng();
+
+                $('#property_latitude').val(cLat.toFixed(7));
+                $('#property_longitude').val(cLng.toFixed(7));
+                $('#badge_lat').text(cLat.toFixed(4));
+                $('#badge_lng').text(cLng.toFixed(4));
+
+                if (isProgrammaticMovement) {
+                    isProgrammaticMovement = false;
+                    return;
+                }
+
+                if (isMapDragging) {
+                    isMapDragging = false;
+                    $('#map_status_text').html('<i class="fa fa-spinner fa-spin text-warning"></i> Checking country serviceability...');
+                    storeGeocoder.geocode({ location: center }, function(results, status) {
+                        if (status === google.maps.GeocoderStatus.OK && results && results.length) {
+                            var bestAddress = results[0].formatted_address || '';
+                            if (/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}$/.test(bestAddress.trim()) && results[1] && results[1].formatted_address) {
+                                bestAddress = bestAddress + ', ' + results[1].formatted_address;
+                            }
+                            $('#address').val(bestAddress);
+
+                            resolveLocationCountry(results, cLat, cLng, bestAddress, function(countryInfo, resolvedAddress) {
+                                handleStoreServiceability(countryInfo, $('#address').val());
+                            });
+                        } else {
+                            resolveLocationCountry([], cLat, cLng, '', function(countryInfo, resolvedAddress) {
+                                handleStoreServiceability(countryInfo, resolvedAddress);
+                            });
+                        }
+                    });
+                }
+            });
+
+            // Map click: pan smoothly to clicked position
+            google.maps.event.addListener(storeMap, 'click', function(e) {
+                if (!e.latLng) return;
+                isMapDragging = true;
+                storeMap.panTo(e.latLng);
+                if (storeMap.getZoom() < 15) {
+                    storeMap.setZoom(15);
+                }
+            });
+
+            // Setup Autocomplete on the main Address input field
+            var addrInput = document.getElementById('address');
+            if (addrInput) {
+                var addrAutocomplete = new google.maps.places.Autocomplete(addrInput);
+                addrAutocomplete.bindTo('bounds', storeMap);
+
+                google.maps.event.addListener(addrAutocomplete, 'place_changed', function() {
+                    var place = addrAutocomplete.getPlace();
+                    if (!place || !place.geometry) return;
+
+                    var pLat = place.geometry.location.lat();
+                    var pLng = place.geometry.location.lng();
+
+                    isProgrammaticMovement = true;
+                    storeMap.panTo(place.geometry.location);
+                    storeMap.setZoom(17);
+
+                    $('#property_latitude').val(pLat.toFixed(7));
+                    $('#property_longitude').val(pLng.toFixed(7));
+                    $('#badge_lat').text(pLat.toFixed(4));
+                    $('#badge_lng').text(pLng.toFixed(4));
+
+                    $('#map_status_text').html('<i class="fa fa-spinner fa-spin text-warning"></i> Checking country serviceability...');
+
+                    resolveLocationCountry([place], pLat, pLng, place.formatted_address || $('#address').val(), function(countryInfo, resolvedAddress) {
+                        handleStoreServiceability(countryInfo, resolvedAddress);
+                    });
+                });
+
+                // Prevent form submit on Enter in address field and geocode
+                $('#address').on('keydown', function(e) {
+                    if (e.keyCode === 13) {
+                        e.preventDefault();
+                        var query = $(this).val();
+                        if (query && storeGeocoder) {
+                            $('#map_status_text').html('<i class="fa fa-spinner fa-spin text-warning"></i> Locating address on map...');
+                            storeGeocoder.geocode({ address: query }, function(results, status) {
+                                if (status === google.maps.GeocoderStatus.OK && results && results.length) {
+                                    var loc = results[0].geometry.location;
+                                    var rLat = loc.lat();
+                                    var rLng = loc.lng();
+                                    isProgrammaticMovement = true;
+                                    storeMap.panTo(loc);
+                                    storeMap.setZoom(17);
+                                    $('#property_latitude').val(rLat.toFixed(7));
+                                    $('#property_longitude').val(rLng.toFixed(7));
+                                    $('#badge_lat').text(rLat.toFixed(4));
+                                    $('#badge_lng').text(rLng.toFixed(4));
+                                    if (results[0].formatted_address) {
+                                        $('#address').val(results[0].formatted_address);
+                                    }
+
+                                    resolveLocationCountry(results, rLat, rLng, results[0].formatted_address || query, function(countryInfo, resolvedAddress) {
+                                        handleStoreServiceability(countryInfo, resolvedAddress);
+                                    });
+                                } else {
+                                    $('#map_status_text').html('<span class="text-muted"><i class="fa fa-info-circle"></i> Drag map to set pin or search location in ' + allowedNamesStr + '</span>');
+                                    $('#errorMessageAddress1').show();
+                                    $('#errorMsgAddress').show().text('Location not found. Please try another search.');
+                                }
+                            });
+                        }
+                        return false;
+                    }
+                });
+
+                // Fallback: If address is entered manually and field loses focus, geocode it
+                $('#address').on('blur', function() {
+                    var query = $(this).val().trim();
+                    if (query && storeGeocoder) {
+                        storeGeocoder.geocode({ address: query }, function(results, status) {
+                            if (status === google.maps.GeocoderStatus.OK && results && results.length) {
+                                var loc = results[0].geometry.location;
+                                resolveLocationCountry(results, loc.lat(), loc.lng(), results[0].formatted_address || query, function(countryInfo, resolvedAddress) {
+                                    handleStoreServiceability(countryInfo, resolvedAddress);
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Locate Me Button (GPS)
+            $('#btn_locate_me').on('click', function() {
+                if (!navigator.geolocation) {
+                    alert('Geolocation is not supported by your browser.');
+                    return;
+                }
+
+                $('#locate_icon').removeClass('fa-crosshairs').addClass('fa-spinner fa-spin text-warning');
+                $('#map_status_text').html('<i class="fa fa-spinner fa-spin text-warning"></i> Detecting current location...');
+
+                navigator.geolocation.getCurrentPosition(function(pos) {
+                    $('#locate_icon').removeClass('fa-spinner fa-spin text-warning').addClass('fa-crosshairs');
+                    var curLat = pos.coords.latitude;
+                    var curLng = pos.coords.longitude;
+                    var curLatLng = new google.maps.LatLng(curLat, curLng);
+
+                    isMapDragging = true;
+                    storeMap.panTo(curLatLng);
+                    storeMap.setZoom(17);
+                }, function(err) {
+                    $('#locate_icon').removeClass('fa-spinner fa-spin text-warning').addClass('fa-crosshairs');
+                    $('#map_status_text').html('<i class="fa fa-exclamation-triangle text-danger"></i> Location access denied or unavailable');
+                }, { enableHighAccuracy: true, timeout: 8000 });
+            });
+        }
     </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ env('GOOGLE_MAPS_API_KEY', 'AIzaSyBwrXHtZoJ6y048ZwDBPrzgoKH0nmHHJLI') }}&libraries=places&callback=initStoreMap" async defer></script>
     @endpush

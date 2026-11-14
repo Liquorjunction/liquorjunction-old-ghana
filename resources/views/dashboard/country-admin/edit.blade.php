@@ -15,7 +15,7 @@
             <label class="col-sm-2 form-control-label">{!! __('backend.phone') !!} <span class="valid_field">*</span>
             </label>
             <div class="col-sm-10">
-                <input type="text" name="phone" id="phone" maxlength="15"  class="form-control" placeholder="Enter Phone Number" value="{{ @$customerData->phone }}">
+                <input type="text" name="phone" id="phone" maxlength="15" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeypress="return (event.charCode >= 48 && event.charCode <= 57)" class="form-control" placeholder="Enter Phone Number" value="{{ @$customerData->phone }}">
                 <span style="color: red;" class="help-block" id="errorMsgPhone" class="validate"></span>
             </div>
         </div>
@@ -95,7 +95,7 @@
     }
     $(document).ready(function() {
         $('#phone').on("input", function() {
-            this.value = this.value.replace(/[^0-9\.]/g, '');
+            this.value = this.value.replace(/[^0-9]/g, '');
             $(this).val($(this).val().replace(/^\s+/g, ''));
         });
         $("#subadminEditForm").validate({

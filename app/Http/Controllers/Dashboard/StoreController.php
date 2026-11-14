@@ -38,22 +38,123 @@ class StoreController extends Controller
         return view("dashboard.store.list");
     }
 
+    public function getAllowedCountriesConfig()
+    {
+        $allowedCountries = Country::where('status', 1)->get();
+        if ($allowedCountries->isEmpty()) {
+            $allowedCountries = Country::where('status', '!=', 2)->get();
+        }
+
+        $allowedCountryCodes = $allowedCountries->pluck('shortname')->map(function($code) {
+            return strtolower(trim($code));
+        })->filter()->unique()->values()->toArray();
+
+        $allowedCountryNames = $allowedCountries->pluck('name')->map(function($name) {
+            return trim($name);
+        })->filter()->unique()->values()->toArray();
+
+        $countryDisplayNames = !empty($allowedCountryNames) ? implode(', ', $allowedCountryNames) : 'Ghana, India';
+
+        return [
+            'allowedCountryCodes' => $allowedCountryCodes,
+            'allowedCountryNames' => $allowedCountryNames,
+            'countryDisplayNames' => $countryDisplayNames,
+        ];
+    }
+
     public function create()
     {
-        $categories = Categories::where('status',1)->orderby('title','ASC')->get();
-        $countryData = Country::where('status','!=',2)->orderBy('phonecode','ASC')->get();    
+        $categories = Categories::where('status', 1)->orderby('title', 'ASC')->get();
+        $countryData = Country::where('status', '!=', 2)->orderBy('phonecode', 'ASC')->get();    
         $settings = Setting::find(1);
-        return view("dashboard.store.create",compact('categories','settings','countryData'));
+        $countryConfig = $this->getAllowedCountriesConfig();
+        $allowedCountryCodes = $countryConfig['allowedCountryCodes'];
+        $allowedCountryNames = $countryConfig['allowedCountryNames'];
+        $countryDisplayNames = $countryConfig['countryDisplayNames'];
+
+        return view("dashboard.store.create", compact(
+            'categories',
+            'settings',
+            'countryData',
+            'allowedCountryCodes',
+            'allowedCountryNames',
+            'countryDisplayNames'
+        ));
     }
 
     public function get_formatted_address(Request $request)
     {
-        $content = file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?latlng=" . $request->latitude . "," . $request->longitude . "&sensor=false&key=" . 'AIzaSyC3ksZwnrjrnMtiZXZJ7cx9YEckAlt3vh4');
+        $apiKey = env('GOOGLE_MAPS_API_KEY', 'AIzaSyBwrXHtZoJ6y048ZwDBPrzgoKH0nmHHJLI');
+        $content = file_get_contents("https://maps.googleapis.com/maps/api/geocode/json?latlng=" . $request->latitude . "," . $request->longitude . "&sensor=false&key=" . $apiKey);
         $content = json_decode($content, true);
        // echo "<pre>";print_r($content);exit();
 
         
         return $content['results'][0]['formatted_address'];
+    }
+
+    public function checkCountryServiceability(Request $request)
+    {
+        $countryConfig = $this->getAllowedCountriesConfig();
+        $allowedCodes = array_map('strtoupper', $countryConfig['allowedCountryCodes']);
+        $allowedNames = $countryConfig['allowedCountryNames'];
+        $allowedNamesStr = $countryConfig['countryDisplayNames'];
+
+        // 1. Check if country_code was submitted by map
+        $countryCode = strtoupper(trim($request->country_code ?? ''));
+        if (!empty($countryCode)) {
+            if (!in_array($countryCode, $allowedCodes)) {
+                $countryName = $request->country ?: $countryCode;
+                return "Store cannot be added in {$countryName}. Stores can only be added in: {$allowedNamesStr}.";
+            }
+            return null;
+        }
+
+        // 2. Check if address text explicitly contains any of the allowed country names
+        $address = trim($request->address ?? '');
+        if (!empty($address)) {
+            foreach ($allowedNames as $name) {
+                if (stripos($address, $name) !== false) {
+                    return null;
+                }
+            }
+        }
+
+        // 3. Fallback: Reverse geocode via coordinates if available
+        if (!empty($request->property_latitude) && !empty($request->property_longitude)) {
+            try {
+                $apiKey = env('GOOGLE_MAPS_API_KEY', 'AIzaSyBwrXHtZoJ6y048ZwDBPrzgoKH0nmHHJLI');
+                $url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" . $request->property_latitude . "," . $request->property_longitude . "&key=" . $apiKey;
+                $res = @file_get_contents($url);
+                if ($res) {
+                    $json = json_decode($res, true);
+                    if (!empty($json['results'])) {
+                        foreach ($json['results'] as $result) {
+                            if (!empty($result['address_components'])) {
+                                foreach ($result['address_components'] as $comp) {
+                                    if (in_array('country', $comp['types'])) {
+                                        $detectedCode = strtoupper(trim($comp['short_name']));
+                                        $detectedName = trim($comp['long_name']);
+                                        if (!in_array($detectedCode, $allowedCodes)) {
+                                            return "Store cannot be added in {$detectedName}. Stores can only be added in: {$allowedNamesStr}.";
+                                        }
+                                        return null;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Ignore network errors in offline/sandbox mode
+            }
+        }
+
+        if (!empty($address)) {
+            return "Store cannot be added in this country. Stores can only be added in: {$allowedNamesStr}.";
+        }
+
+        return null;
     }
 
     public function store(Request $request)
@@ -63,21 +164,28 @@ class StoreController extends Controller
         $validator =Validator::make($request->all(), [
             'store_name' => 'required|max:60',
             'address' => 'required',
-            'contact_number' => 'required|regex:/^[0-9]{8,15}$/'
+            'contact_number' => 'required|regex:/^[0-9]{8,15}$/',
+            'email' => 'required|email|max:150'
         ],
         [            
-            'store_name.max'=> "The store name fr should not be greater than 60 characters.",
+            'store_name.max'=> "The store name should not be greater than 60 characters.",
             'contact_number.required' => "Phone number field is required",            
-            'contact_number.digits_between' => "Phone number field should appear 8 to 15 digits"
+            'contact_number.digits_between' => "Phone number field should appear 8 to 15 digits",
+            'email.required' => "Store email field is required",
+            'email.email' => "Please enter a valid email address"
         ]
     ); 
     if ($validator->fails()) {
         return response()->json($validator->errors(), 422);
-    }            
-    // if ($validator->fails()) {
-    //     $errors = $validator->errors()->all();
-    //     return response()->json(['errors' => $errors], 422);
-    // }
+    }
+
+    $countryError = $this->checkCountryServiceability($request);
+    if ($countryError) {
+        return response()->json([
+            'address' => [$countryError]
+        ], 422);
+    }
+
           $uniqid = uniqid();
           $storeDetails = new StoreDetails();
           $storeDetails->uniqid = $uniqid;
@@ -85,10 +193,12 @@ class StoreController extends Controller
           $storeDetails->sub_admin_id = Auth::user()->id;
           $storeDetails->store_name = $request->store_name;
           $storeDetails->address = $request->address;
+          $storeDetails->country = $request->country ?? '';
           $storeDetails->phone_code = $request->phone_code;
           $storeDetails->contact_number = $request->contact_number;
-          $storeDetails->latitude = $request->property_latitude;
-          $storeDetails->longitude = $request->property_longitude;
+          $storeDetails->email = $request->email;
+          $storeDetails->latitude = $request->property_latitude ?? '';
+          $storeDetails->longitude = $request->property_longitude ?? '';
           $storeDetails->status = 1;
           $storeDetails->save();
        
@@ -176,25 +286,30 @@ class StoreController extends Controller
             $validateData =request()->validate([
                 'store_name' => 'required|max:60',
                 'address' => 'required',
-                 'contact_number' => 'required|regex:/^[0-9]{8,15}$/'
+                'contact_number' => 'required|regex:/^[0-9]{8,15}$/',
+                'email' => 'required|email|max:150'
             ],
             [
                 'store_name.max'=> "The store name should not be greater than 60 characters.",
                 'contact_number.required' => "Phone number field is required",            
-                'contact_number.digits_between' => "Phone number field should appear 8 to 15 digits"
+                'contact_number.digits_between' => "Phone number field should appear 8 to 15 digits",
+                'email.required' => "Store email field is required",
+                'email.email' => "Please enter a valid email address"
             ]
         );
         }else{
             $validateData =request()->validate([
                 'store_name' => 'required|max:60',
                 'address' => 'required',
-                 'contact_number' => 'required|regex:/^[0-9]{8,15}$/'
+                'contact_number' => 'required|regex:/^[0-9]{8,15}$/',
+                'email' => 'required|email|max:150'
             ],
             [
-                
-                'store_name.max'=> "The store name fr should not be greater than 60 characters.",
+                'store_name.max'=> "The store name should not be greater than 60 characters.",
                 'contact_number.required' => "Phone number field is required",            
-                'contact_number.digits_between' => "Phone number field should appear 8 to 15 digits"
+                'contact_number.digits_between' => "Phone number field should appear 8 to 15 digits",
+                'email.required' => "Store email field is required",
+                'email.email' => "Please enter a valid email address"
             ]
         );            
         }
@@ -203,28 +318,50 @@ class StoreController extends Controller
 
     public function edit($id)
     {
-            $store_id = $id;
+        $store_id = $id;
 
-            $StoreDetails = DB::table('store_details')->where('id',$store_id)->first();
-            $countryData = Country::where('status','!=',2)->orderBy('phonecode','ASC')->get(); 
-            $StoreTimingWeek = DB::table('store_timing_week')->leftjoin('week_list','week_list.id','=','store_timing_week.week_id')->select('store_timing_week.*','week_list.name','week_list.week_name')->where('store_timing_week.store_id',$store_id)->get();
+        $StoreDetails = DB::table('store_details')->where('id', $store_id)->first();
+        $countryData = Country::where('status', '!=', 2)->orderBy('phonecode', 'ASC')->get(); 
+        $StoreTimingWeek = DB::table('store_timing_week')->leftjoin('week_list', 'week_list.id', '=', 'store_timing_week.week_id')->select('store_timing_week.*', 'week_list.name', 'week_list.week_name')->where('store_timing_week.store_id', $store_id)->get();
+        $countryConfig = $this->getAllowedCountriesConfig();
+        $allowedCountryCodes = $countryConfig['allowedCountryCodes'];
+        $allowedCountryNames = $countryConfig['allowedCountryNames'];
+        $countryDisplayNames = $countryConfig['countryDisplayNames'];
 
-            return view('dashboard.store.edit', compact('StoreDetails','StoreTimingWeek','countryData'));
+        return view('dashboard.store.edit', compact(
+            'StoreDetails',
+            'StoreTimingWeek',
+            'countryData',
+            'allowedCountryCodes',
+            'allowedCountryNames',
+            'countryDisplayNames'
+        ));
     }
 
     public function update(Request $request,$id)
     {
         // echo "<pre>";print_r($request->toArray())yy;exit();
         $this->validateRequest($id);
+        $countryError = $this->checkCountryServiceability($request);
+        if ($countryError) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'address' => [$countryError]
+                ], 422);
+            }
+            return redirect()->back()->withErrors(['address' => $countryError])->withInput();
+        }
         $store_id = $id;
         $product = StoreDetails::where('id', $store_id)->update(array(
                 
                 'store_name' => $request->store_name,
                 'address' => $request->address,
+                'country' => $request->country ?? '',
                 'phone_code' => $request->phone_code,
                 'contact_number' => $request->contact_number,
-                'latitude' => $request->property_latitude,
-                'longitude' => $request->property_longitude,
+                'email' => $request->email,
+                'latitude' => $request->property_latitude ?? '',
+                'longitude' => $request->property_longitude ?? '',
             ));
         $time = StoreTimingWeek::where('store_id', $store_id)->where('week_id',1)->update(array(
                 'start_time' =>  isset($request->monday_opening_time) ? $request->monday_opening_time : '00:00',

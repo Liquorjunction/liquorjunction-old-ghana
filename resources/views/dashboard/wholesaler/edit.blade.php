@@ -32,7 +32,7 @@
                     <div class="form-group row">
                         <label class="col-sm-2 form-control-label">{!!  __('backend.phone') !!} <span class="valid_field">*</span></label>
                         <div class="col-sm-10">
-                            <input type="text" name="phone" id="phone" class="form-control" placeholder="Phone" maxlength="15" value="{{@$customerData->phone}}">
+                            <input type="text" name="phone" id="phone" class="form-control" placeholder="Phone" maxlength="15" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeypress="return (event.charCode >= 48 && event.charCode <= 57)" value="{{@$customerData->phone}}">
                             
                         </div>
                     </div>
@@ -83,7 +83,7 @@
 
     $(document).ready(function () {
          $('#phone').on("input", function () {
-            this.value = this.value.replace(/[^0-9\.]/g,''); 
+            this.value = this.value.replace(/[^0-9]/g,''); 
             $(this).val($(this).val().replace(/^\s+/g, ''));
         });
  

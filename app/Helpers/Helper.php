@@ -1640,6 +1640,30 @@ if (!empty($sessionCart)) {
         }
     }
 
+    static function encodeFilterId($id)
+    {
+        if (empty($id) && $id !== 0 && $id !== "0") return "";
+        $id = intval($id);
+        $key = 739215;
+        return rtrim(strtr(base64_encode(pack("N", $id ^ $key)), "+/", "-_"), "=");
+    }
+
+    static function decodeFilterId($hash)
+    {
+        if (empty($hash) && $hash !== 0 && $hash !== "0") return null;
+        if (is_numeric($hash)) return intval($hash);
+        $key = 739215;
+        $raw = base64_decode(strtr($hash, "-_", "+/"));
+        if (strlen($raw) === 4) {
+            $arr = unpack("N", $raw);
+            if (isset($arr[1])) {
+                return $arr[1] ^ $key;
+            }
+        }
+        $plain = base64_decode($hash);
+        return is_numeric($plain) ? intval($plain) : null;
+    }
+
     static function encodeUrl($str)
     {
         $encode = str_replace('=', '', base64_encode($str));
