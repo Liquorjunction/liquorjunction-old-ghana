@@ -200,7 +200,7 @@
                                         @php
                                             $subHash = Helper::encodeFilterId($sub->id);
                                             $sCount = $subcatCounts[$subHash] ?? $subcatCounts[$sub->id] ?? 0;
-                                            $isSubChecked = in_array($sub->id, $selectedSubcategories) || in_array($subHash, $selectedSubcategories);
+                                            $isSubChecked = in_array($sub->id, $selectedSubcategories) || in_array($subHash, $selectedSubcategories) || ($isCatChecked && empty($selectedSubcategories));
                                         @endphp
                                         <li class="facet-sub-item"
                                             data-id="{{ $subHash }}"

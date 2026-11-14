@@ -181,15 +181,44 @@ class ProductCatalogController extends Controller
      */
     protected function parseFilters(Request $request, $catalogMinPrice = 0, $catalogMaxPrice = 50000)
     {
-        $rawCats = $this->normalizeArray($request->get('category_ids', $request->get('categories')));
-        $rawSubcats = $this->normalizeArray($request->get('subcategory_ids', $request->get('subcategories')));
-        $rawBrands = $this->normalizeArray($request->get('brand_ids', $request->get('brands')));
-        $sizes = array_values(array_unique($this->normalizeArray($request->get('sizes'))));
+        $rawCats = $this->normalizeArray(
+            $request->get('category_ids', 
+            $request->get('categories', 
+            $request->get('category_id', 
+            $request->get('category', 
+            $request->get('id')))))
+        );
+        if (empty($rawCats) && $request->route('id')) {
+            $rawCats = [$request->route('id')];
+        }
+
+        $rawSubcats = $this->normalizeArray(
+            $request->get('subcategory_ids', 
+            $request->get('subcategories', 
+            $request->get('subcategory_id', 
+            $request->get('subcategory', 
+            $request->get('sid')))))
+        );
+
+        $rawBrands = $this->normalizeArray(
+            $request->get('brand_ids', 
+            $request->get('brands', 
+            $request->get('brand_id', 
+            $request->get('brand',
+            $request->get('bid')))))
+        );
+
+        $sizes = array_values(array_unique($this->normalizeArray($request->get('sizes', $request->get('size')))));
 
         // Decode hashed IDs to integer database IDs safely with array_unique
         $category_ids = array_values(array_unique(array_filter(array_map([Helper::class, 'decodeFilterId'], $rawCats))));
         $subcategory_ids = array_values(array_unique(array_filter(array_map([Helper::class, 'decodeFilterId'], $rawSubcats))));
         $brand_ids = array_values(array_unique(array_filter(array_map([Helper::class, 'decodeFilterId'], $rawBrands))));
+
+        // If subcategories are selected without explicit categories, discover their parent categories for sidebar open state
+        if (!empty($subcategory_ids) && empty($category_ids)) {
+            $category_ids = SubCategories::whereIn('id', $subcategory_ids)->pluck('category_id')->unique()->filter()->values()->toArray();
+        }
 
         $reqMin = $request->filled('min_price') && is_numeric($request->min_price) ? floatval($request->min_price) : null;
         $reqMax = $request->filled('max_price') && is_numeric($request->max_price) ? floatval($request->max_price) : null;
@@ -209,7 +238,7 @@ class ProductCatalogController extends Controller
         $in_stock = $request->boolean('in_stock') || $request->get('in_stock') == '1';
 
         $sort_by = $request->get('sort_by', 'newest');
-        $keyword = trim($request->get('keyword', $request->get('search', '')));
+        $keyword = trim($request->get('keyword', $request->get('search', $request->get('q', ''))));
 
         return compact(
             'category_ids',

@@ -349,7 +349,7 @@ if ($user_id) {
                                                     @php $category_title = $result->title; @endphp
                                                     <div class="mobile-menu__divider"></div>
                                                     <li class="main-nav__item" data-mobile-menu-item="">
-                                                        <a href="{{ route('productlist', ['id' => Helper::encodeUrl($result->id)]) }}"
+                                                        <a href="{{ route('products', ['categories' => Helper::encodeFilterId($result->id)]) }}"
                                                             class="sidebar_close">{{ $category_title }} </a>
 
                                                         @if ($result->subcategory->isNotEmpty())
@@ -375,7 +375,7 @@ if ($user_id) {
                                                                                 @php $subcategory_title = $sub_result->title; @endphp
                                                                                 <li data-mobile-menu-item>
                                                                                     <a
-                                                                                        href="{{ route('productlist', ['id' => Helper::encodeUrl($result->id)]) }}?sid={{ Helper::encodeUrl($sub_result->id) }}">{{ ucfirst($subcategory_title) }}</a>
+                                                                                        href="{{ route('products', ['categories' => Helper::encodeFilterId($result->id), 'subcategories' => Helper::encodeFilterId($sub_result->id)]) }}">{{ ucfirst($subcategory_title) }}</a>
                                                                                 </li>
                                                                                 <div class="mobile-menu__divider"></div>
                                                                             @endforeach
@@ -429,11 +429,11 @@ if ($user_id) {
                             </div>
                         </form> --}}
 
-                        <form action="#" class="header-search-form searchForm">
+                        <form action="{{ route('products') }}" method="GET" class="header-search-form searchForm">
                             <div class="home_search">
-                                <input type="search" autocomplete="off" name="" id="search-box"
+                                <input type="search" autocomplete="off" name="search" id="search-box"
                                     placeholder="{{ @Helper::language('search_the_product') }}">
-                                <button type="submit" class="search-button search-box-click" disabled><i
+                                <button type="submit" class="search-button search-box-click"><i
                                         class="fa-solid fa-magnifying-glass text-white"></i></button>
                                 <div class="auto-suggested-box suggesstion-box d-none" id="suggesstion-box"></div>
                             </div>
@@ -990,7 +990,7 @@ if ($user_id) {
                         @foreach ($get_category as $result)
                             @php $category_title = $result->title; @endphp
                             <li class="nav-item @if ($result->subcategory->isNotEmpty()) {{ 'has-children ' }} @endif">
-                                <a href="{{ route('productlist', ['id' => Helper::encodeUrl($result->id)]) }}">{{ $category_title }}
+                                <a href="{{ route('products', ['categories' => Helper::encodeFilterId($result->id)]) }}">{{ $category_title }}
                                 </a>
                                 @if ($result->subcategory->isNotEmpty())
                                     <div class="sub-menu">
@@ -998,7 +998,7 @@ if ($user_id) {
                                             @foreach ($result->subcategory as $sub_result)
                                                 @php $subcategory_title = $sub_result->title; @endphp
                                                 <li><a
-                                                        href="{{ route('productlist', ['id' => Helper::encodeUrl($result->id)]) }}?sid={{ Helper::encodeUrl($sub_result->id) }}">{{ ucfirst($subcategory_title) }}</a>
+                                                        href="{{ route('products', ['categories' => Helper::encodeFilterId($result->id), 'subcategories' => Helper::encodeFilterId($sub_result->id)]) }}">{{ ucfirst($subcategory_title) }}</a>
                                                 </li>
                                             @endforeach
                                         </ul>

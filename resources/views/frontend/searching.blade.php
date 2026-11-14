@@ -59,7 +59,7 @@ foreach($productDataFilter as $result){
 $html .= '</div>';
 
 $html .= '<div class="suggestion-button-wrapper" style="text-align: center; margin-top: 20px;margin-bottom:20px;">
-          <a href="' . route('filterproductlist') . '?search=' . urlencode($keyword) . '" class="solid-button fw-bold" style="font-size:0.9rem;padding: 10px 20px;">
+          <a href="' . route('products') . '?search=' . urlencode($keyword) . '" class="solid-button fw-bold" style="font-size:0.9rem;padding: 10px 20px;">
                 Show all ' . $productCount . ' products
             </a>
           </div>';

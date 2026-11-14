@@ -139,13 +139,13 @@ $user_id = isset(auth()->guard('user')->user()->id) ? auth()->guard('user')->use
                                         <p>{{@$banner_description}}</p> -->
                                        
                                         @if($banner_result->type ==1 && $banner_result->category_id!="" && $banner_result->subcategory_id!="" )
-                                            <a class="solid-button" href="{{route('productlist',['id'=>Helper::encodeUrl($banner_result->category_id)]);}}?sid={{Helper::encodeUrl($banner_result->subcategory_id)}}">{{@Helper::language('explore_more')}}</a>
+                                            <a class="solid-button" href="{{route('products', ['categories' => Helper::encodeFilterId($banner_result->category_id), 'subcategories' => Helper::encodeFilterId($banner_result->subcategory_id)])}}">{{@Helper::language('explore_more')}}</a>
                                         @elseif($banner_result->type ==1 && $banner_result->category_id!="" )
-                                            <a href="{{route('productlist',['id' => Helper::encodeUrl($banner_result->category_id)])}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
+                                            <a href="{{route('products', ['categories' => Helper::encodeFilterId($banner_result->category_id)])}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
                                         @elseif($banner_result->type ==2 &&$banner_result->product_id!="")
                                             <a href="{{route('productdetails',['id' => Helper::encodeUrl($banner_result->product_id)])}}" class="solid-button">{{@Helper::language('shop_now')}}</a>
                                         @elseif($banner_result->type ==0 && $banner_result->brand_id!="")
-                                        <a href="{{route('filterbrandlist',['id' => Helper::encodeUrl($banner_result->brand_id)])}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
+                                        <a href="{{route('products', ['brands' => Helper::encodeFilterId($banner_result->brand_id)])}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
                                         @else
                                             @if(!empty($banner_result->banner_url))
                                                 <a href="{{$banner_result->banner_url}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
@@ -185,7 +185,7 @@ $user_id = isset(auth()->guard('user')->user()->id) ? auth()->guard('user')->use
                     $category_title = $categories_result->title;
                     @endphp
                     <div class="swiper-slide">
-                        <a href="{{route('productlist',['id'=>Helper::encodeUrl($categories_result->id)]);}}" class="product-wrapper">
+                        <a href="{{route('products', ['categories' => Helper::encodeFilterId($categories_result->id)])}}" class="product-wrapper">
                             <div class="product-image">
                                 @if (file_exists(public_path() . '/uploads/category/'.$categories_result->imagefile))
                                 <img src="{{ asset('uploads/category/'.$categories_result->imagefile) }}" title="{{Helper::language('image_not_available')}}" alt="{{Helper::language('image_not_available')}}" />
@@ -227,13 +227,13 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
         <h2 class="m-0" style="color: {{ $banners_offer->text_color }};">{{ $boffer_title }}</h2>
         <span style="color: {{ $banners_offer->text_color }};">{{ $boffer_description }}</span>
         @if($banners_offer->type ==1 && $banners_offer->category_id!="" && $banners_offer->subcategory_id!="" )
-            <a class="solid-button" href="{{route('productlist',['id'=>Helper::encodeUrl($banners_offer->category_id)]);}}?sid={{Helper::encodeUrl($banners_offer->subcategory_id)}}">{{@Helper::language('explore_more')}}</a>
+            <a class="solid-button" href="{{route('products', ['categories' => Helper::encodeFilterId($banners_offer->category_id), 'subcategories' => Helper::encodeFilterId($banners_offer->subcategory_id)])}}">{{@Helper::language('explore_more')}}</a>
         @elseif($banners_offer->type ==1 && $banners_offer->category_id!="" )
-        <a href="{{route('productlist',['id' => Helper::encodeUrl($banners_offer->category_id)])}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
+        <a href="{{route('products', ['categories' => Helper::encodeFilterId($banners_offer->category_id)])}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
         @elseif($banners_offer->type ==2 &&$banners_offer->product_id!="")
         <a href="{{route('productdetails',['id' => Helper::encodeUrl($banners_offer->product_id)])}}" class="solid-button">{{@Helper::language('order_now')}}</a>
         @elseif($banners_offer->type ==0 && $banners_offer->brand_id!="")
-        <a href="{{route('filterbrandlist',['id' => Helper::encodeUrl($banners_offer->brand_id)])}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
+        <a href="{{route('products', ['brands' => Helper::encodeFilterId($banners_offer->brand_id)])}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
         @else
             @if(!empty($banners_offer->banner_url))
                 <a href="{{$banners_offer->banner_url}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
@@ -448,13 +448,13 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                                 //  dd($highlight_result->category_id );
                                 ?>
                                 @if($highlight_result->type ==1 && $highlight_result->category_id!="" && $highlight_result->subcategory_id!="" )
-                                <a class="solid-button" href="{{route('productlist',['id'=>Helper::encodeUrl($highlight_result->category_id)]);}}?sid={{Helper::encodeUrl($highlight_result->subcategory_id)}}">{{@Helper::language('explore_more')}}</a>
+                                <a class="solid-button" href="{{route('products', ['categories' => Helper::encodeFilterId($highlight_result->category_id), 'subcategories' => Helper::encodeFilterId($highlight_result->subcategory_id)])}}">{{@Helper::language('explore_more')}}</a>
                                 @elseif($highlight_result->type ==1 && $highlight_result->category_id!="" )
-                                <a href="{{route('productlist',['id' => Helper::encodeUrl($highlight_result->category_id)])}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
+                                <a href="{{route('products', ['categories' => Helper::encodeFilterId($highlight_result->category_id)])}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
                                 @elseif($highlight_result->type ==2 &&$highlight_result->product_id!="")
                                 <a href="{{route('productdetails',['id' => Helper::encodeUrl($highlight_result->product_id)])}}" class="solid-button">{{@Helper::language('order_now')}}</a>
                                 @elseif($highlight_result->type ==0 && $highlight_result->brand_id!="")
-                                <a href="{{route('filterbrandlist',['id' => Helper::encodeUrl($highlight_result->brand_id)])}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
+                                <a href="{{route('products', ['brands' => Helper::encodeFilterId($highlight_result->brand_id)])}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
                                 @else
                                 <a href="{{$highlight_result->banner_url}}" class="solid-button">{{@Helper::language('explore_more')}}</a>
                                 @endif

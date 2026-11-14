@@ -108,7 +108,22 @@ class ProductController extends Controller
         return view("frontend.product.product-list",compact('categoryDetails','user_id','productData','brandData','categories','product_max_price','product_min_price','subCategoryDetails','total_product_count','showing_product_count'));
     }
     
-    public function list(Request $request,$id)
+    public function list(Request $request, $id = null)
+    {
+        $params = $request->query();
+        if ($id) {
+            $params['categories'] = $id;
+        }
+        if ($request->filled('sid')) {
+            $params['subcategories'] = $request->get('sid');
+        }
+        if ($request->filled('search')) {
+            $params['search'] = $request->get('search');
+        }
+        return redirect()->route('products', $params);
+    }
+
+    public function listLegacy(Request $request, $id)
     {
         $category_id = base64_decode($request->id);
         $subcategory_id = base64_decode($request->sid);
@@ -281,6 +296,17 @@ class ProductController extends Controller
     }
 
     public function filterproductlist(Request $request)
+    {
+        $params = $request->query();
+        if ($request->filled('search')) {
+            $params['search'] = $request->get('search');
+        } elseif ($request->filled('keyword')) {
+            $params['search'] = $request->get('keyword');
+        }
+        return redirect()->route('products', $params);
+    }
+
+    public function filterproductlistLegacy(Request $request)
     {
         $keyword = $request->query('search'); 
         $keyword = trim($keyword);
@@ -682,6 +708,15 @@ class ProductController extends Controller
 
 
     public function filterbrandlist(Request $request)
+    {
+        $params = $request->query();
+        if ($request->filled('id')) {
+            $params['brands'] = $request->get('id');
+        }
+        return redirect()->route('products', $params);
+    }
+
+    public function filterbrandlistLegacy(Request $request)
     {
         $user_id = $this->user_id;
         $brand_id=base64_decode($request->id);

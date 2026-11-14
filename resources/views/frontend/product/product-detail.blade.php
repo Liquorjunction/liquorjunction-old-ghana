@@ -177,7 +177,7 @@ video::-webkit-media-controls-timeline {
                     <li class="breadcrumb-item"><a href="{{ route('frontend.home') }}">{{ @Helper::language('home') }}</a>
                     </li>
                     <li class="breadcrumb-item" aria-current="page"><a
-                            href="{{ route('productlist', ['id' => Helper::encodeUrl($product_info->category_id)]) }}">{{ $category_title }}</a>
+                            href="{{ route('products', ['categories' => Helper::encodeFilterId($product_info->category_id)]) }}">{{ $category_title }}</a>
                     </li>
                     <li class="breadcrumb-item active" aria-current="page">{{ $product_title }} </li>
                 </ul>
