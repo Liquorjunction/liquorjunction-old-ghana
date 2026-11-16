@@ -579,24 +579,40 @@
     .brand-search-box {
         position: relative;
         margin-bottom: 10px;
+        display: flex;
+        align-items: center;
     }
     .brand-search-box i {
         position: absolute;
         left: 10px;
-        top: 10px;
+        top: 50%;
+        transform: translateY(-50%);
         font-size: 12px;
         color: var(--lj-muted);
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        width: 14px;
+        height: 14px;
     }
     .brand-search-box input {
         width: 100%;
-        padding: 6px 10px 6px 30px;
+        height: 32px;
+        padding: 5px 10px 5px 30px;
         border: 1px solid #dcdcdc;
         border-radius: 6px;
-        font-size: 13px;
+        font-size: 12.5px;
+        line-height: normal;
+        background: #ffffff;
         outline: none;
+        box-sizing: border-box;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
     .brand-search-box input:focus {
         border-color: var(--lj-gold);
+        box-shadow: 0 0 0 2px rgba(251, 181, 22, 0.2);
     }
 
     /* Active Filter Pills Bar (Chips) - Compact Single-Row Horizontal Scroller */
