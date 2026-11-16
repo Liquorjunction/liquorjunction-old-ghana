@@ -418,13 +418,7 @@
                                 value="1">
                         </div>
                     </div>
-                    <div class="form-group row">
-                        <label class="col-sm-3">Is offer ? </label>
-                        <div class="col-sm-9">
-                            <input type="checkbox" style = "cursor:pointer;" id="offer" name="offer"
-                                value="1" @checked(old('offer') == 1 ? true : false)>
-                        </div>
-                    </div>
+                        
 
 
                 </div>

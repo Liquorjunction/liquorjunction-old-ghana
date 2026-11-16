@@ -335,7 +335,7 @@ class ProductController extends Controller
      
     //     $uniqid = $request->uniqid;
     //     $products =  DB::table('product as p')
-    //                 ->select('p.id as productId','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.offer','p.is_product_bestseller')
+    //                 ->select('p.id as productId','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.is_product_bestseller')
     //                 ->join('product_image as pi', 'p.id', '=', 'pi.product_id')
     //                 ->where('pi.status', '=', 1)
     //                 ->join('categories as c', 'p.category_id', '=', 'c.id')                    
@@ -357,7 +357,6 @@ class ProductController extends Controller
                    
                     
     //                 if($list_type==1){
-    //                     $products = $products->where('p.offer',1);
     //                     $products = $products->where('p.is_product_bestseller',1);
                    
 
@@ -484,7 +483,7 @@ class ProductController extends Controller
      
     //     $uniqid = $request->uniqid;
     //     $products =  DB::table('product as p')
-    //                 ->select('p.id as productId','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.offer','p.is_product_bestseller','p.category_id','p.subcategory_id','p.brand_id')
+    //                 ->select('p.id as productId','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.is_product_bestseller','p.category_id','p.subcategory_id','p.brand_id')
     //                 ->join('product_image as pi', 'p.id', '=', 'pi.product_id')
     //                 ->where('pi.status', '=', 1)
     //                 ->join('categories as c', 'p.category_id', '=', 'c.id')                    
@@ -506,7 +505,6 @@ class ProductController extends Controller
     //                 $today = Carbon::now()->toDateString();
                     
     //                 if ($list_type == 1) {
-    //                     $products = $products->where('p.offer', 1);
     //                     $products = $products->where('p.is_product_bestseller', 1);
     //                     // Only offer products
     //                     $offer = Offers::where('status', 1)
@@ -739,7 +737,7 @@ class ProductController extends Controller
         
             $uniqid = $request->uniqid;
             $products =  DB::table('product as p')
-                        ->select('p.id as productId','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.offer','p.is_product_bestseller','p.category_id','p.subcategory_id','p.brand_id')
+                        ->select('p.id as productId','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.is_product_bestseller','p.category_id','p.subcategory_id','p.brand_id')
                         ->join('product_image as pi', 'p.id', '=', 'pi.product_id')
                         ->where('pi.status', '=', 1)
                         ->join('categories as c', 'p.category_id', '=', 'c.id')                    
@@ -761,9 +759,7 @@ class ProductController extends Controller
                         $list_type = $request->listing_type;
                         $today = Carbon::now()->toDateString();
                         
-                        if ($list_type == 1) {
-                            $products = $products->where('p.offer', 1);
-                        } elseif ($list_type == 2) {
+                       if ($list_type == 2) {
                             $products = $products->where('p.is_product_bestseller', 1);
                         } else if($list_type == 3)
                         {
@@ -2037,7 +2033,7 @@ class ProductController extends Controller
             }
             
             $products =  DB::table('product as p')
-                        ->select('p.id as productId','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.offer','p.is_product_bestseller','p.category_id','p.subcategory_id','p.brand_id')
+                        ->select('p.id as productId','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.is_product_bestseller','p.category_id','p.subcategory_id','p.brand_id')
                         ->join('product_image as pi', 'p.id', '=', 'pi.product_id')
                         ->where('pi.status', '=', 1)
                         ->join('categories as c', 'p.category_id', '=', 'c.id')                    

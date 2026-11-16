@@ -325,7 +325,6 @@ class ProductController extends Controller
         // $product->in_online = 1;
         // $product->in_store = 1;
         $product->is_product_bestseller = $request->input('is_product_bestseller');
-        $product->offer = $request->input('offer');
         $product->subcategory_id = $request->input('subcategory_id');
         $product->brand_id = $request->input('brand_id');
         $product->video = $videofileFinalName_ar;
@@ -494,7 +493,6 @@ class ProductController extends Controller
                     // 'supplier_id' => $supplier_id,
                     'category_id' => $request->category_id,
                     'is_product_bestseller' => $request->input('is_product_bestseller') ? 1 : 0,
-                    'offer' => $request->input('offer') ? 1 : 0,
                     'subcategory_id' => $request->input('subcategory_id'),
                     'brand_id' => $request->input('brand_id'),
                     'video' => $videofileFinalName_ar,
@@ -502,13 +500,6 @@ class ProductController extends Controller
                 )
             );
 
-            $cart = Cart::where('product_id', $product_id)->where('status', 1)->update(
-                array(
-                    'total_price' => isset($request->discount_price) ? $request->discount_price : $request->retail_price,
-                    'product_price' => $request->retail_price,
-                    'offer_price' => @$request->discount_price,
-                )
-            );
 
             if (!empty($request->deleted_image)) {
                 // dd($request->deleted_image);
@@ -744,34 +735,6 @@ class ProductController extends Controller
         \Alert::success('Success', __('This product '.($product->is_product_bestseller == '1' ? 'added to' : 'removed from').' best seller successfully'));
         
         $product->save();
-        // print_r($product);
-        // die;
-        return response()->json(['success' => 'true']);
-    }
-    
-    public function offervalue(Request $request)
-    {
-        $id = $request->id;
-        $product = Product::find($id);
-    
-        $offerCount = Product::activeProductsBasedOnRelations()->where('offer',1)->count();
-        // print_r($offerCount);
-        // die;
-        // $nonOfferBestsellerCount = Product::where('offer', '!=', 1)->where('is_product_bestseller', 1)->count();
-        // print_r($nonOfferBestsellerCount);
-        //  die;
-        // if ($product->$offerCount >= 10) {
-            if ($offerCount >= 20 && $product->offer == 0) {
-                return response()->json(['success' => 'false', 'message' => 'Offer product limit exceeded.']);
-        }
-    
-        $product->offer = $product->offer == '1' ? '0' : '1';
-        
-        \Alert::success('Success', __('This product '.($product->offer == '1' ? 'added to' : 'removed from').' the offer successfully'));
-    
-        $product->save();
-        // print_r($product);
-        // die;
         return response()->json(['success' => 'true']);
     }
     
@@ -812,8 +775,6 @@ class ProductController extends Controller
         } elseif ($columnIndex == 7) {
             $sort = 'product.is_product_bestseller';
         } elseif ($columnIndex == 8) {
-            $sort = 'product.offer';
-        } elseif ($columnIndex == 9) {
             $sort = 'product.status';
 
         } else {
@@ -896,25 +857,7 @@ class ProductController extends Controller
             ->skip($start)
             ->take($rowperpage)
             ->get();
-        $selectedBestSellers = $request->input('is_product_bestseller', []);
-        $selectedOffers = $request->input('offer', []);
 
-        // foreach ($selectedBestSellers as $productId) {
-        //     $product = Product::find($productId);
-        //     if ($product) {
-        //         // Update the 'is_product_bestseller' value in the database
-        //         Product::where('id', $product)->update(['is_product_bestseller' => 1]);
-        //     }else{
-        //         $product->update(['is_product_bestseller' => 0]);
-        //     }
-        // }
-
-        // foreach ($selectedOffers as $productId)product_price {
-        //     $product = Product::find($productId);
-        //     if ($product) {
-        //         $product->update(['offer_value' => true]);
-        //     }
-        // }
         $data_arr = [];
         $check_view_permission = @Helper::GetRolePermission(Auth::user()->user_type, 8, 'read');
         $check_creation_permission = @Helper::GetRolePermission(Auth::user()->user_type, 8, 'create');
@@ -944,10 +887,8 @@ class ProductController extends Controller
             if (isset($check_updation_permission) && $check_updation_permission) {
                 $options .= '<a class="btn btn-sm success paddingset" href="' . $productEdit . '" title="Edit"> <small><i class="material-icons" >&#xe3c9;</i> </small> </a>';
                 $best_seller = '<input type="checkbox" class="bestsellervalue" style = "cursor:pointer;"name="is_product_bestseller[]" value="' . $data->id . '" ' . ($data->is_product_bestseller ? 'checked' : '') . '>';
-                $offers = '<input type="checkbox" class ="offervalue" name="offer_value[]" style = "cursor:pointer;" value="' . $data->id . '" ' . ($data->offer ? 'checked' : '') . '>';
             } else {
                 $best_seller = '<span style="font-size:20px;">' . ($data->is_product_bestseller ? '&#10003;' : '&#10005;') . '</span>';
-                $offers = '<span style="font-size:20px;">' . ($data->offer ? '&#10003;' : '&#10005;') . '</span>';
             }
 
             if (isset($check_deletion_permission) && $check_deletion_permission) {
@@ -965,7 +906,6 @@ class ProductController extends Controller
                 "product_price" => isset($data->product_price) ? $data->product_price . ' ' . @$settings->currency_symbol : '',
                 "sku" => isset($data->sku) ? $data->sku : '',
                 "bestseller" => isset($best_seller) ? $best_seller : '',
-                "offer_value" => isset($offers) ? $offers : '',
                 "status" => isset($status) ? $status : '',
                 "options" => isset($options) ? $options : '',
             );

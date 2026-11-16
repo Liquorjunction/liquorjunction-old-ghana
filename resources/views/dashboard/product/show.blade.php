@@ -170,13 +170,6 @@
 
                             <tr>
                                 <tbody>
-                                    <th>Is Offer?</th>
-                                    <td>{{ (@$productData->offer==1)?"Yes":"No" }}</td>
-                                </tbody>
-                            </tr>
-
-                            <tr>
-                                <tbody>
                                     <th>Short Description</th>
                                     <td colspan="4">{{ @$productData->short_description?:"-" }}</td>
                                 </tbody>

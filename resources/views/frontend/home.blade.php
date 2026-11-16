@@ -96,6 +96,45 @@
             padding-top: 50px !important;
         }
     }
+
+    .special-offers-view-all {
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 20px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: #fbb516;
+        background: transparent;
+        border: 1px solid #fbb516;
+        padding: 8px 22px;
+        border-radius: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+    .special-offers-view-all:hover {
+        background: #fbb516;
+        color: #242424 !important;
+        border-color: #fbb516;
+    }
+    .special-offers-view-all i {
+        font-size: 12px;
+        transition: transform 0.3s ease;
+    }
+    .special-offers-view-all:hover i {
+        transform: translateX(4px);
+    }
+    @media only screen and (max-width: 575px) {
+        .special-offers-view-all {
+            font-size: 12px;
+            padding: 6px 14px;
+            letter-spacing: 0.5px;
+            gap: 6px;
+        }
+    }
 </style>
 
 
@@ -249,7 +288,15 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
 @if(isset($offer_product) && count($offer_product) > 0)
 <section class="offers py-60">
     <div class="container">
-        <h2 class="text-center mb-30 text-white">{{@Helper::language('offers')}}</h2>
+        <div class="offers-header-wrapper d-flex justify-content-between align-items-center mb-30 flex-wrap gap-2">
+            <h2 class="text-white mb-0">{{ @Helper::language('offers') ?: 'Special Offers' }}</h2>
+            @if(isset($total_offer_count) && $total_offer_count > 20)
+                <a href="{{ route('special') }}" class="special-offers-view-all" title="{{ @Helper::language('view_all_label') ?: 'View All' }}">
+                    <span>{{ @Helper::language('view_all_label') ?: 'VIEW ALL' }}</span>
+                    <i class="fa-solid fa-arrow-right ms-1"></i>
+                </a>
+            @endif
+        </div>
         <div class="offers-slider-wrapper">
             @if(count($offer_product) > 0)
             <div class="swiper offers-slider pb-30">
@@ -258,8 +305,9 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                     @php
                     $product_title='';
                     $product_title = $offer_result->product_name;
-                    $product_image = $offer_result->get_product_images->first();
-                    $product_variant = $offer_result->get_product_variants->first();
+                    $product_image = $offer_result->image;
+                    $product_image_name = is_string($product_image) ? $product_image : ($product_image->image ?? '');
+                    $product_variant = $offer_result;
                     $product_unit = Helper::getUnitById($product_variant->variant_uof);
                     $fav_data = Helper::userFavoriteProduct($offer_result->id);
 
@@ -270,7 +318,7 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                     $is_in_cart = false;
                     $user_id = auth()->guard('user')->id();
                     $product_id = $offer_result->id;
-                    $variant_id = $product_variant->id;
+                    $variant_id = $product_variant->variant_id ?? $product_variant->id;
                     $available_qty = $product_variant->available_qty ?? 0;
 
                     $get_cart_array = Session::get('cart_info');
@@ -329,8 +377,8 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                                 @endif
 
                                 <a href="{{route('productdetails',['id'=>Helper::encodeUrl($offer_result->id)])}}" >
-                                    @if (file_exists(public_path() . '/uploads/product/'.$product_image->image))					
-                                    <img src="{{ asset('uploads/product/'.$product_image->image) }}" title="{{$product_title}}" />
+                                    @if (!empty($product_image_name) && file_exists(public_path() . '/uploads/product/'.$product_image_name))					
+                                    <img src="{{ asset('uploads/product/'.$product_image_name) }}" title="{{$product_title}}" />
                                     @else
                                     <img src="{{ asset('assets/frontend/images/image-not-avilable.png')}}" title="{{Helper::language('image_not_available')}}" alt="{{Helper::language('image_not_available')}}">
                                     @endif 
@@ -492,6 +540,7 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                     $product_title='';
                     $product_title = $best_result->product_name;
                     $product_image = $best_result->get_product_images->first();
+                    $best_product_image_name = $product_image ? (is_string($product_image) ? $product_image : ($product_image->image ?? '')) : '';
                     $product_variant = $best_result->get_product_variants->first();
                     $product_unit = Helper::getUnitById($product_variant->variant_uof);
                     
@@ -562,8 +611,8 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                                 @endif
 
                                 <a href="{{route('productdetails',['id'=>Helper::encodeUrl($best_result->id)])}}" >
-                                    @if (file_exists(public_path() . '/uploads/product/'.$product_image->image))					
-                                        <img src="{{ asset('uploads/product/'.$product_image->image) }}" title="{{$product_title}}" />
+                                    @if (!empty($best_product_image_name) && file_exists(public_path() . '/uploads/product/'.$best_product_image_name))					
+                                        <img src="{{ asset('uploads/product/'.$best_product_image_name) }}" title="{{$product_title}}" />
                                     @else
                                         <img src="{{ asset('assets/frontend/images/image-not-avilable.png')}}" title="{{Helper::language('image_not_available')}}" alt="{{Helper::language('image_not_available')}}">
                                     @endif 

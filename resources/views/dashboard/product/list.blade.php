@@ -102,7 +102,6 @@
                 <th>{{ __('backend.product_subcategory') }}</th>
                 <th>{{ __('backend.price') }}</th>
                 <th>{{ __('backend.bestseller') }}</th>
-                <th>{{ __('backend.offer') }}</th>
                 <th>{{ __('backend.status') }}</th>
                 <th>{{ __('backend.options') }}</th>
             </tr>
@@ -449,14 +448,14 @@ $(document).on('click', '.offervalue', function(e) {
     <script>
     var show = true;
     var check = true;
-    var sort = [0, 9, 10];
+    var sort = [0, 9];
     </script>
     <?php } else if($check_view_permission==true ) {
     ?>
     <script>
     var show = true;
     var check = false;
-    var sort = [0, 9, 10];
+    var sort = [0, 9];
     </script>
     <?php }else { ?>
     <script>
@@ -543,11 +542,7 @@ $(document).on('click', '.offervalue', function(e) {
                     {
                         data: 'bestseller',
                         name: 'bestseller',
-                    }, {
-                        data: 'offer_value',
-                        name: 'offer_value',
                     },
-
                     {
                         data: 'status',
                         name: 'status',

@@ -499,7 +499,6 @@ class ProductCatalogController extends Controller
                 'p.subcategory_id',
                 'p.brand_id',
                 'p.is_product_bestseller',
-                'p.offer',
                 'first_variant.variant_price as product_price',
                 'first_variant.variant_size as product_size',
                 'first_variant.variant_uof as product_uof'

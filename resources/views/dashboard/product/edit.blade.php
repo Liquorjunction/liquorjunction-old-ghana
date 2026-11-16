@@ -391,12 +391,6 @@
                 <input type="checkbox" style="cursor:pointer;" id="ans_yes" name="is_product_bestseller" value="1" @checked((old('is_product_bestseller', @$productData->is_product_bestseller) == 1)?true:false)>
             </div>
         </div>
-        <div class="form-group row">
-            <label class="col-sm-3">Is offer ? </label>
-            <div class="col-sm-9">
-                <input type="checkbox" style="cursor:pointer;" id="offer" name="offer" value="1" @checked((old('offer', @$productData->offer) == 1)?true:false)>
-            </div>
-        </div>
         <div class="form-group row m-t-md">
             <div class="offset-sm-3 col-sm-9">
                 <button type="submit" class="btn btn-primary m-t" id="submitDetail"><i class="material-icons">&#xe31b;</i> Update</button>

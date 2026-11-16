@@ -43,7 +43,68 @@ class HomeController extends Controller
 
     public function index()
     {
-        $offer_product = Product::activeProductsBasedOnRelations()->where('offer',1)->limit('20')->orderby('updated_at','desc')->get();
+        $today = Carbon::now()->toDateString();
+
+        // 1. Get the first active valid offer (same logic as special())
+        $offer = Offers::where('status', 1)
+            ->whereDate('expiry_date', '>=', $today)
+            ->first();
+
+        $offerProducts = collect();
+        if ($offer) {
+            $offer_product_id = $offer_brand_id = $offer_category_id = $offer_subcategory_id = null;
+            if (!empty($offer->product_id)) {
+                $offer_product_id = $offer->product_id;
+            } elseif (!empty($offer->brand_id)) {
+                $offer_brand_id = $offer->brand_id;
+            } elseif (!empty($offer->category_id) && !empty($offer->subcategory_id)) {
+                $offer_subcategory_id = $offer->subcategory_id;
+            } elseif (!empty($offer->category_id)) {
+                $offer_category_id = $offer->category_id;
+            }
+
+            $offerProducts = $this->getFilteredProducts(
+                $offer_product_id,
+                $offer_brand_id,
+                $offer_subcategory_id,
+                $offer_category_id
+            );
+        }
+
+        // 2. Get active valid BOGO (same logic as special())
+        $bogo = Bogo::where('status', 1)
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->first();
+
+        $bogoProducts = collect();
+        if ($bogo) {
+            $bogo_product_id = $bogo_brand_id = $bogo_category_id = $bogo_subcategory_id = null;
+            if (!empty($bogo->product_id)) {
+                $bogo_product_id = $bogo->product_id;
+            } elseif (!empty($bogo->brand_id)) {
+                $bogo_brand_id = $bogo->brand_id;
+            } elseif (!empty($bogo->category_id) && !empty($bogo->subcategory_id)) {
+                $bogo_subcategory_id = $bogo->subcategory_id;
+            } elseif (!empty($bogo->category_id)) {
+                $bogo_category_id = $bogo->category_id;
+            }
+
+            $bogoProducts = $this->getFilteredProducts(
+                $bogo_product_id,
+                $bogo_brand_id,
+                $bogo_subcategory_id,
+                $bogo_category_id
+            );
+        }
+
+        // 3. Combine both Offers & BOGO products, removing duplicate products by id
+        $combinedOffers = $offerProducts->concat($bogoProducts)->unique('id');
+
+        $total_offer_count = $combinedOffers->count();
+        // Limit to max 20 items for home page display
+        $offer_product = $combinedOffers->take(20);
+
         $best_seller_product = Product::activeProductsBasedOnRelations()->where('is_product_bestseller',1)->limit('20')->orderby('updated_at','desc')->get();
 
 
@@ -51,9 +112,9 @@ class HomeController extends Controller
         $today = Carbon::now()->toDateString();
 
 
-         // Offer Bogo
+        // Offer Bogo & Discount Check
         foreach ($offer_product as $bogoOffer) {
-            $bogo = Bogo::where('status', 1)
+            $bogoCheck = Bogo::where('status', 1)
                 ->whereDate('start_date', '<=', $today)
                 ->whereDate('end_date', '>=', $today)
                 ->where(function ($query) use ($bogoOffer) {
@@ -73,13 +134,13 @@ class HomeController extends Controller
                 })
                 ->first();
 
-            $bogoOffer->bogo_status = $bogo ? true : false; 
+            $bogoOffer->bogo_status = $bogoCheck ? true : false; 
 
 
             // Offer Check
-              $offer = Offers::where('status', 1)
-                        ->whereDate('expiry_date', '>=', $today)
-                        ->where(function ($query) use ($bogoOffer) {
+            $offerCheck = Offers::where('status', 1)
+                ->whereDate('expiry_date', '>=', $today)
+                ->where(function ($query) use ($bogoOffer) {
                     $query->where('product_id', $bogoOffer->id)
                         ->orWhere(function ($q) use ($bogoOffer) {
                             $q->whereNotNull('subcategory_id')
@@ -96,15 +157,15 @@ class HomeController extends Controller
                 })
                 ->first();
 
-                if ($offer) {
-                    $bogoOffer->offer_status = true;
-                    $bogoOffer->discount_amount = $offer->dis_amount;
-                    $bogoOffer->offer_type = $offer->offer_type;
-                } else {
-                    $bogoOffer->offer_status = false;
-                    $bogoOffer->discount_amount = 0;
-                    $bogoOffer->offer_type = null;
-                }
+            if ($offerCheck) {
+                $bogoOffer->offer_status = true;
+                $bogoOffer->discount_amount = $offerCheck->dis_amount;
+                $bogoOffer->offer_type = $offerCheck->offer_type;
+            } else {
+                $bogoOffer->offer_status = false;
+                $bogoOffer->discount_amount = 0;
+                $bogoOffer->offer_type = null;
+            }
 
         }
 
@@ -170,20 +231,21 @@ class HomeController extends Controller
         $banners_offer = Banner::where('status',1)->where('offer',1)->limit(1)->orderby('created_at','desc')->latest()->first();
         $categories = Categories::where('status',1)->orderby('created_at','desc')->get();
        // $bannerData =  Banner::where('status',1)->get();
-        return view("frontend.home",compact('offer_product','best_seller_product','blogs','banners','banners_highlight','banners_offer','categories'));
+        return view("frontend.home",compact('offer_product','total_offer_count','best_seller_product','blogs','banners','banners_highlight','banners_offer','categories'));
     }
 
     private function getFilteredProducts($product_id = null, $brand_id = null, $subcategory_id = null, $category_id = null)
     {
         $query = DB::table('product as p')
             ->select(
+                'pv.*',
+                'pv.id as variant_id',
                 'p.id as product_id',
+                'p.id as id',
                 'p.average_rating',
                 'p.product_name',
-                
                 'pi.image',
                 'pv.final_price',
-                'pv.*',
                 'p.category_id',
                 'p.subcategory_id',
                 'p.brand_id'
