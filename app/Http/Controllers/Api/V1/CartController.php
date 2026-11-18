@@ -12,6 +12,7 @@ use App\Models\MainUser;
 use App\Models\EmailTemplate;
 use App\Models\FavoriteProduct;
 use App\Models\UserAddress;
+use App\Models\UserBillAddress;
 use App\Models\Community;
 use App\Models\Order;
 use App\Models\Cart;
@@ -303,8 +304,9 @@ class CartController extends Controller
             }
 
             if($product_variant_details->available_qty < $quantity){
-                $result['code']     =  strval(1);
-                $result['message']  =  'product_quantity_is_not_availiable';   
+                $result['code']     =  strval(0);
+                $result['message']  =  'product_quantity_is_not_availiable';
+                $result['available_qty'] = $product_variant_details->available_qty;
                 $mainResult   =  $result;
                 return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
             }
@@ -473,9 +475,35 @@ class CartController extends Controller
 
             logger()->info('cartData: ' . json_encode($cartData));
 
+            if (empty($cartData)) {
+                $result['code']     =  strval(0);
+                $result['message']  =  'cart_item_not_found';
+                $result['result']   =  [];
+                $mainResult   =   $result;
+                return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
+
             $productData = DB::table('product')->where('id',$product_id)->where('status',1)->first();
 
             $quantity = $cartData->quantity+1;
+
+            /*--- Check stock availability before incrementing ---*/
+            $variant_id = $cartData->product_variant_id ?? null;
+            $product_variant_details = null;
+            if ($variant_id) {
+                $product_variant_details = DB::table('product_variants')->where('id', $variant_id)->first();
+            } else {
+                $product_variant_details = DB::table('product_variants')->where('product_id', $product_id)->first();
+            }
+
+            if ($product_variant_details && $product_variant_details->available_qty !== null && $product_variant_details->available_qty < $quantity) {
+                $result['code']     =  strval(0);
+                $result['message']  =  'product_quantity_is_not_availiable';
+                $result['available_qty'] = $product_variant_details->available_qty;
+                $result['result']   =  [];
+                $mainResult   =   $result;
+                return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
             
             // $offer_price = $quantity*(isset($productData->discount_price) ? $productData->discount_price : '0');
             // $product_price_data = $quantity*(isset($productData->retail_price) ? $productData->retail_price : '0');
@@ -595,6 +623,15 @@ class CartController extends Controller
             $user_id = $userData->id;
 
             $cartData = DB::table('cart')->where('user_id',$user_id)->where('product_id',$product_id)->where('status',1)->first();
+
+            if (empty($cartData)) {
+                $result['code']     =  strval(0);
+                $result['message']  =  'cart_item_not_found';
+                $result['result']   =  [];
+                $mainResult   =   $result;
+                return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
+
             $productData = DB::table('product')->where('id',$product_id)->where('status',1)->first();
             $quantity = $cartData->quantity-1;
 
@@ -1284,6 +1321,56 @@ class CartController extends Controller
         }
     }
 
+    public function selectBillAddress(Request $request)
+    {
+        $result = [];
+        $validator = \Validator::make($request->all(), [
+            'uniqid' => 'required',
+            'token' => 'required',
+            'bill_address_id' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status_code' => strval(0),
+                'error' => $validator->messages(),
+                'data' => null
+            ], 200);
+        }
+
+        $response = \App\Helpers\ResponseHelper::userCheckStatus($request->uniqid, $request->token);
+        if ($response['code'] != 1) {
+            $mainResult = $response;
+            return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+        }
+
+        $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
+        $user_id = $userData->id;
+        $bill_address_id = $request->bill_address_id;
+
+        $targetAddress = UserBillAddress::where('user_id', $user_id)->where('id', $bill_address_id)->first();
+        if (!$targetAddress) {
+            $result['code'] = strval(0);
+            $result['message'] = 'address_not_found';
+            $result['result'] = [];
+            return response()->json(new \App\Http\Resources\V1\SettingResource($result));
+        }
+
+        UserBillAddress::where('user_id', $user_id)->update(['default' => 0]);
+        $targetAddress->default = 1;
+        $targetAddress->save();
+
+        $result['code'] = strval(1);
+        $result['message'] = 'success';
+        $result['bill_address_id'] = strval($bill_address_id);
+        $result['result'] = [
+            'bill_address_id' => strval($bill_address_id),
+            'is_default' => '1'
+        ];
+
+        return response()->json(new \App\Http\Resources\V1\SettingResource($result));
+    }
+
     public function getCartCount(Request $request){
 
 
@@ -1355,12 +1442,12 @@ class CartController extends Controller
             ], 200);
         }
 
-        $post = $request->all();
+        $post = true;
         if($post)
         {
-            $longitude = $request->longitude;   
-            $latitude = $request->latitude; 
-            $keywords = $request->keywords;
+            $longitude = $request->input('longitude', '');   
+            $latitude = $request->input('latitude', ''); 
+            $keywords = $request->input('keywords', '');
 
             $mainArr = [];
             $result = [];
@@ -1415,6 +1502,9 @@ class CartController extends Controller
                     $storeArr['store_id'] = strval(@$data->id);
                     $storeArr['store_name'] = strval(@$store_name);
                     $storeArr['store_address'] = strval(@$data->address);
+                    $storeArr['store_email'] = strval(@$data->email ?? '');
+                    $storeArr['latitude'] = strval(@$data->latitude ?? '');
+                    $storeArr['longitude'] = strval(@$data->longitude ?? '');
                     $storeArr['store_distance'] = strval(@$distance);
                     $storeArr['store_business_hours'] = strval(@$store_time);
                     $storeArr['store_contact_number'] = strval(@$contactNumber);

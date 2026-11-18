@@ -1279,8 +1279,10 @@
                                  <span class="counters mb-0">
                                     <input class="counters__input" type="text"
                                         value="{{$qty}}"
-                                        name="counters" size="5" id="qty_ince_{{$result->id}}" readonly="readonly" />
-                                    <a class="counters__increment" onclick="quntityIncreaseOrDecrease('{{Helper::encodeUrl($result->get_product_details->id)}}','{{$result->id}}','incr',{{$is_offer ?? 0}}, this);"  href="javascript:void(0)" data-id="{{$result->id}}">
+                                        name="counters" size="5" id="qty_ince_{{$result->id}}"
+                                        data-available-qty="{{ $result->available_qty ?? 0 }}"
+                                        readonly="readonly" />
+                                    <a class="counters__increment" onclick="quntityIncreaseOrDecrease('{{Helper::encodeUrl($result->get_product_details->id)}}','{{$result->id}}','incr',{{$is_offer ?? 0}}, this);"  href="javascript:void(0)" data-id="{{$result->id}}" data-available-qty="{{ $result->available_qty ?? 0 }}">
                                         <svg width="24" height="24" viewBox="0 0 24 24"
                                             fill="none" xmlns="http://www.w3.org/2000/svg">
                                             <g id="plus">
@@ -2784,8 +2786,26 @@
         let currentQty = parseInt(qtyInput.val()) || 1;
         let prevQty = currentQty;
 
+        let $btn = $(btnElement);
+        let maxStock = parseInt($btn.attr('data-available-qty') || qtyInput.attr('data-available-qty') || $btn.data('available-qty') || qtyInput.data('available-qty'));
+
         if (type === 'incr') {
+            if (!isNaN(maxStock) && maxStock > 0 && currentQty >= maxStock) {
+                qtyInput.val(maxStock);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Stock Limit',
+                        text: 'Only ' + maxStock + ' item(s) available in stock.',
+                        confirmButtonColor: '#fbb516'
+                    });
+                }
+                return false;
+            }
             currentQty += 1;
+            if (!isNaN(maxStock) && maxStock > 0 && currentQty > maxStock) {
+                currentQty = maxStock;
+            }
         } else if (type === 'desc') {
             if (currentQty <= 1) return false;
             currentQty -= 1;
@@ -2818,6 +2838,10 @@
                     },
                     success: function (response) {
                         if (response.status && response.success === 'true') {
+                            if (response.available_qty !== undefined) {
+                                $btn.attr('data-available-qty', response.available_qty).data('available-qty', response.available_qty);
+                                qtyInput.attr('data-available-qty', response.available_qty).data('available-qty', response.available_qty);
+                            }
                             if (response.capped) {
                                 $("#qty_ince_" + variantId).val(response.capped_quantity);
                                 qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(response.capped_quantity);
@@ -2873,6 +2897,10 @@
                     },
                     success: function (response) {
                         if (response.success === "true") {
+                            if (response.available_qty !== undefined) {
+                                $btn.attr('data-available-qty', response.available_qty).data('available-qty', response.available_qty);
+                                qtyInput.attr('data-available-qty', response.available_qty).data('available-qty', response.available_qty);
+                            }
                             if (response.capped) {
                                 $("#qty_ince_" + variantId).val(response.capped_quantity);
                                 qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(response.capped_quantity);

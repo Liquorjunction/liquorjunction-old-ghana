@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\CommonController;
+use App\Http\Controllers\Api\V1\CatalogController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -38,6 +39,10 @@ Route::group(['middleware' => 'headerauthwithoutlogin'], function () {
     Route::get('search', [CommonController::class, 'searchList']);
     Route::get('product-filtter', [ProductController::class, 'productsfiltter']);
     Route::post('cart-list', [ProductController::class, 'cartList']);
+
+    // New Dedicated Faceted Product Catalog API
+    Route::match(['GET', 'POST'], 'product-catalog', [CatalogController::class, 'index'])->name('productCatalog');
+    Route::get('catalog-filters', [CatalogController::class, 'filters'])->name('catalogFilters');
     //UserController API
     //Date:18-01-2023
     Route::post('register', 'UserController@register');
@@ -109,6 +114,7 @@ Route::group(['middleware' => 'headerauthwithoutlogin'], function () {
 
     Route::match(['GET', 'POST'], 'pickUpOrder', 'CartController@pickUpOrder')->name('pickUpOrder');
     Route::match(['GET', 'POST'], 'selectAddress', 'CartController@selectAddress')->name('selectAddress');
+    Route::match(['GET', 'POST'], 'selectBillAddress', 'CartController@selectBillAddress')->name('selectBillAddress');
 
     Route::match(['GET', 'POST'], 'notificationList', 'ProductController@notificationList')->name('notificationList');
     Route::match(['GET', 'POST'], 'notificationCount', 'ProductController@notificationCount')->name('notificationCount');

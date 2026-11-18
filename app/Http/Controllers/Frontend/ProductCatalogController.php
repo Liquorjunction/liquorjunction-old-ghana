@@ -43,7 +43,7 @@ class ProductCatalogController extends Controller
         $today = Carbon::now()->toDateString();
 
         // 1. Static Initial Metadata Cached for 5 minutes
-        $meta = Cache::remember('catalog_global_meta_v4', 300, function () {
+        $meta = Cache::remember('catalog_global_meta_v6', 300, function () {
             $categories = Categories::with(['subcategory' => function ($q) {
                 $q->where('status', 1)->orderBy('title', 'ASC');
             }])
@@ -70,18 +70,31 @@ class ProductCatalogController extends Controller
                 $maxPrice = $minPrice + 500;
             }
 
-            // Available distinct sizes
-            $sizes = DB::table('product_variants as pv')
+            // Available distinct sizes with units (sorted by actual volume in ML ascending)
+            $rawSizes = DB::table('product_variants as pv')
                 ->join('product as p', 'pv.product_id', '=', 'p.id')
+                ->leftJoin('uofs as u', 'pv.variant_uof', '=', 'u.id')
                 ->where('p.status', 1)
                 ->where('pv.status', 1)
                 ->whereNotNull('pv.variant_size')
                 ->where('pv.variant_size', '>', 0)
-                ->select('pv.variant_size')
-                ->distinct()
-                ->orderBy('pv.variant_size', 'ASC')
-                ->pluck('variant_size')
-                ->toArray();
+                ->select(
+                    DB::raw('CAST(pv.variant_size AS CHAR) as variant_size'),
+                    DB::raw('MAX(u.title) as unit'),
+                    DB::raw('CASE WHEN MAX(u.title) = "L" OR (MAX(u.title) IS NULL AND pv.variant_size <= 5) THEN pv.variant_size * 1000 ELSE pv.variant_size END as volume_ml')
+                )
+                ->groupBy('pv.variant_size')
+                ->orderBy('volume_ml', 'ASC')
+                ->get();
+
+            $sizes = [];
+            $sizeUnitMap = [];
+            foreach ($rawSizes as $row) {
+                $sz = (string)$row->variant_size;
+                $unit = !empty($row->unit) ? strtoupper(trim($row->unit)) : (floatval($sz) <= 5 ? 'L' : 'ML');
+                $sizes[] = $sz;
+                $sizeUnitMap[$sz] = $unit;
+            }
 
             return [
                 'categories' => $categories,
@@ -89,6 +102,7 @@ class ProductCatalogController extends Controller
                 'min_price' => $minPrice,
                 'max_price' => $maxPrice,
                 'sizes' => $sizes,
+                'size_units' => $sizeUnitMap,
             ];
         });
 
@@ -97,6 +111,7 @@ class ProductCatalogController extends Controller
         $catalogMinPrice = $meta['min_price'];
         $catalogMaxPrice = $meta['max_price'];
         $allSizes = $meta['sizes'];
+        $sizeUnitMap = $meta['size_units'] ?? [];
 
         // 2. Parse Incoming Filter Parameters (with Safe Hashed ID Decoding)
         $filters = $this->parseFilters($request, $catalogMinPrice, $catalogMaxPrice);
@@ -133,7 +148,7 @@ class ProductCatalogController extends Controller
         }
 
         // 6. Active Filter Pills Structure (Dynamic, only when filters actually active)
-        $active_pills = $this->generateActivePills($filters, $allCategories, $allBrands, $catalogMinPrice, $catalogMaxPrice);
+        $active_pills = $this->generateActivePills($filters, $allCategories, $allBrands, $catalogMinPrice, $catalogMaxPrice, $sizeUnitMap);
 
         // 7. Handle AJAX request (Faceted re-render or Load More)
         if ($request->ajax()) {
@@ -163,6 +178,7 @@ class ProductCatalogController extends Controller
             'allCategories',
             'allBrands',
             'allSizes',
+            'sizeUnitMap',
             'catalogMinPrice',
             'catalogMaxPrice',
             'dynamicPriceBounds',
@@ -564,15 +580,18 @@ class ProductCatalogController extends Controller
         $matchingPids = (clone $sizeBase)->pluck('p.id')->toArray();
         $sizeCounts = [];
         if (!empty($matchingPids)) {
-            $sizeCounts = DB::table('product_variants as pv')
+            $rawSizeCounts = DB::table('product_variants as pv')
                 ->whereIn('pv.product_id', $matchingPids)
                 ->where('pv.status', 1)
                 ->whereNotNull('pv.variant_size')
                 ->where('pv.variant_size', '>', 0)
-                ->select('pv.variant_size', DB::raw('COUNT(DISTINCT pv.product_id) as count'))
+                ->select(DB::raw('CAST(pv.variant_size AS CHAR) as variant_size'), DB::raw('COUNT(DISTINCT pv.product_id) as count'))
                 ->groupBy('pv.variant_size')
-                ->pluck('count', 'variant_size')
-                ->toArray();
+                ->get();
+
+            foreach ($rawSizeCounts as $rsc) {
+                $sizeCounts[(string)$rsc->variant_size] = intval($rsc->count);
+            }
         }
 
         // 4. Rating Facets (relative to current filters, excluding rating)
@@ -789,7 +808,7 @@ class ProductCatalogController extends Controller
     /**
      * Generate Active Filter Pills array (with Hashed IDs)
      */
-    protected function generateActivePills(array $filters, $allCategories = null, $allBrands = null, $catalogMinPrice = 0, $catalogMaxPrice = 50000)
+    protected function generateActivePills(array $filters, $allCategories = null, $allBrands = null, $catalogMinPrice = 0, $catalogMaxPrice = 50000, array $sizeUnitMap = [])
     {
         $pills = [];
 
@@ -849,10 +868,11 @@ class ProductCatalogController extends Controller
         // Size pills
         if (!empty($filters['sizes'])) {
             foreach ($filters['sizes'] as $sz) {
+                $unit = $sizeUnitMap[$sz] ?? (floatval($sz) <= 5 ? 'L' : 'ML');
                 $pills[] = [
                     'type' => 'size',
                     'id' => $sz,
-                    'label' => 'Size: ' . $sz . ' ml',
+                    'label' => 'Size: ' . $sz . ' ' . $unit,
                 ];
             }
         }

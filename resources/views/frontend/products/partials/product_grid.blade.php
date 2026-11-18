@@ -104,7 +104,7 @@
                     </h6>
 
                     <span class="text-sm grey-text">
-                        {{ !empty($result->product_size) ? $result->product_size . ' ' . $product_unit : '' }}
+                        {{ !empty($result->product_size) ? $result->product_size . ' ' . strtoupper($product_unit) : '' }}
                     </span>
 
                     <div class="price-wrapper">

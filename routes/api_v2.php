@@ -18,5 +18,5 @@ use Illuminate\Support\Facades\Route;
 
 
 
-Route::get('getuser', 'SettingController@index');
+// Route::get('getuser', 'SettingController@index');
 

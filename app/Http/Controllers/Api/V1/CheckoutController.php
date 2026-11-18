@@ -1820,10 +1820,12 @@ class CheckoutController extends Controller
             $delivery_address = "";
             ($user_address_data->name) ? $delivery_address .= $user_address_data->name : '';
             ($user_address_data->address) ? $delivery_address .= ',| ' . $user_address_data->address : '';
-            ($user_address_data->country->name) ? $delivery_address .= ',| ' . $user_address_data->country->name : '';
-            ($user_address_data->region->title) ? $delivery_address .= ',| ' . $user_address_data->region->title : '';
-            ($user_address_data->area->title) ? $delivery_address .= ',| ' . $user_address_data->area->title : '';
-            ($user_address_data->phone) ? $delivery_address .= ',| +' . $user_address_data->phonecode . ' ' . $user_address_data->phone : '';
+            ($user_address_data->country ? $user_address_data->country->name : '') ? $delivery_address .= ',| ' . $user_address_data->country->name : '';
+            ($user_address_data->region ? $user_address_data->region->title : '') ? $delivery_address .= ',| ' . $user_address_data->region->title : '';
+            ($user_address_data->area ? $user_address_data->area->title : '') ? $delivery_address .= ',| ' . $user_address_data->area->title : '';
+            ($user_address_data->phone) ? $delivery_address .= ',| +' . @$user_address_data->phonecode . ' ' . @$user_address_data->phone : '';
+            ($user_address_data->city) ? $delivery_address .= ',| ' . @$user_address_data->city : '';
+            ($user_address_data->zip_code) ? $delivery_address .= ',| ' . @$user_address_data->zip_code : '';
             if (!empty($user_address_data->latitude)) {
                 $delivery_address .= ',| ' . $user_address_data->latitude;
             }
@@ -1849,12 +1851,38 @@ class CheckoutController extends Controller
             $billing_address = '';
             ($user_bill_address_data->name) ? $billing_address .= $user_bill_address_data->name : '';
             ($user_bill_address_data->address) ? $billing_address .= ',| ' . $user_bill_address_data->address : '';
-            ($user_bill_address_data->country->name) ? $billing_address .= ',| ' . $user_bill_address_data->country->name : '';
-            ($user_bill_address_data->region->title) ? $billing_address .= ',| ' . $user_bill_address_data->region->title : '';
-            ($user_bill_address_data->area->title) ? $billing_address .= ',| ' . $user_bill_address_data->area->title : '';
+            ($user_bill_address_data->country ? $user_bill_address_data->country->name : '') ? $billing_address .= ',| ' . $user_bill_address_data->country->name : '';
+            ($user_bill_address_data->region ? $user_bill_address_data->region->title : '') ? $billing_address .= ',| ' . $user_bill_address_data->region->title : '';
+            ($user_bill_address_data->area ? $user_bill_address_data->area->title : '') ? $billing_address .= ',| ' . $user_bill_address_data->area->title : '';
             ($user_bill_address_data->phone) ? $billing_address .= ',| +' . @$user_bill_address_data->phonecode . ' ' . @$user_bill_address_data->phone : '';
-            ($user_bill_address_data->city) ? $billing_address .= ',| ' . @$user_bill_address_data->city . ' ' . @$user_bill_address_data->city : '';
-            ($user_bill_address_data->zip_code) ? $billing_address .= ',| ' . @$user_bill_address_data->zip_code . ' ' . @$user_bill_address_data->zip_code : '';
+            ($user_bill_address_data->city) ? $billing_address .= ',| ' . @$user_bill_address_data->city : '';
+            ($user_bill_address_data->zip_code) ? $billing_address .= ',| ' . @$user_bill_address_data->zip_code : '';
+            if (!empty($user_bill_address_data->latitude)) {
+                $billing_address .= ',| ' . $user_bill_address_data->latitude;
+            }
+            if (!empty($user_bill_address_data->longitude)) {
+                $billing_address .= ',| ' . $user_bill_address_data->longitude;
+            }
+        }
+
+        if (empty($billing_address) && $purchase_order_type == 1 && !$isSameAddress) {
+            $defaultBillAddress = UserBillAddress::with(['country', 'region', 'area'])->where([['user_id', $user_id], ['status', 1], ['default', 1]])->first();
+            if ($defaultBillAddress) {
+                ($defaultBillAddress->name) ? $billing_address .= $defaultBillAddress->name : '';
+                ($defaultBillAddress->address) ? $billing_address .= ',| ' . $defaultBillAddress->address : '';
+                ($defaultBillAddress->country ? $defaultBillAddress->country->name : '') ? $billing_address .= ',| ' . $defaultBillAddress->country->name : '';
+                ($defaultBillAddress->region ? $defaultBillAddress->region->title : '') ? $billing_address .= ',| ' . $defaultBillAddress->region->title : '';
+                ($defaultBillAddress->area ? $defaultBillAddress->area->title : '') ? $billing_address .= ',| ' . $defaultBillAddress->area->title : '';
+                ($defaultBillAddress->phone) ? $billing_address .= ',| +' . @$defaultBillAddress->phonecode . ' ' . @$defaultBillAddress->phone : '';
+                ($defaultBillAddress->city) ? $billing_address .= ',| ' . @$defaultBillAddress->city : '';
+                ($defaultBillAddress->zip_code) ? $billing_address .= ',| ' . @$defaultBillAddress->zip_code : '';
+                if (!empty($defaultBillAddress->latitude)) {
+                    $billing_address .= ',| ' . $defaultBillAddress->latitude;
+                }
+                if (!empty($defaultBillAddress->longitude)) {
+                    $billing_address .= ',| ' . $defaultBillAddress->longitude;
+                }
+            }
         }
 
         logger()->info('billing_address: ' . json_encode($billing_address));
@@ -2062,7 +2090,7 @@ class CheckoutController extends Controller
         $order->order_id = $order_custom_id;
         $order->delivery_address = @$delivery_address;
 
-        if ($isSameAddress) {
+        if ($isSameAddress || empty($billing_address)) {
             $order->billing_address = $delivery_address;
             $order->isSameAddress = 1;
         } else {

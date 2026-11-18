@@ -373,13 +373,16 @@
                                                         <span class="counter mb-0">
                                                                 <input class="counter__input" type="text"
                                                                     value="{{$qty}}"
-                                                                    name="counter" size="5" id="qty_ince_{{$result->id}}" readonly="readonly" />
+                                                                    name="counter" size="5" id="qty_ince_{{$result->id}}"
+                                                                    data-available-qty="{{ $result->available_qty ?? 0 }}"
+                                                                    readonly="readonly" />
 
                                                          <!-- Increment -->
                                                         <button type="button" class="counter__increment btn-increment" 
                                                             data-id="{{$result->id}}" 
                                                             data-product="{{ Helper::encodeUrl($result->get_product_details->id) }}"
                                                             data-offer_status="{{$is_offer}}"
+                                                            data-available-qty="{{ $result->available_qty ?? 0 }}"
                                                             style="background: none; border: none; padding: 0; cursor: pointer;">
                                                             <svg width="24" height="24" viewBox="0 0 24 24"
                                                                 fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -861,8 +864,25 @@
         let prevQty = tquty;
         let quantity = tquty;
 
+        let maxStock = parseInt($button.attr('data-available-qty') || qtyInput.attr('data-available-qty') || $button.data('available-qty') || qtyInput.data('available-qty'));
+
         if (type === 'incr') {
+            if (!isNaN(maxStock) && maxStock > 0 && tquty >= maxStock) {
+                qtyInput.val(maxStock);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Stock Limit',
+                        text: 'Only ' + maxStock + ' item(s) available in stock.',
+                        confirmButtonColor: '#fbb516'
+                    });
+                }
+                return false;
+            }
             quantity += 1;
+            if (!isNaN(maxStock) && maxStock > 0 && quantity > maxStock) {
+                quantity = maxStock;
+            }
         } else if (type === 'desc') {
             if (tquty <= 1) return false;
             quantity -= 1;
@@ -903,6 +923,10 @@
                 },
                 success: function(response) {
                     if (response.success === "true") {
+                        if (response.available_qty !== undefined) {
+                            $button.attr('data-available-qty', response.available_qty).data('available-qty', response.available_qty);
+                            qtyInput.attr('data-available-qty', response.available_qty).data('available-qty', response.available_qty);
+                        }
                         if (response.capped) {
                             qtyInput.val(response.capped_quantity);
                             if (typeof Swal !== 'undefined') {

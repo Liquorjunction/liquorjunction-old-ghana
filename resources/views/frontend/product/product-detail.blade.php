@@ -406,7 +406,7 @@ video::-webkit-media-controls-timeline {
                                                 id="pack-size{{ Helper::encodeUrl($variant_result->id) }}"
                                                 @if ($key == 0) checked="checked" @endif
                                                 value="{{ $variant_result->id }}">
-                                            <label for="pack-size-1"
+                                            <label for="pack-size{{ Helper::encodeUrl($variant_result->id) }}"
                                                 onclick="varinatPice('{{ Helper::encodeUrl($variant_result->id) }}');">
                                                 {{ @$variant_result->variant_size ?: '' }}
                                                 {{ Helper::getUnitById($variant_result->variant_uof) }}</label>
@@ -417,14 +417,16 @@ video::-webkit-media-controls-timeline {
                         </div>
                         <?php
                         $style = 'none';
-                        if ($product_info->get_product_variants[0]->available_qty > 0) {
+                        $first_variant = $product_info->get_product_variants[0] ?? null;
+                        $first_available_qty = $first_variant ? (int)$first_variant->available_qty : 0;
+                        if ($first_available_qty > 0) {
                             $style = 'block';
                         }
                         $varinat_qty = 1;
                         if (!empty($cartData) && $cartData->quantity!="") {
                             $varinat_qty = $cartData->quantity;
-                        }else if(@Helper::getCartQuantity($product_info->get_product_variants[0]->id)){
-                            $varinat_qty = Helper::getCartQuantity($product_info->get_product_variants[0]->id);
+                        }else if($first_variant && @Helper::getCartQuantity($first_variant->id)){
+                            $varinat_qty = Helper::getCartQuantity($first_variant->id);
                         }
                         ?>
                         <div style="display: <?php echo $style; ?>" id="div-cart">
@@ -432,8 +434,10 @@ video::-webkit-media-controls-timeline {
                                 <span class="counter mb-0">
 
                                     <input class="counter__input" type="text" value="{{@$varinat_qty}}" name="counter"
-                                        size="5" readonly="readonly" />
-                                    <a class="counter__increment" href="javascript:void(0)">
+                                        size="5" readonly="readonly" data-available-qty="{{ $first_available_qty }}" />
+                                    <a class="counter__increment" href="javascript:void(0)"
+                                        data-id="{{ $first_variant ? $first_variant->id : '' }}"
+                                        data-available-qty="{{ $first_available_qty }}">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
                                             <g id="plus">
@@ -962,8 +966,8 @@ video::-webkit-media-controls-timeline {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/elevatezoom/3.0.8/jquery.elevatezoom.min.js"></script>
     <script>
         function varinatPice(id) {
-            $("input[name='pack_size']").removeAttr('checked');;
-            $("#pack-size" + id).attr('checked', 'checked');
+            $("input[name='pack_size']").prop('checked', false).removeAttr('checked');
+            $("#pack-size" + id).prop('checked', true).attr('checked', 'checked');
             $.ajax({
                 url: "{{ route('productVariantPrice') }}?variantId=" + id,
                 success: function(response) {                   
@@ -981,10 +985,14 @@ video::-webkit-media-controls-timeline {
                     $("#varinat_orignal_price").val(response.orignal_price);
                     $("#variant_disc_price").val(response.discounted_price);
                     if (response.available_qty !== undefined) {
-                        $("#pack-size" + id).attr('data-available-qty', response.available_qty);
+                        var availQty = parseInt(response.available_qty);
+                        $("#pack-size" + id).attr('data-available-qty', availQty).data('available-qty', availQty);
+                        $(".counter__input").attr('data-available-qty', availQty).data('available-qty', availQty);
+                        $(".counter__increment").attr('data-available-qty', availQty).data('available-qty', availQty);
+                        $(".counter__increment").attr('data-id', $("#pack-size" + id).val());
                         var curVal = parseInt($(".counter__input").val()) || 1;
-                        if (curVal > response.available_qty && response.available_qty > 0) {
-                            $(".counter__input").val(response.available_qty);
+                        if (curVal > availQty && availQty > 0) {
+                            $(".counter__input").val(availQty);
                         }
                     }
                     if (response.product_stock == true) {

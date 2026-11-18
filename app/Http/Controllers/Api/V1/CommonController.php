@@ -44,9 +44,20 @@ class CommonController extends Controller
 
         $result = [];
         if ($request->type == 1) {
-            $banner_info =  Banner::where('status', 1)->where('highlight', 1)->limit(6)->orderby('created_at', 'desc')->get();
+            $banner_info = Banner::where('status', 1)->where('highlight', 1)->limit(6)->orderby('created_at', 'desc')->get();
+        } elseif ($request->type == 2) {
+            $banner_info = Banner::where('status', 1)->where('offer', 1)->limit(6)->orderby('created_at', 'desc')->get();
         } else {
-            $banner_info = Banner::where('status', 1)->limit(6)->orderby('created_at', 'desc')->where('highlight', null)->where('offer', null)->get();
+            $banner_info = Banner::where('status', 1)
+                ->where(function ($q) {
+                    $q->where('highlight', 0)->orWhereNull('highlight');
+                })
+                ->where(function ($q) {
+                    $q->where('offer', 0)->orWhereNull('offer');
+                })
+                ->limit(6)
+                ->orderby('created_at', 'desc')
+                ->get();
         }
         if (!empty($banner_info)) {
             $banner_data = [];
@@ -653,6 +664,9 @@ class CommonController extends Controller
                         $title = $area->title ?? '';
                         $areaList['id'] = strval(@$area->id);
                         $areaList['name'] = strval(@$area->title);
+                        $areaList['delivery_fee'] = strval(@$area->delivery_fee ?? 0);
+                        $areaList['delivery_amount'] = strval(@$area->delivery_amount ?? 0);
+                        $areaList['rate'] = strval(@$area->rate ?? 0);
                         $areaArr[] = $areaList;
                     }
                     $mainArr = $areaArr;

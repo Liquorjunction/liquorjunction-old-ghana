@@ -914,795 +914,795 @@ class UserController extends Controller
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
             }
-        } else {
-            $result['code'] = strval(0);
+            } else {
+                        $result['code'] = strval(0);
             $result['message'] = 'something_went_wrong';
             $result['result'] = [];
-
+            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
         }
-    }
-
+    
     public function otpVerification(Request $request)
     {
-        $result = [];
+                $result = [];
         $finalArr = [];
         $validator = Validator::make($request->all(), [
-            'otp' => 'required',
+                        'otp' => 'required',
             'uniqid' => 'required',
             'token' => 'required',
-        ]);
-
+            ]);
+        
         if ($validator->fails()) {
-            return response()->json([
-                'status_code' => strval(0),
+                        return response()->json([
+                                'status_code' => strval(0),
                 'error' => $validator->messages(),
                 'data' => null
-            ], 200);
-        }
-
+                ], 200);
+            }
+        
         $post = $request->all();
         if ($post) {
-            // Find user by uniqid, token, and otp
+                        // Find user by uniqid, token, and otp
             $userdata = MainUser::where('uniqid', $request->uniqid)
-                ->where('otp', $request->otp)
+            ->where('otp', $request->otp)
                 ->where('remember_token', $request->token)
                 ->latest()->first();
-            if (!empty($userdata) && $userdata != "") {
-                // Check OTP expiry
+                if (!empty($userdata) && $userdata != "") {
+                                // Check OTP expiry
                 if ($userdata->otp_expire_time <= date('Y-m-d H:i:s')) {
-                    $result['code'] = strval(-9);
+                                        $result['code'] = strval(-9);
                     $result['message'] = 'otp_expired';
                     $result['result'] = NULL;
                     $mainResult = $result;
                     return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-                }
+                    }
                 // If guest user, update status and allow login
                 if ($userdata->is_guest_user) {
-                    MainUser::where('uniqid', $userdata->uniqid)->update([
-                        'is_verify_user' => 1,
+                                        MainUser::where('uniqid', $userdata->uniqid)->update([
+                                                'is_verify_user' => 1,
                         'is_otp_verify' => 1,
                         'status' => 1,
                         'otp' => null,
                         'otp_expire_time' => null,
                         'is_phone' => @$request->device_type,
                         'device_token' => @$request->firebase_token,
-                    ]);
+                        ]);
                     $response = [
-                        'otp' => '',
+                                                'otp' => '',
                         'otp_expire_time' => '',
                         'uniqid' => strval(@$userdata->uniqid ?: ''),
                         'remember_token' => strval(@$userdata->remember_token ?: ''),
-                    ];
+                        ];
                     $result['code'] = strval(1);
                     $result['message'] = 'guest_user_verified';
                     $result['result'] = $response;
                     $mainResult = $result;
                     return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-                } else {
-                    // Normal user flow
+                    } else {
+                                        // Normal user flow
                     MainUser::where('uniqid', $userdata->uniqid)->update([
-                        'is_verify_user' => 1,
+                                                'is_verify_user' => 1,
                         'is_otp_verify' => 1,
                         'is_phone' => @$request->device_type,
                         'device_token' => @$request->firebase_token,
-                    ]);
+                        ]);
                     $ismail = $this->sendRegisterToUser($userdata);
                     $response = [
-                        'otp' => strval(@$userdata->otp ?: ''),
+                                                'otp' => strval(@$userdata->otp ?: ''),
                         'otp_expire_time' => strval(@$userdata->otp_expire_time ?: ''),
                         'uniqid' => strval(@$userdata->uniqid ?: ''),
-                    ];
+                        ];
                     $result['code'] = strval(1);
                     $result['message'] = 'user_register_successfully';
                     $result['result'] = $response;
                     $mainResult = $result;
                     return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-                }
-            } else {
-                $result['code'] = strval(-8);
+                    }
+                } else {
+                                $result['code'] = strval(-8);
                 $result['message'] = 'otp_not_match';
                 $result['result'] = NULL;
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            }
-        } else {
-            $result['code'] = strval(0);
+                }
+            } else {
+                        $result['code'] = strval(0);
             $result['message'] = 'something_went_wrong';
             $result['result'] = [];
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
         }
-    }
-
+    
     public function forgototpVerification(Request $request)
     {
-        $result = [];
+                $result = [];
         $finalArr = [];
         $validator = \Validator::make($request->all(), [
-            'email' => 'required|email',
+                        'email' => 'required|email',
             'otp' => 'required',
-        ]);
-
+            ]);
+        
         if ($validator->fails()) {
-            return response()->json([
-                'status_code' => strval(0),
+                        return response()->json([
+                                'status_code' => strval(0),
                 'error' => $validator->messages(),
                 'data' => null
-            ], 200);
-        }
-
-
-
+                ], 200);
+            }
+        
+        
+        
         $post = $request->all();
-
+        
         if ($post) {
-            $userdata = MainUser::where('email', $request->email)->where('otp', $request->otp)->where('is_otp_verify', 1)->first();
+                        $userdata = MainUser::where('email', $request->email)->where('otp', $request->otp)->where('is_otp_verify', 1)->first();
             // echo "<pre>";print_r($userdata);exit();
             if (!empty($userdata) && $userdata != "") {
-
-                if ($userdata->otp_expire_time <= date('Y-m-d H:i:s')) {
-                    $result['code'] = strval(-9);
+                
+            if ($userdata->otp_expire_time <= date('Y-m-d H:i:s')) {
+                                        $result['code'] = strval(-9);
                     $result['message'] = 'otp_expired';
                     $result['result'] = [];
                     $mainResult = $result;
-
+                    
                     return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-                }
-
+                    }
+                
                 $update = MainUser::where('uniqid', $userdata->uniqid)->update([
-                    'is_phone' => @$request->device_type,
+                                        'is_phone' => @$request->device_type,
                     'device_token' => @$request->firebase_token,
                     'is_verify_user' => 1,
-                ]);
-
+                    ]);
+                
                 // $ismail = $this->sendRegisterToUser($userdata);
                 $response = \App\Helpers\ResponseHelper::userCommonResponse($userdata);
-
+                
                 $result['code'] = strval(1);
                 $result['message'] = 'success';
                 $result['result'][] = $response;
-
+                
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            } else {
-                $result['code'] = strval(-8);
+                } else {
+                                $result['code'] = strval(-8);
                 $result['message'] = 'opt_not_match';
                 $result['result'] = [];
-
+                
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            }
-        } else {
-
-            $result['code'] = strval(0);
+                }
+            } else {
+            
+        $result['code'] = strval(0);
             $result['message'] = 'something_went_wrong';
             $result['result'] = [];
-
+            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
         }
-    }
-
+    
     public function sendRegisterToUser($userData)
     {
-        $setting = Setting::find(1);
+                $setting = Setting::find(1);
         $from_email = $setting['mail_no_replay'];
         $emailtemp = Emailtemplate::find('9');
         $name = $userData->first_name . ' ' . $userData->last_name;
-
-
+        
+        
         $data = array('email' => $userData->email, 'name' => $name, 'id' => 9, 'from_email' => $from_email, 'support_name' => $setting['support_name'], 'title' => $emailtemp['title'], 'subject' => $emailtemp['subject']);
-
+        
         Mail::send('emails.register_user', $data, function ($message) use ($data) {
-
-            $message->to($data['email'], $data['title'])->subject($data['subject']);
+            
+        $message->to($data['email'], $data['title'])->subject($data['subject']);
             //$message->to('manoj.vrinsofts@gmail.com', 'Upskild')->subject('Password has been reset succesfully!');
-
+            
             $message->from($data['from_email'], $data['support_name']);
-        });
-    }
-
+            });
+        }
+    
     public function resendOtp(Request $request)
     {
-        $result = [];
+                $result = [];
         $finalArr = [];
-
+        
         $validator = \Validator::make($request->all(), [
-            'uniqid' => 'required',
+                        'uniqid' => 'required',
             'token' => 'required',
-        ]);
-
+            ]);
+        
         if ($validator->fails()) {
-            return response()->json([
-                'status_code' => strval(0),
+                        return response()->json([
+                                'status_code' => strval(0),
                 'error' => $validator->messages(),
                 'data' => null
-            ], 200);
-        }
-
+                ], 200);
+            }
+        
         $response = \App\Helpers\ResponseHelper::userCheckStatus($request->uniqid, $request->token);
         // echo "<pre>";print_r();exit();
         if ($response['code'] != 1) {
-            $mainResult = $response;
+                        $mainResult = $response;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-        }
-
+            }
+        
         $post = $request->all();
-
+        
         if ($post) {
-            $setting = Setting::find(1);
+                        $setting = Setting::find(1);
             $findUser = MainUser::where('uniqid', $request->uniqid)->where('remember_token', $request->token)->where('status', '!=', 2)->first();
             $otp = mt_rand(1000, 9999);
             $otp_expire_time = Carbon::now()->addSeconds(@$setting->otp_expiration_second ?: 300);
-
-
+            
+            
             if (!empty($findUser) && $findUser != "") {
-
-                $update = MainUser::where('uniqid', $request->uniqid)->update([
-                    "otp" => $otp,
+                
+            $update = MainUser::where('uniqid', $request->uniqid)->update([
+                                        "otp" => $otp,
                     "otp_expire_time" => $otp_expire_time,
-                ]);
-
+                    ]);
+                
                 $userdata = MainUser::where('uniqid', $request->uniqid)->where('status', 1)->first();
                 // echo "<pre>";print_r($userdata);exit();
                 //  $response = \App\Helpers\ResponseHelper::userCommonResponse($userdata);
                 $response = [
-                    'otp' => strval(@$userdata->otp ?: ''),
+                                        'otp' => strval(@$userdata->otp ?: ''),
                     'otp_expire_time' => strval(@$userdata->otp_expire_time ?: ''),
                     'uniqid' => strval(@$userdata->uniqid ?: ''),
-                ];
-
+                    ];
+                
                 $logo = \Config::get('app.url') . 'public/assets/dashboard/images/liquor.png';
                 $url_link = \URL::to("/");
                 $url = $url_link . '/';
                 $email = $userdata->email;
                 $otp = $otp;
                 $name = $userdata->first_name;
-
+                
                 $ismail = $this->attachment_otp_email($email, $otp, $name, $url, $logo);
-
+                
                 $result['code'] = strval(1);
                 $result['message'] = 'success';
                 $result['result'] = $response;
-
+                
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            } else {
-                $result['code'] = strval(0);
+                } else {
+                                $result['code'] = strval(0);
                 $result['message'] = 'no_data_found';
                 // $result['result']   =  [];
-
+                
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            }
-        } else {
-
-            $result['code'] = strval(0);
+                }
+            } else {
+            
+        $result['code'] = strval(0);
             $result['message'] = 'something_went_wrong';
             $result['result'] = [];
-
+            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
         }
-    }
-
+    
     public function resendforgotOtp(Request $request)
     {
-        $result = [];
+                $result = [];
         $finalArr = [];
         $validator = \Validator::make($request->all(), [
-            'email' => 'required|email',
-        ]);
-
+                        'email' => 'required|email',
+            ]);
+        
         if ($validator->fails()) {
-            return response()->json([
-                'status_code' => strval(0),
+                        return response()->json([
+                                'status_code' => strval(0),
                 'error' => $validator->messages(),
                 'data' => null
-            ], 200);
-        }
-
-
-
+                ], 200);
+            }
+        
+        
+        
         $post = $request->all();
-
+        
         if ($post) {
-            $setting = Setting::find(1);
+                        $setting = Setting::find(1);
             $findUser = MainUser::where('email', $request->email)->where('status', '!=', 2)->where('is_otp_verify', 1)->first();
             $otp = mt_rand(1000, 9999);
             $otp_expire_time = Carbon::now()->addSeconds(@$setting->otp_expiration_second ?: 300);
-
-
+            
+            
             if (!empty($findUser) && $findUser != "") {
-
-                $update = MainUser::where('uniqid', $findUser->uniqid)->update([
-                    "otp" => $otp,
+                
+            $update = MainUser::where('uniqid', $findUser->uniqid)->update([
+                                        "otp" => $otp,
                     "otp_expire_time" => $otp_expire_time,
-                ]);
-
+                    ]);
+                
                 $userdata = MainUser::where('uniqid', $findUser->uniqid)->where('status', 1)->first();
                 // echo "<pre>";print_r($userdata);exit();
                 $ismail = $this->sendOtpToUser($userdata, $otp);
                 $response = \App\Helpers\ResponseHelper::userCommonResponse($userdata);
-
+                
                 $result['code'] = strval(1);
                 $result['message'] = 'success';
                 $result['result'][] = $response;
-
+                
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            } else {
-                $result['code'] = strval(0);
+                } else {
+                                $result['code'] = strval(0);
                 $result['message'] = 'no_data_found';
                 $result['result'] = [];
-
+                
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            }
-        } else {
-
-            $result['code'] = strval(0);
+                }
+            } else {
+            
+        $result['code'] = strval(0);
             $result['message'] = 'something_went_wrong';
             $result['result'] = [];
-
+            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
         }
-    }
-
+    
     public function forgotPassword(Request $request)
     {
-        $result = [];
+                $result = [];
         $finalArr = [];
         $validator = \Validator::make($request->all(), [
-            'email_phone' => 'required',
-        ]);
-
+                        'email_phone' => 'required',
+            ]);
+        
         if ($validator->fails()) {
-            return response()->json([
-                'status_code' => strval(0),
+                        return response()->json([
+                                'status_code' => strval(0),
                 'error' => $validator->messages(),
                 'data' => null
-            ], 200);
-        }
-
+                ], 200);
+            }
+        
         $post = $request->all();
-
+        
         if ($post) {
-            $User = MainUser::where([
-                ['status', '!=', 2],
+                        $User = MainUser::where([
+                                ['status', '!=', 2],
                 ['is_otp_verify', 1],
-            ])->where('email', $request->email_phone)->orWhere('phone', $request->email_phone)->first();
+                ])->where('email', $request->email_phone)->orWhere('phone', $request->email_phone)->first();
             if (!empty($User)) {
-
-                if ($User->status == 0) {
-
-                    $result['code'] = strval(-6);
+                
+            if ($User->status == 0) {
+                    
+                $result['code'] = strval(-6);
                     $result['message'] = 'email_id_inactive';
                     $result['result'] = [];
-
+                    
                     $mainResult = $result;
                     return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-                } elseif ($User->status == 2) {
-
-                    $result['code'] = strval(-7);
+                    } elseif ($User->status == 2) {
+                    
+                $result['code'] = strval(-7);
                     $result['message'] = 'profile_deleted_inactive';
                     $result['result'] = [];
-
+                    
                     $mainResult = $result;
                     return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-                } else {
-
-                    $setting = Setting::find(1);
-
+                    } else {
+                    
+                $setting = Setting::find(1);
+                    
                     $id = $User->id;
-
+                    
                     $otp = rand(1000, 9999);
                     $otp_expire_time = Carbon::now()->addSeconds(@$setting->otp_expiration_second ?: 300);
-
+                    
                     $token = $this->generateToken();
-
+                    
                     $User->otp = $otp;
                     $User->otp_expire_time = $otp_expire_time;
                     $User->remember_token = $token;
-
+                    
                     if ($User->save()) {
-                        $ismail = $this->sendOtpToUser($User, $otp);
+                                                $ismail = $this->sendOtpToUser($User, $otp);
                         // response = \App\Helpers\ResponseHelper::userCommonResponse($User);
                         $response = [
-                            'otp' => strval(@$User->otp ?: ''),
+                                                        'otp' => strval(@$User->otp ?: ''),
                             'otp_expire_time' => strval(@$User->otp_expire_time ?: ''),
                             'uniqid' => strval(@$User->uniqid ?: ''),
                             'remember_token' => strval(@$User->remember_token ?: '')
-                        ];
-
+                            ];
+                        
                         $result['code'] = strval(1);
                         $result['message'] = 'otp_sent';
                         $result['result'] = $response;
-
+                        
                         $mainResult = $result;
                         return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-                    } else {
-                        $result['code'] = strval(0);
+                        } else {
+                                                $result['code'] = strval(0);
                         $result['message'] = 'something_went_wrong';
                         $result['result'] = [];
-
+                        
                         $mainResult = $result;
                         return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+                        }
                     }
-                }
-            } else {
-                $result['code'] = strval(-10);
+                } else {
+                                $result['code'] = strval(-10);
                 $result['message'] = 'email_or_password_not_exist';
                 $result['result'] = [];
-
+                
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            }
-        } else {
-
-            $result['code'] = strval(0);
+                }
+            } else {
+            
+        $result['code'] = strval(0);
             $result['message'] = 'something_went_wrong';
             $result['result'] = [];
-
+            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
         }
-    }
-
+    
     //Forgot Password Otp Send in mail
     public function sendOtpToUser($userData, $otp)
     {
-        $setting = Setting::find(1);
+                $setting = Setting::find(1);
         // $emaildetail = EmailTemplate::find(8);
         // $from_email = $setting['from_email'];
         $name = $userData->first_name . ' ' . $userData->last_name;
         $from_email = $setting['mail_no_replay'];
         $emailtemp = Emailtemplate::find('15');
-
+        
         $data = array('email' => $userData->email, 'name' => $name, 'otp' => $otp, 'id' => 15, 'from_email' => $from_email, 'support_name' => $setting['support_name'], 'title' => $emailtemp['title'], 'subject' => $emailtemp['subject']);
-
+        
         Mail::send('emails.user_otp', $data, function ($message) use ($data) {
-
-            $message->to($data['email'], $data['title'])->subject($data['subject']);
-
+            
+        $message->to($data['email'], $data['title'])->subject($data['subject']);
+            
             $message->from($data['from_email'], $data['support_name']);
-        });
-    }
-
+            });
+        }
+    
     public function resetPassword(Request $request)
     {
-        $result = [];
+                $result = [];
         $finalArr = [];
         $validator = \Validator::make($request->all(), [
-            'uniqid' => 'required',
+                        'uniqid' => 'required',
             'new_password' => 'required',
-        ]);
-
+            ]);
+        
         if ($validator->fails()) {
-            return response()->json([
-                'status_code' => strval(0),
+                        return response()->json([
+                                'status_code' => strval(0),
                 'error' => $validator->messages(),
                 'data' => null
-            ], 200);
-        }
-
+                ], 200);
+            }
+        
         $post = $request->all();
         if ($post) {
-            $data = MainUser::where([
-                ['uniqid', '=', $request->uniqid],
+                        $data = MainUser::where([
+                                ['uniqid', '=', $request->uniqid],
                 ['status', '=', 1],
                 // ['remember_token', '=', $request->token],
-            ])->first();
-
+                ])->first();
+            
             // dd($data);
             if (!empty($data)) {
-
-                $customer = MainUser::where('uniqid', $request->uniqid)->update(
-                    array(
-                        'password' => Hash::make($request->new_password),
-                    )
-                );
+                
+            $customer = MainUser::where('uniqid', $request->uniqid)->update(
+                                        array(
+                                                'password' => Hash::make($request->new_password),
+                        )
+                    );
                 $customerData_detail = MainUser::where('uniqid', $request->uniqid)->first();
                 // $response = \App\Helpers\ResponseHelper::userCommonResponse($customerData_detail);
-
+                
                 $result['code'] = strval(1);
                 $result['message'] = 'password_reset_success';
                 //  $result['result'][]       =  $response;
-
+                
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            } else {
-                $result['code'] = strval(0);
+                } else {
+                                $result['code'] = strval(0);
                 $result['message'] = 'something_went_wrong';
                 $result['result'] = [];
-
+                
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            }
-        } else {
-
-            $result['code'] = strval(0);
+                }
+            } else {
+            
+        $result['code'] = strval(0);
             $result['message'] = 'something_went_wrong';
             $result['result'] = [];
-
+            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
         }
-    }
-
+    
     public function viewProfile(Request $request)
     {
-        $result = [];
+                $result = [];
         $finalArr = [];
         $validator = \Validator::make($request->all(), [
-            'uniqid' => 'required',
+                        'uniqid' => 'required',
             'token' => 'required',
-        ]);
-
+            ]);
+        
         if ($validator->fails()) {
-            return response()->json([
-                'status_code' => strval(0),
+                        return response()->json([
+                                'status_code' => strval(0),
                 'error' => $validator->messages(),
                 'data' => null
-            ], 200);
-        }
-
+                ], 200);
+            }
+        
         $post = $request->all();
-
+        
         $response = \App\Helpers\ResponseHelper::userCheckStatus($request->uniqid, $request->token);
         // echo "<pre>";print_r();exit();
         if ($response['code'] != 1) {
-            $mainResult = $response;
+                        $mainResult = $response;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-        }
-
+            }
+        
         if ($post) {
-            $userdata = MainUser::where('uniqid', $request->uniqid)->where('status', 1)->first();
-
+                        $userdata = MainUser::where('uniqid', $request->uniqid)->where('status', 1)->first();
+            
             if (!empty($userdata)) {
-                $response = \App\Helpers\ResponseHelper::userCommonResponse($userdata);
-
+                                $response = \App\Helpers\ResponseHelper::userCommonResponse($userdata);
+                
                 $result['code'] = strval(1);
                 $result['message'] = 'success';
                 $result['result'] = $response;
-
+                
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            } else {
-                $result['code'] = strval(0);
+                } else {
+                                $result['code'] = strval(0);
                 $result['message'] = 'no_data_found';
                 $result['result'] = [];
-
+                
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            }
-        } else {
-
-            $result['code'] = strval(0);
+                }
+            } else {
+            
+        $result['code'] = strval(0);
             $result['message'] = 'something_went_wrong';
             $result['result'] = [];
-
+            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
         }
-    }
-
+    
     public function changePassword(Request $request)
     {
-        $result = [];
+                $result = [];
         $finalArr = [];
         $validator = \Validator::make($request->all(), [
-            'uniqid' => 'required',
+                        'uniqid' => 'required',
             'token' => 'required',
             'old_password' => 'required',
             'new_password' => 'required',
             // 'confirm_password' => 'required',
-        ]);
-
+            ]);
+        
         if ($validator->fails()) {
-            return response()->json([
-                'status_code' => strval(0),
+                        return response()->json([
+                                'status_code' => strval(0),
                 'error' => $validator->messages(),
                 'data' => null
-            ], 200);
-        }
-
+                ], 200);
+            }
+        
         $checkPassword = MainUser::where('uniqid', $request->uniqid)->first();
         if (empty($checkPassword)) {
-            $result['code'] = strval(0);
+                        $result['code'] = strval(0);
             $result['message'] = 'no_data_found';
             $result['result'] = [];
-
+            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-        }
-
+            }
+        
         if (!(Hash::check($request->old_password, $checkPassword->password))) {
-            return response()->json([
-                'status_code' => strval(0),
+                        return response()->json([
+                                'status_code' => strval(0),
                 'message' => "current_password_is_incorrect",
                 'result' => null
-            ], 200);
-        }
-
+                ], 200);
+            }
+        
         // if ($request->new_password != $request->confirm_password) {
         //     return response()->json([
         //         'status_code' => strval(0),
         //         'error'=>"New password and confirm password doesn't match",
         //         'data' => null
         //     ], 200);
-
+        
         if (strcmp($request->old_password, $request->new_password) == 0) {
-            $result['code'] = strval(0);
+                        $result['code'] = strval(0);
             $result['message'] = 'new_password_old_password_not_mathced';
             $result['result'] = NULL;
-
+            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-        }
-
+            }
+        
         // exit();
         $post = $request->all();
-
+        
         $response = \App\Helpers\ResponseHelper::userCheckStatus($request->uniqid, $request->token);
         // echo "<pre>";print_r();exit();
         if ($response['code'] != 1) {
-            $mainResult = $response;
+                        $mainResult = $response;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-        }
-
+            }
+        
         if ($post) {
-            $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
-
+                        $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
+            
             if (!empty($userData)) {
-                $updatepsw = MainUser::where('id', $userData->id)->update(
-                    array(
-                        'password' => bcrypt($request->new_password),
-                    )
-                );
-
+                                $updatepsw = MainUser::where('id', $userData->id)->update(
+                                        array(
+                                                'password' => bcrypt($request->new_password),
+                        )
+                    );
+                
                 $result['code'] = strval(1);
                 $result['message'] = 'change_password_successfully';
                 // $result['result']       = [];
-
+                
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            } else {
-
-                $result['code'] = strval(0);
+                } else {
+                
+            $result['code'] = strval(0);
                 $result['message'] = 'no_data_found';
                 $result['result'] = [];
-
+                
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            }
-        } else {
-            $result['code'] = strval(0);
+                }
+            } else {
+                        $result['code'] = strval(0);
             $result['message'] = 'something_went_wrong';
             $result['result'] = [];
-
+            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
         }
-    }
-
+    
     public function logout(Request $request)
     {
-        $result = [];
+                $result = [];
         $finalArr = [];
         $validator = \Validator::make($request->all(), [
-            'uniqid' => 'required',
+                        'uniqid' => 'required',
             'token' => 'required',
-        ]);
-
+            ]);
+        
         if ($validator->fails()) {
-            return response()->json([
-                'status_code' => strval(0),
+                        return response()->json([
+                                'status_code' => strval(0),
                 'error' => $validator->messages(),
                 'data' => null
-            ], 200);
-        }
-
+                ], 200);
+            }
+        
         // exit();
         $post = $request->all();
-
+        
         $response = \App\Helpers\ResponseHelper::userCheckStatus($request->uniqid, $request->token);
         // echo "<pre>";print_r();exit();
         if ($response['code'] != 1) {
-            $mainResult = $response;
+                        $mainResult = $response;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-        }
-
+            }
+        
         if ($post) {
-            $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
-
+                        $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
+            
             $updatepsw = MainUser::where('id', $userData->id)->update(
-                array(
-                    'remember_token' => '',
+                                array(
+                                        'remember_token' => '',
                     'device_token' => '',
-                )
-            );
-
-
+                    )
+                );
+            
+            
             $result['code'] = strval(1);
             $result['message'] = 'success';
             // $result['result']       = [];
-
+            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-        } else {
-            $result['code'] = strval(0);
+            } else {
+                        $result['code'] = strval(0);
             $result['message'] = 'something_went_wrong';
             $result['result'] = [];
-
+            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
         }
-    }
-
+    
     public function updateProfile(Request $request)
     {
-        $result = [];
+                $result = [];
         $finalArr = [];
         $validator = \Validator::make($request->all(), [
-            'uniqid' => 'required',
+                        'uniqid' => 'required',
             'token' => 'required',
-        ]);
-
+            ]);
+        
         if ($validator->fails()) {
-            return response()->json([
-                'status_code' => strval(0),
+                        return response()->json([
+                                'status_code' => strval(0),
                 'error' => $validator->messages(),
                 'data' => null
-            ], 200);
-        }
-
-
-
+                ], 200);
+            }
+        
+        
+        
         // exit();
         $post = $request->all();
-
+        
         $response = \App\Helpers\ResponseHelper::userCheckStatus($request->uniqid, $request->token);
         // echo "<pre>";print_r();exit();
         if ($response['code'] != 1) {
-            $mainResult = $response;
+                        $mainResult = $response;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-        }
-
+            }
+        
         if ($post) {
-
-            $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
-
+            
+        $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
+            
             $validator = \Validator::make($request->all(), [
-                'first_name' => 'required',
+                                'first_name' => 'required',
                 'last_name' => 'required',
                 'phone' => [
-                    // 'required',
+                                        // 'required',
                     Rule::unique('main_users')->ignore($userData->id)->where(function ($query) {
-                        return $query->where('status', '!=', '2');
-                    })
-                ],
+                                                return $query->where('status', '!=', '2');
+                        })
+                    ],
                 'email' => [
-                    // 'required',
+                                        // 'required',
                     Rule::unique('main_users')->ignore($userData->id)->where(function ($query) {
-                        return $query->where('status', '!=', '2');
-                    })
-                ]
-            ]);
-
+                                                return $query->where('status', '!=', '2');
+                        })
+                    ]
+                ]);
+            
             if ($validator->fails()) {
-                return response()->json([
-                    'status_code' => strval(0),
+                                return response()->json([
+                                        'status_code' => strval(0),
                     'error' => $validator->messages(),
                     'data' => null
-                ], 200);
-            }
+                    ], 200);
+                }
             $updatepsw = MainUser::where('id', $userData->id)->update(
-                array(
-                    'first_name' => @$request->first_name,
+                                array(
+                                        'first_name' => @$request->first_name,
                     'last_name' => @$request->last_name,
                     'email' => @$request->email,
                     'phone' => @$request->phone,
@@ -1712,50 +1712,50 @@ class UserController extends Controller
                     'post_code' => @$request->zip_code,
                     'city' => @$request->city,
                     'phone_code' => @$request->phone_code,
-                )
-            );
-
-
+                    )
+                );
+            
+            
             $result['code'] = strval(1);
             $result['message'] = 'success';
             // $result['result']       = [];
-
+            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-        } else {
-            $result['code'] = strval(0);
+            } else {
+                        $result['code'] = strval(0);
             $result['message'] = 'something_went_wrong';
             $result['result'] = [];
-
+            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
         }
-    }
-
+    
     public function contactUs(Request $request)
     {
-        $result = [];
+                $result = [];
         $finalArr = [];
         $validator = \Validator::make($request->all(), [
-            'email' => 'required|email',
+                        'email' => 'required|email',
             'name' => 'required',
             'phone' => 'required',
             'message' => 'required',
-
-        ]);
-
+            
+            ]);
+        
         if ($validator->fails()) {
-            return response()->json([
-                'status_code' => strval(0),
+                        return response()->json([
+                                'status_code' => strval(0),
                 'error' => $validator->messages(),
                 'data' => null
-            ], 200);
-        }
-
+                ], 200);
+            }
+        
         // exit();
         $post = $request->all();
-
-
+        
+        
         if ($post) {
             $ismail = $this->attachment_contact_us_email($request->name, $request->email, $request->phone, $request->message);
             $result['code'] = strval(1);
@@ -2402,6 +2402,7 @@ class UserController extends Controller
                         'data' => null
                     ], 200);
                 }
+
                 $orderInformation = Order::with('order_details', 'orderInfo', 'transcations')->where('order_id', $request->order_number)->where('user_id', $userData->id)->first();
             } else {
                 $validator = \Validator::make($request->all(), [
@@ -2414,6 +2415,7 @@ class UserController extends Controller
                         'data' => null
                     ], 200);
                 }
+
                 $orderInformation = Order::with('order_details', 'orderInfo', 'transcations')->where('id', $request->order_id)->where('user_id', $userData->id)->first();
             }
 
@@ -2535,24 +2537,26 @@ class UserController extends Controller
                 $customer_name = "";
                 $delivery_address = "";
                 $mobile_number = "";
+                $order_lat = "";
+                $order_lng = "";
                 if (!empty($orderInformation->order_type) && $orderInformation->order_type == 1) {
                     $order_type = 'Online';
-                    if (strpos($orderInformation->delivery_address, ',|') !== false) {
-                        $order_delivery_address = explode(',| ', $orderInformation->delivery_address);
-                        //removing first element from array, it means name.         
-                        $customer_name = array_shift($order_delivery_address);
-                        $mobile_number = array_pop($order_delivery_address);
-                        $delivery_address = implode(', ', $order_delivery_address);
-                    }
+                    $parsedDel = Helper::formatOrderAddress($orderInformation->delivery_address, $orderInformation->orderInfo->customer_mobile ?? null);
+                    $customer_name = $parsedDel['name'] ?? '';
+                    $mobile_number = $parsedDel['phone'] ?? '';
+                    $delivery_address = $parsedDel['address'] ?? '';
+                    $order_lat = !empty($parsedDel['lat']) ? strval($parsedDel['lat']) : '';
+                    $order_lng = !empty($parsedDel['lng']) ? strval($parsedDel['lng']) : '';
                 } else {
 
                     $order_type = 'Pickup Order';
-                    // dd($orderInformation->orderInfo->store_pickup_address);
-                    if (strpos($orderInformation->orderInfo->store_pickup_address, ',|') !== false) {
+                    if (strpos($orderInformation->orderInfo->store_pickup_address ?? '', ',|') !== false) {
                         $order_pickup_address = explode(',| ', $orderInformation->orderInfo->store_pickup_address);
                         //removing first element from array, it means name.         
                         $customer_name = array_shift($order_pickup_address);
                         $delivery_address = implode('', $order_pickup_address);
+                    } else {
+                        $delivery_address = $orderInformation->orderInfo->store_pickup_address ?? '';
                     }
                 }
 
@@ -2585,6 +2589,8 @@ class UserController extends Controller
                 $mainArr["customer_name"] = strval(@$customer_name);
                 $mainArr["customer_phone"] = strval(@$mobile_number);
                 $mainArr["delivery_address"] = strval(@$delivery_address);
+                $mainArr["latitude"] = strval(@$order_lat);
+                $mainArr["longitude"] = strval(@$order_lng);
                 $product_original_amount = 0;
                 $product_discount_amount = 0;
                 $total_quantity = 0;
@@ -2992,14 +2998,14 @@ class UserController extends Controller
                 $query->where('status', 1);
             })->withWhereHas('area', function ($query) {
                 $query->where('status', 1);
-            })->where([['user_id', $userData->id], ['status', 1], ['default', 1]])->get();
+            })->where([['user_id', $userData->id], ['status', 1]])->orderBy('default', 'DESC')->get();
 
 
             $mainArr = [];
+            $addressArr = [];
+            $billAddressArr = [];
 
             if (!empty($userAddress)) {
-                $addressArr = [];
-                $billAddressArr = [];
                 foreach ($userAddress as $get_result) {
                     $full_address = $get_result->address ?: '';
                     $full_address .= ($get_result->area->title) ? ', ' . @$get_result->area->title : '';
@@ -3014,16 +3020,22 @@ class UserController extends Controller
                     $addressList['customer_name'] = strval(@$get_result->name);
                     $addressList['customer_phone'] = strval(@$get_result->phone);
                     $addressList['customer_phonecode'] = strval(@$phone_code);
+                    $addressList['address'] = strval(@$get_result->address);
+                    $addressList['city'] = strval(@$get_result->city);
+                    $addressList['zip_code'] = strval(@$get_result->zip_code);
                     $addressList['country_id'] = strval(@$get_result->country_id);
                     $addressList['region_id'] = strval(@$get_result->region_id);
                     $addressList['area_id'] = strval(@$get_result->area_id);
                     $addressList['customer_address'] = strval(@$full_address);
+                    $addressList['is_selected'] = strval(@$get_result->is_selected_address_id ?? 0);
                     $addressList['latitude'] = @$get_result->latitude ? strval($get_result->latitude) : '';
                     $addressList['longitude'] = @$get_result->longitude ? strval($get_result->longitude) : '';
                     $addressArr[] = $addressList;
                 }
+            }
 
-                // Process billing addresses
+            // Process billing addresses
+            if (!empty($UserBillAddressData)) {
                 foreach ($UserBillAddressData as $bill_result) {
                     $full_bill_address = $bill_result->address ?: '';
                     $full_bill_address .= ($bill_result->area->title) ? ', ' . @$bill_result->area->title : '';
@@ -3036,17 +3048,21 @@ class UserController extends Controller
                     $billAddress['customer_name'] = strval(@$bill_result->name);
                     $billAddress['customer_phone'] = strval(@$bill_result->phone);
                     $billAddress['customer_phonecode'] = strval(@$bill_phone_code);
+                    $billAddress['address'] = strval(@$bill_result->address);
                     $billAddress['city'] = strval(@$bill_result->city);
                     $billAddress['zip_code'] = strval(@$bill_result->zip_code);
                     $billAddress['country_id'] = strval(@$bill_result->country_id);
                     $billAddress['region_id'] = strval(@$bill_result->region_id);
                     $billAddress['area_id'] = strval(@$bill_result->area_id);
                     $billAddress['customer_address'] = strval(@$full_bill_address);
+                    $billAddress['is_default'] = strval(@$bill_result->default ?? 0);
                     $billAddress['latitude'] = @$bill_result->latitude ? strval($bill_result->latitude) : '';
                     $billAddress['longitude'] = @$bill_result->longitude ? strval($bill_result->longitude) : '';
                     $billAddressArr[] = $billAddress;
                 }
+            }
 
+            if (!empty($addressArr) || !empty($billAddressArr)) {
                 $mainArr['address_list'] = $addressArr;
                 $mainArr['billing_address_list'] = $billAddressArr;
 
@@ -3204,6 +3220,23 @@ class UserController extends Controller
                     ], 200);
                 }
 
+                $validRegion = DB::table('regions')->where('id', $request->region_id)->where('country_id', $request->country_id)->where('status', 1)->first();
+                if (!$validRegion) {
+                    return response()->json([
+                        'status_code' => strval(0),
+                        'error' => ['region_id' => ['Selected region does not belong to the selected country.']],
+                        'data' => null
+                    ], 200);
+                }
+                $validArea = DB::table('area')->where('id', $request->area_id)->where('region_id', $request->region_id)->where('status', 1)->first();
+                if (!$validArea) {
+                    return response()->json([
+                        'status_code' => strval(0),
+                        'error' => ['area_id' => ['Selected area does not belong to the selected region.']],
+                        'data' => null
+                    ], 200);
+                }
+
                 $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
                 logger()->info("-------------------User Data Edit----------------------");
                 logger()->info(json_encode($userData));
@@ -3261,9 +3294,20 @@ class UserController extends Controller
                     $editAddress->save();
                 }
 
-
                 $result['code'] = strval(1);
                 $result['message'] = 'address_updated_successfully';
+                $result['address_id'] = strval($editAddress->id);
+                $result['result'] = [
+                    'address_id' => strval($editAddress->id),
+                    'name' => strval($editAddress->name),
+                    'phone' => strval($editAddress->phone),
+                    'phonecode' => strval($editAddress->phonecode),
+                    'address' => strval($editAddress->address),
+                    'city' => strval($editAddress->city),
+                    'zip_code' => strval($editAddress->zip_code),
+                    'latitude' => strval($editAddress->latitude ?? ''),
+                    'longitude' => strval($editAddress->longitude ?? ''),
+                ];
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
             } elseif ($request->type == 1) {
@@ -3281,6 +3325,23 @@ class UserController extends Controller
                     return response()->json([
                         'status_code' => strval(0),
                         'error' => $validator->messages(),
+                        'data' => null
+                    ], 200);
+                }
+
+                $validRegion = DB::table('regions')->where('id', $request->region_id)->where('country_id', $request->country_id)->where('status', 1)->first();
+                if (!$validRegion) {
+                    return response()->json([
+                        'status_code' => strval(0),
+                        'error' => ['region_id' => ['Selected region does not belong to the selected country.']],
+                        'data' => null
+                    ], 200);
+                }
+                $validArea = DB::table('area')->where('id', $request->area_id)->where('region_id', $request->region_id)->where('status', 1)->first();
+                if (!$validArea) {
+                    return response()->json([
+                        'status_code' => strval(0),
+                        'error' => ['area_id' => ['Selected area does not belong to the selected region.']],
                         'data' => null
                     ], 200);
                 }
@@ -3328,6 +3389,18 @@ class UserController extends Controller
 
                 $result['code'] = strval(1);
                 $result['message'] = 'address_added_successfully';
+                $result['address_id'] = strval($add_address->id);
+                $result['result'] = [
+                    'address_id' => strval($add_address->id),
+                    'name' => strval($add_address->name),
+                    'phone' => strval($add_address->phone),
+                    'phonecode' => strval($add_address->phonecode),
+                    'address' => strval($add_address->address),
+                    'city' => strval($add_address->city),
+                    'zip_code' => strval($add_address->zip_code),
+                    'latitude' => strval($add_address->latitude ?? ''),
+                    'longitude' => strval($add_address->longitude ?? ''),
+                ];
 
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
@@ -3403,6 +3476,23 @@ class UserController extends Controller
                     ], 200);
                 }
 
+                $validRegion = DB::table('regions')->where('id', $request->region_id)->where('country_id', $request->country_id)->where('status', 1)->first();
+                if (!$validRegion) {
+                    return response()->json([
+                        'status_code' => strval(0),
+                        'error' => ['region_id' => ['Selected region does not belong to the selected country.']],
+                        'data' => null
+                    ], 200);
+                }
+                $validArea = DB::table('area')->where('id', $request->area_id)->where('region_id', $request->region_id)->where('status', 1)->first();
+                if (!$validArea) {
+                    return response()->json([
+                        'status_code' => strval(0),
+                        'error' => ['area_id' => ['Selected area does not belong to the selected region.']],
+                        'data' => null
+                    ], 200);
+                }
+
                 $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
                 $editAddress = UserBillAddress::find($request->bill_address_id);
 
@@ -3450,6 +3540,18 @@ class UserController extends Controller
 
                 $result['code'] = strval(1);
                 $result['message'] = 'address_updated_successfully';
+                $result['bill_address_id'] = strval($editAddress->id);
+                $result['result'] = [
+                    'bill_address_id' => strval($editAddress->id),
+                    'name' => strval($editAddress->name),
+                    'phone' => strval($editAddress->phone),
+                    'phonecode' => strval($editAddress->phonecode),
+                    'address' => strval($editAddress->address),
+                    'city' => strval($editAddress->city),
+                    'zip_code' => strval($editAddress->zip_code),
+                    'latitude' => strval($editAddress->latitude ?? ''),
+                    'longitude' => strval($editAddress->longitude ?? ''),
+                ];
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
             } elseif ($request->type == 1) {
@@ -3467,6 +3569,23 @@ class UserController extends Controller
                     return response()->json([
                         'status_code' => strval(0),
                         'error' => $validator->messages(),
+                        'data' => null
+                    ], 200);
+                }
+
+                $validRegion = DB::table('regions')->where('id', $request->region_id)->where('country_id', $request->country_id)->where('status', 1)->first();
+                if (!$validRegion) {
+                    return response()->json([
+                        'status_code' => strval(0),
+                        'error' => ['region_id' => ['Selected region does not belong to the selected country.']],
+                        'data' => null
+                    ], 200);
+                }
+                $validArea = DB::table('area')->where('id', $request->area_id)->where('region_id', $request->region_id)->where('status', 1)->first();
+                if (!$validArea) {
+                    return response()->json([
+                        'status_code' => strval(0),
+                        'error' => ['area_id' => ['Selected area does not belong to the selected region.']],
                         'data' => null
                     ], 200);
                 }
@@ -3512,6 +3631,18 @@ class UserController extends Controller
 
                 $result['code'] = strval(1);
                 $result['message'] = 'address_added_successfully';
+                $result['bill_address_id'] = strval($add_address->id);
+                $result['result'] = [
+                    'bill_address_id' => strval($add_address->id),
+                    'name' => strval($add_address->name),
+                    'phone' => strval($add_address->phone),
+                    'phonecode' => strval($add_address->phonecode),
+                    'address' => strval($add_address->address),
+                    'city' => strval($add_address->city),
+                    'zip_code' => strval($add_address->zip_code),
+                    'latitude' => strval($add_address->latitude ?? ''),
+                    'longitude' => strval($add_address->longitude ?? ''),
+                ];
 
                 $mainResult = $result;
                 return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));

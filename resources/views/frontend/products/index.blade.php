@@ -615,12 +615,12 @@
         box-shadow: 0 0 0 2px rgba(251, 181, 22, 0.2);
     }
 
-    /* Active Filter Pills Bar (Chips) - Compact Single-Row Horizontal Scroller */
+    /* Active Filter Pills Bar (Chips) - Swiper Slider Integration */
     .active-filter-pills-bar {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 5px 10px;
+        gap: 6px;
+        padding: 5px 8px;
         background: #ffffff;
         border: 1px solid #e9ecef;
         border-radius: 6px;
@@ -628,6 +628,7 @@
         margin-top: -2px;
         box-shadow: 0 1px 2px rgba(0,0,0,0.03);
         min-height: 38px;
+        position: relative;
     }
     .active-pills-label-wrap {
         display: inline-flex;
@@ -642,29 +643,51 @@
         padding-right: 8px;
         border-right: 1px solid #e9ecef;
     }
-    .active-pills-scroller {
+    .active-pills-slider.swiper {
         flex: 1;
-        overflow-x: auto;
-        overflow-y: hidden;
-        white-space: nowrap;
-        -webkit-overflow-scrolling: touch;
-        scroll-behavior: smooth;
+        min-width: 0;
+        overflow: hidden;
         padding: 2px 0;
-        scrollbar-width: thin;
-        scrollbar-color: #dcdcdc transparent;
+        margin: 0 4px;
     }
-    .active-pills-scroller::-webkit-scrollbar {
-        height: 3px;
+    .active-pills-slider .swiper-wrapper {
+        display: flex;
+        align-items: center;
     }
-    .active-pills-scroller::-webkit-scrollbar-track {
-        background: transparent;
+    .filter-chip-slide.swiper-slide {
+        width: auto !important;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
     }
-    .active-pills-scroller::-webkit-scrollbar-thumb {
-        background: #dcdcdc;
-        border-radius: 3px;
+    .pills-nav-btn {
+        width: 22px;
+        height: 22px;
+        min-width: 22px;
+        border-radius: 50%;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        color: #495057;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9.5px;
+        cursor: pointer;
+        padding: 0;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+        user-select: none;
     }
-    .active-pills-scroller::-webkit-scrollbar-thumb:hover {
-        background: var(--lj-gold);
+    .pills-nav-btn:hover:not(.swiper-button-disabled):not(.swiper-button-lock) {
+        background: var(--lj-gold, #fbb516);
+        border-color: var(--lj-gold, #fbb516);
+        color: #242424;
+    }
+    .pills-nav-btn.swiper-button-disabled,
+    .pills-nav-btn.swiper-button-lock {
+        opacity: 0.2;
+        cursor: default;
+        pointer-events: none;
     }
     .active-pills-track {
         display: inline-flex;
@@ -839,22 +862,34 @@
                     </div>
                 </div>
 
-                {{-- Active Filter Pills (Chips Bar - Single-Row Horizontal Scroller) --}}
+                {{-- Active Filter Pills (Chips Bar - Swiper Slider) --}}
                 <div class="active-filter-pills-bar" id="active-pills-container" style="{{ empty($active_pills) ? 'display: none;' : '' }}">
                     <div class="active-pills-label-wrap">
                         <i class="fa-solid fa-filter text-warning" style="font-size: 11px;"></i>
                         <span class="active-pills-label">Active:</span>
                     </div>
-                    <div class="active-pills-scroller" id="pills-scroller">
-                        <div id="pills-list" class="active-pills-track">
+
+                    <button type="button" class="pills-nav-btn pills-swiper-prev" aria-label="Previous">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+
+                    <div class="swiper active-pills-slider" id="pills-slider">
+                        <div id="pills-list" class="swiper-wrapper active-pills-track">
                             @foreach ($active_pills as $pill)
-                                <span class="filter-chip" data-type="{{ $pill['type'] }}" data-id="{{ $pill['id'] }}">
-                                    <span class="chip-text">{{ $pill['label'] }}</span>
-                                    <span class="chip-remove" onclick="removeSinglePill('{{ $pill['type'] }}', '{{ $pill['id'] }}');" title="Remove filter">&times;</span>
-                                </span>
+                                <div class="swiper-slide filter-chip-slide">
+                                    <span class="filter-chip" data-type="{{ $pill['type'] }}" data-id="{{ $pill['id'] }}">
+                                        <span class="chip-text">{{ $pill['label'] }}</span>
+                                        <span class="chip-remove" onclick="removeSinglePill('{{ $pill['type'] }}', '{{ $pill['id'] }}');" title="Remove filter">&times;</span>
+                                    </span>
+                                </div>
                             @endforeach
                         </div>
                     </div>
+
+                    <button type="button" class="pills-nav-btn pills-swiper-next" aria-label="Next">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+
                     <button type="button" onclick="resetAllFacetedFilters();" class="btn-clear-all" title="Clear all active filters">
                         Clear All
                     </button>
@@ -1759,6 +1794,41 @@
         }
     };
 
+    window.pillsSwiperInstance = null;
+
+    window.initOrUpdatePillsSlider = function() {
+        if (typeof Swiper === 'undefined') return;
+
+        var sliderEl = document.querySelector('.active-pills-slider');
+        if (!sliderEl) return;
+
+        if (window.pillsSwiperInstance) {
+            window.pillsSwiperInstance.update();
+            return;
+        }
+
+        window.pillsSwiperInstance = new Swiper('.active-pills-slider', {
+            slidesPerView: 'auto',
+            spaceBetween: 8,
+            freeMode: {
+                enabled: true,
+                sticky: false,
+                momentumBounce: true,
+            },
+            grabCursor: true,
+            mousewheel: {
+                forceToAxis: true,
+            },
+            navigation: {
+                nextEl: '.pills-swiper-next',
+                prevEl: '.pills-swiper-prev',
+            },
+            watchOverflow: true,
+            observer: true,
+            observeParents: true,
+        });
+    };
+
     // Active Pills Render
     window.renderActivePills = function(pills) {
         if (!window.jQuery) return;
@@ -1769,19 +1839,33 @@
         if (!pills || pills.length === 0) {
             container.hide();
             list.html('');
+            if (window.pillsSwiperInstance) {
+                window.pillsSwiperInstance.update();
+            }
             return;
         }
 
         var html = '';
         pills.forEach(function(p) {
+            html += '<div class="swiper-slide filter-chip-slide">';
             html += '<span class="filter-chip" data-type="' + p.type + '" data-id="' + p.id + '">';
             html += '<span class="chip-text">' + p.label + '</span>';
             html += '<span class="chip-remove" onclick="removeSinglePill(\'' + p.type + '\', \'' + p.id + '\');" title="Remove filter">&times;</span>';
             html += '</span>';
+            html += '</div>';
         });
 
         list.html(html);
         container.css('display', 'flex').show();
+
+        setTimeout(function() {
+            if (window.pillsSwiperInstance) {
+                window.pillsSwiperInstance.update();
+                window.pillsSwiperInstance.slideTo(0, 150);
+            } else {
+                window.initOrUpdatePillsSlider();
+            }
+        }, 30);
     };
 
     // Remove Single Pill
@@ -2178,6 +2262,13 @@
             $(document).on('hidden.bs.offcanvas', '#filteroffcanvas', function () {
                 window.scrollToProductTop();
             });
+
+            // Initialize Swiper on active pills slider if pills are present on initial page load
+            if ($('#active-pills-container').is(':visible') && $('#pills-list .filter-chip-slide').length > 0) {
+                setTimeout(function() {
+                    window.initOrUpdatePillsSlider();
+                }, 100);
+            }
         });
     }
 

@@ -333,6 +333,7 @@
                         @php
                             $szCount = $sizeCounts[$size] ?? 0;
                             $isSizeChecked = in_array($size, $selectedSizes);
+                            $szUnit = $sizeUnitMap[$size] ?? (floatval($size) <= 5 ? 'L' : 'ML');
                         @endphp
                         <li class="facet-chip-item facet-size-item {{ $szCount == 0 && !$isSizeChecked ? 'zero-count' : '' }}" 
                             data-size="{{ $size }}">
@@ -344,7 +345,7 @@
                                        id="size_{{ $size }}"
                                        {{ $isSizeChecked ? 'checked' : '' }}
                                        {{ $szCount == 0 && !$isSizeChecked ? 'disabled' : '' }}>
-                                <span class="chip-title">{{ $size }} ml</span>
+                                <span class="chip-title">{{ $size }} {{ $szUnit }}</span>
                                 <span class="chip-count" id="size-count-{{ $size }}">{{ $szCount }}</span>
                             </label>
                         </li>

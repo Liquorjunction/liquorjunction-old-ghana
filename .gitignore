@@ -21,3 +21,8 @@
 AuthKey_*.p8
 liquor-junction.json
 *.sql
+
+# Postman Extension & Workspace
+.postman/
+postman/
+*.postman_collection.json

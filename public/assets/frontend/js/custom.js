@@ -651,8 +651,11 @@ $(document).ready(function () {
     if ($this.hasClass("counter__increment")) {
       $("#add-to-bucket").show();
       $("#go-to-cart").hide();
-      var variant_id = $this.attr("data-id") || $("input[name='pack_size']:checked").val();
-      var maxStockAttr = $("input[name='pack_size']:checked").attr("data-available-qty") || $this.attr("data-available-qty");
+      var variant_id = $this.attr("data-id") || $("input[name='pack_size']:checked").val() || $("input[name='pack_size']").first().val();
+      var maxStockAttr = $counter__input.attr("data-available-qty") || 
+                         $this.attr("data-available-qty") || 
+                         $("input[name='pack_size']:checked").attr("data-available-qty") || 
+                         $("input[name='pack_size']").first().attr("data-available-qty");
       var maxStock = (maxStockAttr !== undefined && maxStockAttr !== false && maxStockAttr !== "") ? parseInt(maxStockAttr) : null;
 
       // Local stock limit check (instant UI feedback)
@@ -667,12 +670,15 @@ $(document).ready(function () {
               confirmButtonColor: '#fbb516'
             });
           }
-          return;
+          return false;
         }
       }
 
       // Optimistic instant increment (no lag on clicks)
       var newVal = $currentVal + 1;
+      if (maxStock !== null && !isNaN(maxStock) && maxStock > 0 && newVal > maxStock) {
+        newVal = maxStock;
+      }
       $counter__input.val(newVal);
 
       // Debounced server verification
@@ -687,6 +693,8 @@ $(document).ready(function () {
               if (response.available_qty !== undefined) {
                 var avail = parseInt(response.available_qty);
                 $("input[name='pack_size']:checked").attr("data-available-qty", avail);
+                $counter__input.attr("data-available-qty", avail);
+                $this.attr("data-available-qty", avail);
                 if (targetVal > avail) {
                   $counter__input.val(avail);
                   if (typeof Swal !== 'undefined') {

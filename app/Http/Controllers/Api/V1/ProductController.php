@@ -279,21 +279,44 @@ class ProductController extends Controller
             ];
         }
 
+        // Combined Special Offers matching Web Home Page Special Offers slider
+        $combinedProducts = [];
+        $seenProductIds = [];
+        foreach (array_merge($offerProductArr, $bogoProductArr) as $item) {
+            $pid = $item['product_id'];
+            if (!in_array($pid, $seenProductIds)) {
+                $seenProductIds[] = $pid;
+                $combinedProducts[] = $item;
+            }
+        }
+
         // Final response
         $response = [
+            'combined_offers' => [
+                'status' => (!empty($offer) || !empty($bogo)) && count($combinedProducts) > 0,
+                'products' => array_slice($combinedProducts, 0, $limit),
+                'total_count' => count($combinedProducts),
+                'showing_count' => min($limit, count($combinedProducts)),
+            ],
+            'special_offers' => [
+                'status' => (!empty($offer) || !empty($bogo)) && count($combinedProducts) > 0,
+                'products' => array_slice($combinedProducts, 0, $limit),
+                'total_count' => count($combinedProducts),
+                'showing_count' => min($limit, count($combinedProducts)),
+            ],
             'offer' => [
-                    'status' => !empty($offer),
-                    'products' => $offerProductArr,
-                    'total_count' => $offer_total_product_count,
-                    'showing_count' => $offer_showing_product_count,
-                ],
-                'bogo' => [
-                    'status' => !empty($bogo),
-                    'products' => $bogoProductArr,
-                    'total_count' => $bogo_total_product_count,
-                    'showing_count' => $bogo_showing_product_count,
-                ]
-            ];
+                'status' => !empty($offer),
+                'products' => $offerProductArr,
+                'total_count' => $offer_total_product_count,
+                'showing_count' => $offer_showing_product_count,
+            ],
+            'bogo' => [
+                'status' => !empty($bogo),
+                'products' => $bogoProductArr,
+                'total_count' => $bogo_total_product_count,
+                'showing_count' => $bogo_showing_product_count,
+            ]
+        ];
 
         $mainResult = [
             'code' => '1',
@@ -759,13 +782,8 @@ class ProductController extends Controller
                         $list_type = $request->listing_type;
                         $today = Carbon::now()->toDateString();
                         
-                       if ($list_type == 2) {
-                            $products = $products->where('p.is_product_bestseller', 1);
-                        } else if($list_type == 3)
-                        {
-                            $products = $products->where('p.brand_id', $brand_id);
-                        } elseif ($list_type == 4) {
-                            // Only offer products
+                        if ($list_type == 1 || $list_type == 4) {
+                            // Only offer & bogo products (Special Offers matching Web)
                             $offer = Offers::where('status', 1)
                                 ->whereDate('expiry_date', '>=', $today)
                                 ->first();
@@ -810,6 +828,11 @@ class ProductController extends Controller
                                 // No active offers or bogo
                                 $products = $products->whereRaw('0 = 1');
                             }
+                        } elseif ($list_type == 2) {
+                            $products = $products->where('p.is_product_bestseller', 1);
+                        } else if($list_type == 3)
+                        {
+                            $products = $products->where('p.brand_id', $brand_id);
                         } 
 
                         if($category_ids!=null && $subcategory_ids ==null){
@@ -931,7 +954,7 @@ class ProductController extends Controller
                     $final_bogo_status = false;
                     $final_bogo_label = '';
                     
-                    if ($list_type == 4 && $bogo && (
+                    if (($list_type == 1 || $list_type == 4) && $bogo && (
                         ($bogo->product_id && $bogo->product_id == $data->productId) ||
                         ($bogo->brand_id && $bogo->brand_id == $data->brand_id) ||
                         ($bogo->subcategory_id && $bogo->subcategory_id == $data->subcategory_id) ||
@@ -939,7 +962,7 @@ class ProductController extends Controller
                     )) {
                         $final_bogo_status = true;
                         $final_bogo_label = 'BOGO';
-                    } elseif ($list_type != 4 && $bogo) {
+                    } elseif ($list_type != 1 && $list_type != 4 && $bogo) {
                         $final_bogo_status = true;
                         $final_bogo_label = 'BOGO';
                     }
@@ -972,7 +995,7 @@ class ProductController extends Controller
                     $final_offer_subcategory_id = $data->subcategory_id;
                     $final_offer_brand_id = $data->brand_id;
 
-                    if ($list_type == 4 && $offer && (
+                    if (($list_type == 1 || $list_type == 4) && $offer && (
                         ($offer->product_id && $offer->product_id == $data->productId) ||
                         ($offer->brand_id && $offer->brand_id == $data->brand_id) ||
                         ($offer->subcategory_id && $offer->subcategory_id == $data->subcategory_id) ||
@@ -981,7 +1004,7 @@ class ProductController extends Controller
                         $final_offer_status = true;
                         $final_offer_type = $offer->offer_type ?? null;
                         $final_discount_amount = $offer->dis_amount ?? 0;
-                    } elseif ($list_type != 4 && $offer) {
+                    } elseif ($list_type != 1 && $list_type != 4 && $offer) {
                         $final_offer_status = true;
                         $final_offer_type = $offer->offer_type ?? null;
                         $final_discount_amount = $offer->dis_amount ?? 0;
@@ -3454,7 +3477,29 @@ class ProductController extends Controller
         {
             $userData = DB::table('main_users')->where('uniqid',$request->uniqid)->first();
 
-            $cartData = DB::table('cart')->leftjoin('product','product.id','=','cart.product_id')->leftJoin('main_users','main_users.id','=','product.supplier_id')->select('cart.*','product.product_image','product.uniqid as product_unique_id','product.product_name','main_users.store_name','main_users.id as store_id')->where('cart.user_id',$userData->id)->where('cart.status',1)->where('product.status',1)->where('product.is_admin_approve',1)->get();
+            $cartData = DB::table('cart')
+                ->leftJoin('product', 'product.id', '=', 'cart.product_id')
+                ->leftJoin('main_users', 'main_users.id', '=', 'product.supplier_id')
+                ->leftJoin('product_variants', 'product_variants.id', '=', 'cart.product_variant_id')
+                ->leftJoin('uofs', 'uofs.id', '=', 'product_variants.variant_uof')
+                ->select(
+                    'cart.*',
+                    'product.product_image',
+                    'product.uniqid as product_unique_id',
+                    'product.product_name',
+                    'main_users.store_name',
+                    'main_users.id as store_id',
+                    'product_variants.variant_size',
+                    'product_variants.variant_price',
+                    'product_variants.variant_discounted_price',
+                    'product_variants.available_qty',
+                    'uofs.title as unit_title'
+                )
+                ->where('cart.user_id', $userData->id)
+                ->where('cart.status', 1)
+                ->where('product.status', 1)
+                ->where('product.is_admin_approve', 1)
+                ->get();
 
             if (!empty($cartData->toArray())) {
                 $cartItemCount = $cartData->count();
@@ -3485,15 +3530,29 @@ class ProductController extends Controller
             // echo "<pre>";print_r($cartData->toArray());exit();
             $cartArr = [];
             foreach ($cartData as $cart) {
+                $unit = !empty($cart->unit_title) ? strtoupper(trim($cart->unit_title)) : '';
+                $size = ($cart->variant_size) ? $cart->variant_size . ($unit ? ' ' . $unit : '') : '';
+                $availQty = $cart->available_qty !== null ? (int)$cart->available_qty : null;
+                $isOutOfStock = ($availQty !== null && $availQty <= 0) || ($availQty !== null && $cart->quantity > $availQty);
+
                 $cartList['cart_id'] = strval(@$cart->id);
                 $cartList['product_id'] = strval(@$cart->product_id);
+                $cartList['variant_id'] = strval(@$cart->product_variant_id ?? '');
+                $cartList['product_variant_id'] = strval(@$cart->product_variant_id ?? '');
                 $cartList['store_id'] = strval(@$cart->store_id);
                 $cartList['store_name'] = strval(@$cart->store_name);
                 $cartList['product_name'] = strval(@$cart->product_name);
-                $cartList['product_img'] = strval(@$cart->product_image ? asset( PRODUCT_PATH . $cart->product_image) : '');
+                $cartList['product_size'] = strval($size);
+                $cartList['available_qty'] = $availQty;
+                $cartList['is_out_of_stock'] = (bool)$isOutOfStock;
+                $cartList['product_img'] = strval(@$cart->product_image ? asset(PRODUCT_PATH . $cart->product_image) : '');
                 $cartList['quantity'] = strval(@$cart->quantity);
                 $cartList['product_discounted_price'] = strval(@$cart->total_price);
                 $cartList['product_price'] = strval(@$cart->product_price);
+                $cartList['is_bogo'] = (bool)(@$cart->is_bogo);
+                $cartList['is_offer'] = (bool)(@$cart->is_offer);
+                $cartList['offer_type'] = strval(@$cart->offer_type ?? '');
+                $cartList['discount_amount'] = strval(@$cart->discount_amount ?? '');
                 $cartArr[] = $cartList;
             }
                 $mainArr['product_list'] = $cartArr;
@@ -4091,29 +4150,49 @@ class ProductController extends Controller
         //     // echo "string";exit();
         //     $storeMapData = DB::table('store_details')->leftjoin('main_users','main_users.id','=','store_details.wholesaler_id')->select('store_details.*','main_users.store_name','main_users.profile')->orderby('store_details.id','DESC')->get();
 
-        if ($current_lat) {
-        // echo "string";exit;
-         $storeMapData = DB::table('store_details')->leftjoin('main_users','main_users.id','=','store_details.wholesaler_id')->select('store_details.*','main_users.store_name','main_users.profile',DB::raw("(3959 * acos(cos(radians('" . $current_lat . "')) * cos(radians(store_details.latitude)) * cos( radians(store_details.longitude) - radians('" . $current_long . "')) + sin(radians('" . $current_lat . "')) * sin(radians(store_details.latitude))))* 0.621371 as distance"))->where('store_details.status',1)->havingRaw('distance <='.$diff)->orderby('distance','DESC')->get();
+        if ($current_lat && $current_long) {
+            $storeMapData = DB::table('store_details')
+                ->select('store_details.*', DB::raw("(3959 * acos(cos(radians('" . $current_lat . "')) * cos(radians(store_details.latitude)) * cos( radians(store_details.longitude) - radians('" . $current_long . "')) + sin(radians('" . $current_lat . "')) * sin(radians(store_details.latitude)))) * 0.621371 as distance"))
+                ->where('store_details.status', 1)
+                ->havingRaw('distance <= ' . $diff)
+                ->orderBy('distance', 'ASC')
+                ->get();
+        } else {
+            $storeMapData = DB::table('store_details')
+                ->select('store_details.*')
+                ->orderBy('store_details.id', 'DESC')
+                ->where('store_details.status', 1)
+                ->get();
+        }
 
-    }else{
-        // echo "string2";exit;
-        $storeMapData = DB::table('store_details')->leftjoin('main_users','main_users.id','=','store_details.wholesaler_id')->select('store_details.*','main_users.store_name','main_users.profile')->orderby('store_details.id','DESC')->where('store_details.status',1)->get();
-    }
+        if (!empty($storeMapData) && count($storeMapData) > 0) {
+            $mainArr = [];
+            $mapArr = [];
+            foreach ($storeMapData as $map) {
+                $storeTiming = DB::table('store_timing_week')
+                    ->leftjoin('week_list', 'week_list.id', '=', 'store_timing_week.week_id')
+                    ->where('store_timing_week.status', 1)
+                    ->where('store_timing_week.store_id', $map->id)
+                    ->select('store_timing_week.*', 'week_list.name as week_name')
+                    ->get();
 
-        // echo "<pre>";print_r($storeMapData->toArray());exit();
-        if (!empty($storeMapData->toArray())) {
-                $mainArr = [];
-                $mapArr = [];
-                foreach ($storeMapData as $map) {
+                $contactNumber = '';
+                if (!empty($map->phone_code)) {
+                    $contactNumber .= '+' . $map->phone_code . ' ';
+                }
+                if (!empty($map->contact_number)) {
+                    $contactNumber .= $map->contact_number;
+                }
 
-                    $storeTiming = DB::table('store_timing_week')->leftjoin('week_list','week_list.id','=','store_timing_week.week_id')->where('store_timing_week.status',1)->where('store_timing_week.store_id',$map->id)->select('store_timing_week.*','week_list.name as week_name')->get();
-                    // echo "<pre>";print_r($storeTiming->toArray());exit();
-                    $mapList['id'] = strval($map->id);
-                    $mapList['store_id'] = strval($map->wholesaler_id);
-                    $mapList['store_name'] = strval($map->store_name);
-                    $mapList['store_logo'] = strval(@$map->profile ? asset( CUSTOMER_PROFILE_PATH . $map->profile) : '');
-                    $mapList['latitude'] = strval($map->latitude);
-                    $mapList['longitude'] = strval($map->longitude);
+                $mapList['id'] = strval($map->id);
+                $mapList['store_id'] = strval($map->id);
+                $mapList['store_name'] = strval($map->store_name);
+                $mapList['store_logo'] = asset('assets/frontend/images/logo.png');
+                $mapList['store_address'] = strval(@$map->address ?? '');
+                $mapList['store_email'] = strval(@$map->email ?? '');
+                $mapList['store_contact_number'] = strval($contactNumber);
+                $mapList['latitude'] = strval($map->latitude ?? '');
+                $mapList['longitude'] = strval($map->longitude ?? '');
 
                 $timeArr = [];
                     foreach ($storeTiming as $time) {
