@@ -101,6 +101,7 @@
                 <th>{{ __('backend.product_category') }}</th>
                 <th>{{ __('backend.product_subcategory') }}</th>
                 <th>{{ __('backend.price') }}</th>
+                <th>Available Qty</th>
                 <th>{{ __('backend.bestseller') }}</th>
                 <th>{{ __('backend.status') }}</th>
                 <th>{{ __('backend.options') }}</th>
@@ -448,20 +449,20 @@ $(document).on('click', '.offervalue', function(e) {
     <script>
     var show = true;
     var check = true;
-    var sort = [0, 9];
+    var sort = [0, 10];
     </script>
     <?php } else if($check_view_permission==true ) {
     ?>
     <script>
     var show = true;
     var check = false;
-    var sort = [0, 9];
+    var sort = [0, 10];
     </script>
     <?php }else { ?>
     <script>
     var show = false;
     var check = false;
-    var sort = [0, 9 ];
+    var sort = [0, 10];
     </script>
     <?php }?>
 <script type="text/javascript">
@@ -538,6 +539,10 @@ $(document).on('click', '.offervalue', function(e) {
                     {
                         data: 'product_price',
                         name: 'product_price',
+                    },
+                    {
+                        data: 'available_qty',
+                        name: 'available_qty',
                     },
                     {
                         data: 'bestseller',

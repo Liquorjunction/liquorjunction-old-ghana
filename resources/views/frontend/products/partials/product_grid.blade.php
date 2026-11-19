@@ -144,11 +144,15 @@
 
                     <input class="favs-icon checked_box" 
                            type="checkbox" 
-                           id="fav-item{{ $key2 }}" 
+                           id="fav-item-{{ $result->product_id }}" 
                            value="{{ ($fav_data != '') ? '1' : '0' }}" 
                            {{ ($fav_data != '') ? 'checked' : '' }} 
-                           onclick="return productFav({{ $result->product_id }}, {{ ($fav_data != '') ? '1' : '0' }})" />
-                    <label class="favs-button" title="{{ Helper::language('add_to_favourite') }}" for="fav-item{{ $key2 }}"></label>
+                           tabindex="-1"
+                           onclick="return productFav({{ $result->product_id }}, {{ ($fav_data != '') ? '1' : '0' }}, this);" />
+                    <label class="favs-button" 
+                           title="{{ Helper::language('add_to_favourite') }}" 
+                           for="fav-item-{{ $result->product_id }}"
+                           onclick="event.preventDefault(); return productFav({{ $result->product_id }}, {{ ($fav_data != '') ? '1' : '0' }}, this);"></label>
                 </div>
 
                 <div class="load_products_ids" data-id="{{ Helper::encodeUrl($result->product_id) }}"></div>

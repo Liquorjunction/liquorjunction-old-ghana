@@ -426,9 +426,21 @@
                         $cb.data('fav-status', newStatus);
                         var oc = $cb.attr('onclick') || '';
                         if (oc.indexOf('productFavTest') !== -1) {
-                            $cb.attr('onclick', 'return productFavTest(' + product_id + ',' + newStatus + ')');
+                            $cb.attr('onclick', 'return productFavTest(' + product_id + ',' + newStatus + ', this)');
                         } else {
-                            $cb.attr('onclick', 'return productFav(' + product_id + ',' + newStatus + ')');
+                            $cb.attr('onclick', 'return productFav(' + product_id + ',' + newStatus + ', this)');
+                        }
+
+                        // Also update associated label onclicks to prevent jump and keep status in sync
+                        var cbId = $cb.attr('id');
+                        if (cbId) {
+                            $('label[for="' + cbId + '"]').each(function() {
+                                var $lbl = $(this);
+                                var loc = $lbl.attr('onclick') || '';
+                                if (loc.indexOf('productFav') !== -1) {
+                                    $lbl.attr('onclick', 'event.preventDefault(); return productFav(' + product_id + ',' + newStatus + ', this);');
+                                }
+                            });
                         }
                     });
                 }

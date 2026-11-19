@@ -806,6 +806,40 @@
     .filteroffcanvas .faceted-filter-widget > .widget-head {
         display: none !important;
     }
+
+    /* Wishlist / Favorite Heart - Prevent page jump & align checkbox */
+    .bs-box .bs-content .favs-button {
+        cursor: pointer;
+        z-index: 5;
+    }
+    .bs-box .bs-content input[type="checkbox"].favs-icon {
+        position: absolute !important;
+        top: -348px !important;
+        right: -2px !important;
+        left: auto !important;
+        width: 24px !important;
+        height: 23px !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        z-index: 1 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    @media (min-width: 991px) and (max-width: 1199px) {
+        .bs-box .bs-content input[type="checkbox"].favs-icon { top: -310px !important; }
+    }
+    @media (min-width: 768px) and (max-width: 991px) {
+        .bs-box .bs-content input[type="checkbox"].favs-icon { top: -240px !important; }
+    }
+    @media (min-width: 581px) and (max-width: 767px) {
+        .bs-box .bs-content input[type="checkbox"].favs-icon { top: -245px !important; }
+    }
+    @media (min-width: 477px) and (max-width: 580px) {
+        .bs-box .bs-content input[type="checkbox"].favs-icon { top: -235px !important; }
+    }
+    @media (max-width: 476px) {
+        .bs-box .bs-content input[type="checkbox"].favs-icon { top: -266px !important; }
+    }
 </style>
 
 <div class="loader" id="loader"></div>
@@ -1978,9 +2012,9 @@
     };
 
     // Wishlist Toggle
-    window.productFav = function(productId, status) {
+    window.productFav = function(productId, status, targetEl) {
         if (typeof toggleProductFav === 'function') {
-            return toggleProductFav(productId, status);
+            return toggleProductFav(productId, status, targetEl);
         }
     };
 

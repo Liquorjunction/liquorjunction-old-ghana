@@ -55,6 +55,16 @@
         .manage-space {
             white-space: nowrap;
         }
+
+        .card-body .form-group {
+            flex-wrap: wrap !important;
+        }
+
+        .card-body .form-group > .col-md-3 {
+            flex: 0 0 25% !important;
+            max-width: 25% !important;
+            float: none !important;
+        }
     </style>
     <?php
     // $user_id = isset(auth()->guard('user')->user()->id) ? auth()->guard('user')->user()->id : '';
@@ -64,6 +74,8 @@
     <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script> -->
     <!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script> -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css" type="text/css" />
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css" />
     <div class="loader" id="loader"></div>
     <div class="padding website-label">
         <div class="success_message" style="margin-bottom: 10px;"></div>
@@ -76,17 +88,19 @@
                     <span>{{ __('backend.OrderManagement') }}</span>
                 </small>
             </div>
+            <div class="padding general-setting">
+            </div>
             <div class="card-body">
-                <div class="form-group row">
-                    <div class="col-md-2" style="margin-bottom: 15px;">
+                <div class="form-group">
+                    <div class="col-md-3" style="margin-bottom: 15px;">
                         <label>From Date</label>
-                        <input type="date" name="from_date" id="from_date" class="form-control">
+                        <input type="text" name="from_date" id="from_date" class="form-control" placeholder="DD-MM-YYYY">
                     </div>
-                    <div class="col-md-2" style="margin-bottom: 15px;">
+                    <div class="col-md-3" style="margin-bottom: 15px;">
                         <label>To Date</label>
-                        <input type="date" name="to_date" id="to_date" class="form-control">
+                        <input type="text" name="to_date" id="to_date" class="form-control" placeholder="DD-MM-YYYY">
                     </div>
-                    <div class="col-md-2" style="margin-bottom: 15px;">
+                    <div class="col-md-3" style="margin-bottom: 15px;">
                         <label>User Type</label>
                         <select name="user_type_filter" id="user_type_filter" class="form-control">
                             <option value="">All</option>
@@ -94,7 +108,7 @@
                             <option value="1">Guest</option>
                         </select>
                     </div>
-                    <div class="col-md-2" style="margin-bottom: 15px;">
+                    <div class="col-md-3" style="margin-bottom: 15px;">
                         <label>Order Type</label>
                         <select name="order_type_status" id="order_type_status" class="form-control">
                             <option value="">All</option>
@@ -102,7 +116,7 @@
                             <option value="2">Pickup Order</option>
                         </select>
                     </div>
-                    <div class="col-md-2" style="margin-bottom: 15px;">
+                    <div class="col-md-3" style="margin-bottom: 15px;">
                         <label>Payment Type</label>
                         <select name="payment_type_filter" id="payment_type_filter" class="form-control">
                             <option value="">All</option>
@@ -110,7 +124,7 @@
                             <option value="3">Cash On Delivery</option>
                         </select>
                     </div>
-                    <div class="col-md-2" style="margin-bottom: 15px;">
+                    <div class="col-md-3" style="margin-bottom: 15px;">
                         <label>Payment Status</label>
                         <select name="payment_status_filter" id="payment_status_filter" class="form-control">
                             <option value="">All</option>
@@ -119,7 +133,7 @@
                             <option value="3">Failed</option>
                         </select>
                     </div>
-                    <div class="col-md-2" style="margin-bottom: 15px;">
+                    <div class="col-md-3" style="margin-bottom: 15px;">
                         <label>Delivery Status</label>
                         <select name="delivery_status" id="delivery_status" class="form-control">
                             <option value="">All</option>
@@ -131,37 +145,20 @@
                             <option value="4">Cancel</option>
                         </select>
                     </div>
-                     <div class="col-md-2 clear_button" style="margin-bottom: 15px; margin-top: 25px;">
+                    <div class="col-md-3 clear_button" style="margin-bottom: 15px;">
                         <label>&nbsp;</label>
                         <a onclick="location.reload();">
                             <button type="button" class="btn btn-danger mr-2 mb-5">Clear</button>
                         </a>
                     </div>
                 </div>
-            </div>
-            {{ Form::open(['route' => 'orderstatusUpdateAll', 'method' => 'post', 'id' => 'updateAll']) }}
-            @php
-                $check_updation_permission = @Helper::GetRolePermission(Auth::user()->user_type, 28, 'update');
-                $check_view_permission = @Helper::GetRolePermission(Auth::user()->user_type, 28, 'read');
-            @endphp
-            {{-- <div class="bulk-action">
-            <div></div>
-            @if (isset($check_updation_permission) && $check_updation_permission == true)
-            <div>
-                <select name="action" id="action" class="form-control c-select w-sm inline v-middle" required>
-                    <option value="no">{{ __('backend.bulkAction') }}</option>
-                    @if (isset($check_updation_permission) && $check_updation_permission == true)
-                    <option value="1">{{ __('backend.pendingSelected') }}</option>
-                    <option value="2">In Process</option>
-                    <option value="3">Delivered</option>
-                    <option value="4">{{ __('backend.cancleSelected') }}</option>
-                    @endif
-        </select>
-        <button style="" type="submit" id="submit_all" class="btn white">{{ __('backend.apply') }}</button>
-    </div>
-    @endif
-</div> --}}
-            <div class="table-responsive" style="margin-top: 50px;">
+
+                {{ Form::open(['route' => 'orderstatusUpdateAll', 'method' => 'post', 'id' => 'updateAll']) }}
+                @php
+                    $check_updation_permission = @Helper::GetRolePermission(Auth::user()->user_type, 28, 'update');
+                    $check_view_permission = @Helper::GetRolePermission(Auth::user()->user_type, 28, 'read');
+                @endphp
+                <div class="table-responsive" style="margin-top: 170px;">
                 <table class="table table-bordered m-a-0 manage-space" id="label">
                     <thead class="dker">
                         <tr>
@@ -267,6 +264,7 @@
                 </div>
             </footer>
             {{ Form::close() }}
+            </div>
         </div>
     </div>
 @endsection
@@ -274,6 +272,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.6.3/js/bootstrap-select.min.js"></script>
     <script src="https://ajax.aspnetcdn.com/ajax/jquery.validate/1.11.1/jquery.validate.min.js"></script>
     <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
     <script>
         var show = "";
         var sort = "";
@@ -317,6 +316,20 @@ if (isset($check_updation_permission) && $check_updation_permission == true) {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 }
             });
+            function formatDateForBackend(dStr) {
+                if (!dStr) return '';
+                dStr = $.trim(dStr);
+                var parts = dStr.split(/[-/]/);
+                if (parts.length === 3) {
+                    if (parts[0].length === 2 && parts[2].length === 4) {
+                        return parts[2] + '-' + parts[1] + '-' + parts[0];
+                    } else if (parts[0].length === 4) {
+                        return parts[0] + '-' + parts[1] + '-' + parts[2];
+                    }
+                }
+                return dStr;
+            }
+
             load_data();
 
             function load_data() {
@@ -342,8 +355,8 @@ if (isset($check_updation_permission) && $check_updation_permission == true) {
                         data: function(d) {
                             return $.extend({}, d, {
                                 "order_type_status": $("#order_type_status").val().toLowerCase(),
-                                "from_date": $("#from_date").val(),
-                                "to_date": $("#to_date").val(),
+                                "from_date": formatDateForBackend($("#from_date").val()),
+                                "to_date": formatDateForBackend($("#to_date").val()),
                                 "user_type_filter": $("#user_type_filter").val(),
                                 "payment_type_filter": $("#payment_type_filter").val(),
                                 "payment_status_filter": $("#payment_status_filter").val(),
@@ -420,9 +433,53 @@ if (isset($check_updation_permission) && $check_updation_permission == true) {
                     ],
                     order: ['0', 'DESC']
                 });
-                $('#order_type_status, #from_date, #to_date, #user_type_filter, #payment_type_filter, #payment_status_filter, #delivery_status').change(function() {
+
+                $("#from_date").datepicker({
+                    changeMonth: true,
+                    endDate: '+0d',
+                    changeYear: true,
+                    format: 'dd-mm-yyyy',
+                    todayHighlight: true,
+                    orientation: "bottom",
+                    autoclose: true
+                }).on('changeDate', function(selected) {
+                    if (selected && selected.date) {
+                        var minDate = new Date(selected.date.valueOf());
+                        $('#to_date').datepicker('setStartDate', minDate);
+                    }
+                    $('#from_date').trigger('change');
+                });
+
+                $("#to_date").datepicker({
+                    changeMonth: true,
+                    endDate: '+0d',
+                    changeYear: true,
+                    format: 'dd-mm-yyyy',
+                    todayHighlight: true,
+                    orientation: "bottom",
+                    autoclose: true
+                }).on('changeDate', function(selected) {
+                    if (selected && selected.date) {
+                        var minDate = new Date(selected.date.valueOf());
+                        $('#from_date').datepicker('setEndDate', minDate);
+                    }
+                    $('#to_date').trigger('change');
+                });
+
+                $('#from_date, #to_date, #order_type_status, #user_type_filter, #payment_type_filter, #payment_status_filter, #delivery_status').on('change input', function() {
                     $("#export_order_type_status").val($("#order_type_status").val().toLowerCase());
                     dataTable.draw();
+                });
+
+                $(document).on('input keyup', '.dataTables_filter input', function(e) {
+                    dataTable.search(this.value).draw();
+                });
+
+                $(document).on('keydown', '.dataTables_filter input', function(e) {
+                    if (e.which === 13) {
+                        e.preventDefault();
+                        return false;
+                    }
                 });
             }
 

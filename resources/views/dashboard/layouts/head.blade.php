@@ -20,10 +20,10 @@
 <link rel="stylesheet" href="{{ asset('assets/dashboard/fonts/material-design-icons/material-design-icons.css') }}" type="text/css"/>
 <link rel="stylesheet" href="{{ asset('assets/dashboard/css/bootstrap/dist/css/bootstrap.min.css') }}" type="text/css"/>
 <link rel="stylesheet" type="text/css" href="{{ asset('assets/frontend/css/base_error.css') }}">
-<link rel="stylesheet" href="{{ asset('assets/dashboard/css/app.css') }}" type="text/css"/>
+<link rel="stylesheet" href="{{ asset('assets/dashboard/css/app.css') }}?v={{ filemtime(public_path('assets/dashboard/css/app.css')) }}" type="text/css"/>
 <link rel="stylesheet" href="{{ asset('assets/dashboard/css/font.css') }}" type="text/css"/>
 <link rel="stylesheet" href="{{ asset('assets/dashboard/css/topic.css') }}" type="text/css"/>
-<link rel="stylesheet" href="{{ asset('assets/dashboard/css/custom.css') }}" type="text/css"/>
+<link rel="stylesheet" href="{{ asset('assets/dashboard/css/custom.css') }}?v={{ filemtime(public_path('assets/dashboard/css/custom.css')) }}" type="text/css"/>
 <script src="{{ asset('ckeditor/ckeditor.js') }}"></script>
 <script src="{{ asset('ckeditor/styles.js') }}"></script>
 @stack('after-styles')

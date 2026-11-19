@@ -582,28 +582,23 @@ class ProductController extends Controller
                         ];
 
                         $get_variant_data = ProductVariants::where('id', $value['id'])->first();
-                        // if ($get_variant_data->variant_qty != "") {
-                        //     $getVqty = $get_variant_data->variant_qty + $value['variant_qty'];
-                        //     $getAqty = $getVqty - $get_variant_data->sold_qty;
+                        $soldQty = $get_variant_data ? ($get_variant_data->sold_qty ?? 0) : 0;
+                        $enteredAvailableQty = max((int)($value['variant_qty'] ?? 0), 0);
 
-                        //     $variantData["variant_qty"] = $getVqty;
-                        //     $variantData["available_qty"] = $getAqty;
-                        // }
-
-                        $variantData["variant_qty"] = $value['variant_qty'];
-                        $variantData["available_qty"] = max($value['variant_qty'] - ($get_variant_data->sold_qty ?? 0), 0);
-
+                        $variantData["available_qty"] = $enteredAvailableQty;
+                        $variantData["variant_qty"] = $enteredAvailableQty + $soldQty;
 
                         ProductVariants::where('id', $value['id'])->update($variantData);
                     } else {
+                        $enteredAvailableQty = max((int)($value['variant_qty'] ?? 0), 0);
                         $variantData = [
                             "product_id" => $product_id,
                             "variant_uof" => $value['variant_uof'],
                             "variant_size" => $value['variant_size'],
                             // "variant_size" => $variant_size,
                             "variant_price" => $value['variant_price'],
-                            "variant_qty" => $value['variant_qty'],
-                            "available_qty" => $value['variant_qty'],
+                            "variant_qty" => $enteredAvailableQty,
+                            "available_qty" => $enteredAvailableQty,
                             // "variant_discounted_price" => $value['variant_discounted_price'],
                         ];
                         ProductVariants::create($variantData);
@@ -773,8 +768,10 @@ class ProductController extends Controller
             // $sort = 'product_variants.variant_price';
             $sort = 'first_variant.variant_price';
         } elseif ($columnIndex == 7) {
-            $sort = 'product.is_product_bestseller';
+            $sort = 'variant_stock.available_qty';
         } elseif ($columnIndex == 8) {
+            $sort = 'product.is_product_bestseller';
+        } elseif ($columnIndex == 9) {
             $sort = 'product.status';
 
         } else {
@@ -795,6 +792,10 @@ class ProductController extends Controller
             ORDER BY pv2.id ASC
             LIMIT 1
         )');
+
+        $variantStock = DB::table('product_variants')
+            ->select('product_id', DB::raw('SUM(COALESCE(available_qty, GREATEST(CAST(variant_qty AS SIGNED) - COALESCE(CAST(sold_qty AS SIGNED), 0), 0))) as available_qty'))
+            ->groupBy('product_id');
 
         // $totalAr = DB::table('product')
         //     ->leftjoin('brand', 'brand.id', '=', 'product.brand_id') // Potential issue: Check this join
@@ -817,12 +818,16 @@ class ProductController extends Controller
             ->leftJoinSub($firstVariant, 'first_variant', function ($join) {
                 $join->on('first_variant.product_id', '=', 'product.id');
             })
+            ->leftJoinSub($variantStock, 'variant_stock', function ($join) {
+                $join->on('variant_stock.product_id', '=', 'product.id');
+            })
             ->select(
                 'product.*',
                 'categories.title as product_category',
                 'brand.title as brand_name',
                 'sub_categories.title as product_subcategory',
-                'first_variant.variant_price as product_price'
+                'first_variant.variant_price as product_price',
+                'variant_stock.available_qty as available_qty'
             )
             ->where('product.status', '!=', '2');
 
@@ -895,6 +900,7 @@ class ProductController extends Controller
                 $options .= '<button class="btn btn-sm warning delete-school" title="Delete" data-id="' . $data->id . '" style="margin-left: -4px;"> <small><i class="material-icons">&#xe872;</i> </small> </button>';
             }
 
+            $availableQty = isset($data->available_qty) && $data->available_qty !== null ? (int)$data->available_qty : 0;
 
             $data_arr[] = array(
                 "checkbox" => '<label class="ui-check m-a-0"> <input type="checkbox" name="ids[]" value="' . $data->id . '" class="has-value" onchange="checkChange();" data-id="' . $data->id . '"><i class="dark-white"></i> <input class="form-control row_no has-value" name="row_ids[]" type="hidden" value="' . $data->id . '"> </label>',
@@ -904,6 +910,7 @@ class ProductController extends Controller
                 "product_subcategory" => isset($data->product_subcategory) ? $data->product_subcategory : '',
                 "brand_name" => isset($data->brand_name) ? $data->brand_name : '',
                 "product_price" => isset($data->product_price) ? $data->product_price . ' ' . @$settings->currency_symbol : '',
+                "available_qty" => $availableQty,
                 "sku" => isset($data->sku) ? $data->sku : '',
                 "bestseller" => isset($best_seller) ? $best_seller : '',
                 "status" => isset($status) ? $status : '',

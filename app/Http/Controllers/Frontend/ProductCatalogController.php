@@ -24,6 +24,7 @@ class ProductCatalogController extends Controller
     protected $setting;
     protected $user_id;
     protected $cachedSpecialOfferProductIds = null;
+    protected $cachedEffectivePriceSql = [];
 
     public function __construct()
     {
@@ -43,7 +44,7 @@ class ProductCatalogController extends Controller
         $today = Carbon::now()->toDateString();
 
         // 1. Static Initial Metadata Cached for 5 minutes
-        $meta = Cache::remember('catalog_global_meta_v6', 300, function () {
+        $meta = Cache::remember('catalog_global_meta_v7', 300, function () {
             $categories = Categories::with(['subcategory' => function ($q) {
                 $q->where('status', 1)->orderBy('title', 'ASC');
             }])
@@ -53,14 +54,15 @@ class ProductCatalogController extends Controller
 
             $brands = Brand::where('status', 1)->orderBy('title', 'ASC')->get();
 
-            // Truly dynamic price bounds from active variants
+            // Truly dynamic price bounds from active variants (including active offers)
+            $effectivePrice = $this->getEffectivePriceSql('pv.variant_price');
             $priceBounds = DB::table('product as p')
                 ->join('product_variants as pv', 'p.id', '=', 'pv.product_id')
                 ->where('p.status', 1)
                 ->where('pv.status', 1)
                 ->where('pv.variant_price', '>', 0)
-                ->selectRaw('MIN(COALESCE(NULLIF(pv.variant_discounted_price, ""), pv.variant_price)) as min_price')
-                ->selectRaw('MAX(COALESCE(NULLIF(pv.variant_discounted_price, ""), pv.variant_price)) as max_price')
+                ->selectRaw("MIN({$effectivePrice}) as min_price")
+                ->selectRaw("MAX({$effectivePrice}) as max_price")
                 ->first();
 
             $minPrice = floor($priceBounds->min_price ?? 0);
@@ -317,12 +319,13 @@ class ProductCatalogController extends Controller
             $query->joinSub($firstVariant, 'fv_base', 'fv_base.product_id', '=', 'p.id');
 
             if ($hasPriceFilter) {
+                $effectivePrice = $this->getEffectivePriceSql('fv_base.variant_price');
                 if ($filters['min_price'] !== null && $filters['max_price'] !== null) {
-                    $query->whereBetween('fv_base.variant_price', [$filters['min_price'], $filters['max_price']]);
+                    $query->whereRaw("{$effectivePrice} BETWEEN ? AND ?", [$filters['min_price'], $filters['max_price']]);
                 } elseif ($filters['min_price'] !== null) {
-                    $query->where('fv_base.variant_price', '>=', $filters['min_price']);
+                    $query->whereRaw("{$effectivePrice} >= ?", [$filters['min_price']]);
                 } elseif ($filters['max_price'] !== null) {
-                    $query->where('fv_base.variant_price', '<=', $filters['max_price']);
+                    $query->whereRaw("{$effectivePrice} <= ?", [$filters['max_price']]);
                 }
             }
 
@@ -443,12 +446,14 @@ class ProductCatalogController extends Controller
             case '2':
             case 'price_desc':
             case 'high_to_low':
-                $query->orderBy('fv_base.variant_price', 'DESC');
+                $effectivePrice = $this->getEffectivePriceSql('fv_base.variant_price');
+                $query->orderByRaw("{$effectivePrice} DESC");
                 break;
             case '3':
             case 'price_asc':
             case 'low_to_high':
-                $query->orderBy('fv_base.variant_price', 'ASC');
+                $effectivePrice = $this->getEffectivePriceSql('fv_base.variant_price');
+                $query->orderByRaw("{$effectivePrice} ASC");
                 break;
             case '4':
             case 'popular':
@@ -653,7 +658,7 @@ class ProductCatalogController extends Controller
     }
 
     /**
-     * Calculate dynamic min/max price bounds for current selection
+     * Calculate dynamic min/max price bounds for current selection (using effective discounted selling prices)
      */
     protected function calculatePriceBounds(array $filters, $defaultMin = 0, $defaultMax = 2000)
     {
@@ -667,18 +672,150 @@ class ProductCatalogController extends Controller
             ];
         }
 
-        $bounds = DB::table('product_variants as pv')
-            ->whereIn('pv.product_id', $pids)
-            ->where('pv.status', 1)
-            ->where('pv.variant_price', '>', 0)
-            ->selectRaw('MIN(COALESCE(NULLIF(pv.variant_discounted_price, ""), pv.variant_price)) as min_price')
-            ->selectRaw('MAX(COALESCE(NULLIF(pv.variant_discounted_price, ""), pv.variant_price)) as max_price')
+        $effectivePrice = $this->getEffectivePriceSql('fv.variant_price');
+        $pidList = implode(',', array_map('intval', $pids));
+        $bounds = DB::table('product_variants as fv')
+            ->join(
+                DB::raw('(SELECT product_id, MIN(id) as min_vid FROM product_variants WHERE status = 1 and product_id IN (' . $pidList . ') GROUP BY product_id) as fv_min'),
+                'fv.id', '=', 'fv_min.min_vid'
+            )
+            ->join('product as p', 'fv.product_id', '=', 'p.id')
+            ->where('fv.variant_price', '>', 0)
+            ->where('p.status', 1)
+            ->selectRaw("MIN({$effectivePrice}) as min_price")
+            ->selectRaw("MAX({$effectivePrice}) as max_price")
             ->first();
 
         return (object)[
             'min_price' => floor($bounds->min_price ?? $defaultMin),
             'max_price' => ceil($bounds->max_price ?? $defaultMax),
         ];
+    }
+
+    /**
+     * Build SQL expression for the effective selling price (taking into account active offers and BOGOs)
+     */
+    protected function getEffectivePriceSql(string $priceCol = 'fv_base.variant_price')
+    {
+        if (isset($this->cachedEffectivePriceSql[$priceCol])) {
+            return $this->cachedEffectivePriceSql[$priceCol];
+        }
+
+        $today = Carbon::now()->toDateString();
+
+        // 1. Get active BOGO product IDs (products on BOGO keep original price, not discounted)
+        $activeBogos = Bogo::where('status', 1)
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->get();
+
+        $bogoPids = [];
+        foreach ($activeBogos as $bogo) {
+            $q = DB::table('product as p')->where('p.status', 1);
+            if (!empty($bogo->product_id)) {
+                $q->where('p.id', $bogo->product_id);
+            } elseif (!empty($bogo->subcategory_id)) {
+                if (!empty($bogo->category_id)) {
+                    $q->where('p.category_id', $bogo->category_id);
+                }
+                $q->where('p.subcategory_id', $bogo->subcategory_id);
+            } elseif (!empty($bogo->category_id)) {
+                $q->where('p.category_id', $bogo->category_id);
+            } elseif (!empty($bogo->brand_id)) {
+                $q->where('p.brand_id', $bogo->brand_id);
+            }
+            $pids = $q->pluck('p.id')->toArray();
+            if (!empty($pids)) {
+                $bogoPids = array_merge($bogoPids, $pids);
+            }
+        }
+        $bogoPids = array_unique(array_filter(array_map('intval', $bogoPids)));
+
+        // 2. Get active offers
+        $activeOffers = Offers::where('status', 1)
+            ->whereDate('expiry_date', '>=', $today)
+            ->get();
+
+        if ($activeOffers->isEmpty()) {
+            return $this->cachedEffectivePriceSql[$priceCol] = $priceCol;
+        }
+
+        // Build CASE statement with priority matching:
+        // Priority 1: Specific Product ID
+        // Priority 2: Subcategory
+        // Priority 3: Category
+        // Priority 4: Brand
+        $whenBranches = [];
+
+        // If there are BOGOs, ensure BOGO products aren't discounted
+        if (!empty($bogoPids)) {
+            $bogoList = implode(',', $bogoPids);
+            $whenBranches[] = "WHEN p.id IN ({$bogoList}) THEN {$priceCol}";
+        }
+
+        $productOffers = [];
+        $subcatOffers = [];
+        $catOffers = [];
+        $brandOffers = [];
+
+        foreach ($activeOffers as $offer) {
+            if (!empty($offer->product_id)) {
+                $productOffers[] = $offer;
+            } elseif (!empty($offer->subcategory_id)) {
+                $subcatOffers[] = $offer;
+            } elseif (!empty($offer->category_id)) {
+                $catOffers[] = $offer;
+            } elseif (!empty($offer->brand_id)) {
+                $brandOffers[] = $offer;
+            }
+        }
+
+        $allPrioritized = array_merge($productOffers, $subcatOffers, $catOffers, $brandOffers);
+
+        foreach ($allPrioritized as $offer) {
+            $conditions = [];
+            if (!empty($offer->product_id)) {
+                $pid = intval($offer->product_id);
+                $conditions[] = "p.id = {$pid}";
+            } elseif (!empty($offer->subcategory_id)) {
+                $sid = intval($offer->subcategory_id);
+                if (!empty($offer->category_id)) {
+                    $cid = intval($offer->category_id);
+                    $conditions[] = "p.category_id = {$cid}";
+                }
+                $conditions[] = "p.subcategory_id = {$sid}";
+            } elseif (!empty($offer->category_id)) {
+                $cid = intval($offer->category_id);
+                $conditions[] = "p.category_id = {$cid}";
+            } elseif (!empty($offer->brand_id)) {
+                $bid = intval($offer->brand_id);
+                $conditions[] = "p.brand_id = {$bid}";
+            }
+
+            if (empty($conditions)) continue;
+
+            $condStr = implode(' AND ', $conditions);
+            $disAmount = floatval($offer->dis_amount);
+
+            if ($offer->offer_type === 'flat') {
+                $expr = "GREATEST(0, {$priceCol} - {$disAmount})";
+            } elseif ($offer->offer_type === 'percentage') {
+                $factor = (100.0 - $disAmount) / 100.0;
+                if ($factor < 0) $factor = 0;
+                $factorStr = number_format($factor, 4, '.', '');
+                $expr = "GREATEST(0, ROUND({$priceCol} * {$factorStr}, 2))";
+            } else {
+                continue;
+            }
+
+            $whenBranches[] = "WHEN {$condStr} THEN {$expr}";
+        }
+
+        if (empty($whenBranches)) {
+            return $this->cachedEffectivePriceSql[$priceCol] = $priceCol;
+        }
+
+        return $this->cachedEffectivePriceSql[$priceCol] = "(CASE " . implode(' ', $whenBranches) . " ELSE {$priceCol} END)";
     }
 
     /**

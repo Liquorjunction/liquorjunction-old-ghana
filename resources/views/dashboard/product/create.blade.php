@@ -277,12 +277,12 @@
                                         value="{{ @$variantArr['id'] }}">
                                 </div> --}}
                                 <div class="form-group row">
-                                    <label class="col-sm-3 form-control-label" style="display: flex;">Qty <span
+                                    <label class="col-sm-3 form-control-label" style="display: flex;">Available Qty <span
                                             class="valid_field">*</span></label>
                                     <div class="col-sm-9">
                                         <input type="text" name="prod_variant[{{ $key }}][variant_qty]"
                                             maxlength="5" onkeypress="return isNumberBlock(event)" class="form-control"
-                                            placeholder="Qty" value="{{ @$variantArr['variant_qty'] }}">
+                                            placeholder="Available Qty" value="{{ @$variantArr['variant_qty'] }}">
                                         @if ($errors->has('prod_variant.' . $key . '.variant_qty'))
                                             <span class="help-block">
                                                 <span style="color: red;"

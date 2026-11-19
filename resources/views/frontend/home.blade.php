@@ -104,7 +104,7 @@
         letter-spacing: 1px;
         text-transform: uppercase;
         color: #fbb516;
-        background: transparent;
+        background: #242424;
         border: 1px solid #fbb516;
         padding: 8px 22px;
         border-radius: 0;
@@ -288,15 +288,7 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
 @if(isset($offer_product) && count($offer_product) > 0)
 <section class="offers py-60">
     <div class="container">
-        <div class="offers-header-wrapper d-flex justify-content-between align-items-center mb-30 flex-wrap gap-2">
-            <h2 class="text-white mb-0">{{ @Helper::language('offers') ?: 'Special Offers' }}</h2>
-            @if(isset($total_offer_count) && $total_offer_count > 20)
-                <a href="{{ route('special') }}" class="special-offers-view-all" title="{{ @Helper::language('view_all_label') ?: 'View All' }}">
-                    <span>{{ @Helper::language('view_all_label') ?: 'VIEW ALL' }}</span>
-                    <i class="fa-solid fa-arrow-right ms-1"></i>
-                </a>
-            @endif
-        </div>
+        <h2 class="text-center mb-30 text-white">{{@Helper::language('offers')}}</h2>
         <div class="offers-slider-wrapper">
             @if(count($offer_product) > 0)
             <div class="swiper offers-slider pb-30">
@@ -350,8 +342,92 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                         $adisplay = 'none';
                     }
 
+                    $original_price = $product_variant->variant_price;
+                    $final_price = $original_price;
 
+                    if ($offer_result->offer_status && !$offer_result->bogo_status) {
+                        if ($offer_result->offer_type === 'flat') {
+                            $final_price = max(0, $original_price - $offer_result->discount_amount);
+                        } elseif ($offer_result->offer_type === 'percentage') {
+                            $final_price = max(0, $original_price - ($original_price * $offer_result->discount_amount / 100));
+                        }
+                    }
+
+                    $is_21st_product = ($loop->iteration == 21);
                     @endphp
+
+                    @if($is_21st_product)
+                    <div class="swiper-slide">
+                        <div class="bs-box position-relative" style="cursor: pointer;" onclick="window.location.href='{{ route('special') }}'">
+                            <div style="filter: blur(4px); pointer-events: none; user-select: none;">
+                                <div class="bs-image responsive-image">
+                                    @if ($offer_result->bogo_status)
+                                        <div class="mb-1 mt-1">
+                                            <span class="bogo" id="bogo">
+                                                {{@Helper::language('bogo')}}
+                                            </span>
+                                        </div>
+                                    @endif
+
+                                    @if ($offer_result->offer_status && !$offer_result->bogo_status)
+                                        <div class="mb-1 mt-1">
+                                            <span class="offer" id="offer">
+                                                @if ($offer_result->offer_type === 'flat')
+                                                    Flat {{ intval($offer_result->discount_amount) }} {{ Helper::Settings('currency_symbol') }} Off
+                                                @elseif ($offer_result->offer_type === 'percentage')
+                                                    {{ intval($offer_result->discount_amount) }}% Off
+                                                @endif
+                                            </span>
+                                        </div>
+                                    @endif
+
+                                    <a href="javascript:void(0);">
+                                        @if (!empty($product_image_name) && file_exists(public_path() . '/uploads/product/'.$product_image_name))					
+                                        <img src="{{ asset('uploads/product/'.$product_image_name) }}" title="{{$product_title}}" />
+                                        @else
+                                        <img src="{{ asset('assets/frontend/images/image-not-avilable.png')}}" title="{{Helper::language('image_not_available')}}" alt="{{Helper::language('image_not_available')}}">
+                                        @endif 
+                                    </a>
+                                </div>
+                                <div class="offers-content">
+                                    <h6>
+                                        <a href="javascript:void(0);" class="heading-six">{{@ucfirst($product_title)?: ''}} </a>
+                                    </h6>
+                                    <span class="text-sm grey-text">{{@$product_variant->variant_size? $product_variant->variant_size.' '.$product_unit :''}}</span>
+
+                                    <div class="price-wrapper">
+                                        @if($final_price < $original_price)
+                                            <span class="sell-price">
+                                                {{ $final_price }}{{ Helper::Settings('currency_symbol') }}
+                                            </span>
+                                            <span class="original-price">
+                                                {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                            </span>
+                                        @else
+                                            <span class="sell-price">
+                                                {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                            </span>
+                                        @endif
+                                    </div>
+
+                                    @if(!empty($offer_result->average_rating))
+                                    <div class="product-rating">
+                                        <span class="text-sm black-text">{{@$offer_result->average_rating?: ''}}</span>
+                                        <i class="icon-star-fill"></i>
+                                    </div>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.35); z-index: 5;">
+                                <a href="{{ route('special') }}" class="special-offers-view-all" title="{{ @Helper::language('view_all_label') ?: 'View All' }}">
+                                    <span>{{ @Helper::language('view_all_label') ?: 'VIEW ALL' }}</span>
+                                    <i class="fa-solid fa-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    @else
                     <div class="swiper-slide">
                         <div class="bs-box">
                             <div class="bs-image responsive-image">
@@ -389,30 +465,8 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                                     <a href="{{route('productdetails',['id'=>Helper::encodeUrl($offer_result->id)])}}" class="heading-six">{{@ucfirst($product_title)?: ''}} </a>
                                 </h6>
                                 <span class="text-sm grey-text">{{@$product_variant->variant_size? $product_variant->variant_size.' '.$product_unit :''}}</span>
-                                {{-- <div class="price-wrapper">
-                                    @if($product_variant->variant_discounted_price=='' || $product_variant->variant_discounted_price==0)
-                                        <span class="sell-price"> {{@$product_variant->variant_price? $product_variant->variant_price.Helper::Settings( 'currency_symbol') :''}}</span>                                        
-                                    @else
-                                        <span class="sell-price"> {{@$product_variant->variant_discounted_price?    $product_variant->variant_discounted_price.Helper::Settings( 'currency_symbol') :''}}</span>
-                                        <span class="original-price">{{@$product_variant->variant_price? $product_variant->variant_price.Helper::Settings( 'currency_symbol') :''}}</span>
-                                       
-                                    @endif
-                                </div> --}}
 
                                 <div class="price-wrapper">
-                                    @php
-                                        $original_price = $product_variant->variant_price;
-                                        $final_price = $original_price;
-
-                                        if ($offer_result->offer_status && !$offer_result->bogo_status) {
-                                            if ($offer_result->offer_type === 'flat') {
-                                                $final_price = max(0, $original_price - $offer_result->discount_amount);
-                                            } elseif ($offer_result->offer_type === 'percentage') {
-                                                $final_price = max(0, $original_price - ($original_price * $offer_result->discount_amount / 100));
-                                            }
-                                        }
-                                    @endphp
-
                                     @if($final_price < $original_price)
                                         <span class="sell-price">
                                             {{ $final_price }}{{ Helper::Settings('currency_symbol') }}
@@ -433,7 +487,6 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                                     <i class="icon-star-fill"></i>
                                 </div>
                                 @endif
-                                {{-- <a title="{{Helper::language('add_to_cart')}}" href="{{ route('productdetails', ['id' => Helper::encodeUrl($offer_result->id)]) }}" class="add-bucket"><i class="icon-bucket"></i></a> --}}
 
                                 @if ($available_qty>0)
                                     <a style="display: <?php echo $adisplay ; ?>;" title="{{Helper::language('add_to_cart')}}"  data-product-id="{{ Helper::encodeUrl($product_id) }}"  data-variant-id="{{ $variant_id }}" data-bogo_status="{{ $offer_result->bogo_status}}" data-offer_status="{{ $offer_result->offer_status}}"  class="add-bucket"  href="javascript:void(0);"><i class="icon-bucket"></i></a>
@@ -443,6 +496,7 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                                 <label class="fav-button" title="{{Helper::language('add_to_favourite')}}" for="fav-item1{{$key1}}"></label>
                         </div>
                     </div>
+                    @endif
                     @endforeach
                 </div>
             </div>

@@ -36,11 +36,11 @@
     </div> --}}
     <div class="form-group row">
         <label class="col-sm-3 form-control-label"
-            style="display: flex;">Qty <span
+            style="display: flex;">Available Qty <span
                 class="valid_field">*</span></label>
         <div class="col-sm-9">
             <input type="text" name="prod_variant[{{$key}}][variant_qty]" maxlength="5"
-                onkeypress="return isNumberBlock(event)" class="form-control" placeholder="Qty"
+                onkeypress="return isNumberBlock(event)" class="form-control" placeholder="Available Qty"
                 value="">
         </div>
     </div>

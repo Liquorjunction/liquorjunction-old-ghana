@@ -102,8 +102,8 @@ class HomeController extends Controller
         $combinedOffers = $offerProducts->concat($bogoProducts)->unique('id');
 
         $total_offer_count = $combinedOffers->count();
-        // Limit to max 20 items for home page display
-        $offer_product = $combinedOffers->take(20);
+        // Limit to max 21 items for home page display (20 items + 21st blurred View All item if count > 20)
+        $offer_product = $combinedOffers->take(21);
 
         $best_seller_product = Product::activeProductsBasedOnRelations()->where('is_product_bestseller',1)->limit('20')->orderby('updated_at','desc')->get();
 

@@ -44,8 +44,8 @@
   <script src="{{ asset('assets/frontend/js/moment-timezone/0.5.13/moment-timezone-with-data.js') }}"></script>
   <script>
       $(document).ready(function(){
-          var timezone = moment.tz.guess();
-          
+          var timezone = (typeof moment !== 'undefined' && moment && moment.tz) ? moment.tz.guess() : '';
+          if (!timezone) return;
           let url = "{{route('frontend.setTimeZone')}}";
           $.ajax({
               url: url,

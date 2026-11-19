@@ -263,7 +263,8 @@
     </div>
     @endsection
     @push('after-scripts')
-    <!-- Scripts -->
+    
+    <script type="text/javascript">
         $(document).ready(function() {
             $('#storeForm').submit(function(event) {
                 event.preventDefault(); // Prevent the default form submission
@@ -630,32 +631,6 @@
                     }
                 });
             }
-
-            // Locate Me Button (GPS)
-            $('#btn_locate_me').on('click', function() {
-                if (!navigator.geolocation) {
-                    alert('Geolocation is not supported by your browser.');
-                    return;
-                }
-
-                $('#locate_icon').removeClass('fa-crosshairs').addClass('fa-spinner fa-spin text-warning');
-                $('#map_status_text').html('<i class="fa fa-spinner fa-spin text-warning"></i> Detecting current location...');
-
-                navigator.geolocation.getCurrentPosition(function(pos) {
-                    $('#locate_icon').removeClass('fa-spinner fa-spin text-warning').addClass('fa-crosshairs');
-                    var curLat = pos.coords.latitude;
-                    var curLng = pos.coords.longitude;
-                    var curLatLng = new google.maps.LatLng(curLat, curLng);
-
-                    isMapDragging = true;
-                    storeMap.panTo(curLatLng);
-                    storeMap.setZoom(17);
-                }, function(err) {
-                    $('#locate_icon').removeClass('fa-spinner fa-spin text-warning').addClass('fa-crosshairs');
-                    $('#map_status_text').html('<i class="fa fa-exclamation-triangle text-danger"></i> Location access denied or unavailable');
-                }, { enableHighAccuracy: true, timeout: 8000 });
-            });
-        }
 
             // Locate Me Button (GPS)
             $('#btn_locate_me').on('click', function() {

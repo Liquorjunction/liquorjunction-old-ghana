@@ -2725,11 +2725,11 @@ body {
 
 .navside .nav li a:hover,
 .navside .nav li a:focus {
-    background-color: rgb(251 181 22 / 90);
+    background-color: rgba(255, 255, 255, 0.06);
 }
 
 .navside .nav li.active {
-    background-color: rgb(251 181 22 / 90);
+    background-color: transparent;
 }
 
 .navside .nav li.active > a {
