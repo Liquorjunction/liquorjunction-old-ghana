@@ -34,6 +34,10 @@ class userAuth
                 session()->put('url.intended', $request->fullUrl());
             }
 
+            if ($request->is('checkout*') || session()->has('buy_now_info')) {
+                session()->put('checkout_value', 1);
+            }
+
             Alert::warning('Login Required', 'Please login to access this page.');
             return redirect()->route('websitelogin');
         }

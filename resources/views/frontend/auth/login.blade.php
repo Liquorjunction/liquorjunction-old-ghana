@@ -233,30 +233,14 @@
                         let counter = response.counter;
                         let pack_size = response.pack_size;
 
-                        if (checkout_value == 1) {
-                            // console.log("checkout_value");
-                            // console.log(checkout_value);
-
-                            // console.log("counter");
-                            // console.log(counter);
-
-                            // console.log("pack_size");
-                            // console.log(pack_size);
-                            // let checkoutUrl = '{{ route('checkout', ['counter' => ':counter', 'pack_size' => ':pack_size']) }}';
-                            // checkoutUrl = checkoutUrl.replace(':counter', counter).replace(':pack_size', pack_size);
-
+                        if (response.redirect_url) {
+                            window.location.href = response.redirect_url;
+                        } else if (response.redirect) {
+                            window.location.href = response.redirect;
+                        } else if (checkout_value == 1) {
                             var checkoutUrl =
                                 '{{ route('checkout') }}'; // This fetches the route '/checkout'
-
-                            // console.log("Checkout URL:");
-                            // console.log(checkoutUrl);
-
-                            // Redirect to the checkout URL or handle as needed
                             window.location.href = checkoutUrl;
-                            // console.log("checkoutUrl");
-                            // console.log(checkoutUrl);
-                            // window.location.href = checkoutUrl;
-
                         } else {
                             var homeUrl = '{{ route('frontend.home') }}';
                             window.location.href = homeUrl;

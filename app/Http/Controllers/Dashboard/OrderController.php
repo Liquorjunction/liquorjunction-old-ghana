@@ -232,16 +232,27 @@ class OrderController extends Controller
         $orderInformation = Order::with('order_details', 'orderInfo', 'transcations')->where('id', $order_id)->first();
 
         if (!empty($orderInformation)) {
+            $transaction = $orderInformation->transcations;
+            $paymentType = $transaction ? (int)$transaction->payment_type : null;
+            $wasStockDeducted = ((int)$orderInformation->is_stock_updated === 1) || ($paymentType === 3);
+
+            if (!$wasStockDeducted) {
+                return;
+            }
+
             foreach ($orderInformation->order_details as $key => $order_detail) {
-                $order_quantity = $order_detail->quantity;
+                $order_quantity = (int)$order_detail->quantity;
                 $varinat_id = $order_detail->variant_id;
                 $varinat_info = ProductVariants::where('id', $varinat_id)->first();
                 if ($varinat_info != "") {
-                    $varinat_info->sold_qty = ($varinat_info->sold_qty - $order_quantity);
-                    $varinat_info->available_qty = ($varinat_info->available_qty + $order_quantity);
+                    $varinat_info->sold_qty = max(0, (int)$varinat_info->sold_qty - $order_quantity);
+                    $varinat_info->available_qty = (int)$varinat_info->available_qty + $order_quantity;
                     $varinat_info->save();
                 }
             }
+
+            $orderInformation->is_stock_updated = 2;
+            $orderInformation->save();
         }
     }
 
@@ -347,13 +358,13 @@ class OrderController extends Controller
     
         }
 
-        $order = Order::leftjoin('order_status', 'order_status.id', '=', 'order.id')
-            ->select('order.*', 'order_status.name as order_status', )
-            ->where('order.id', $order_id)->first();
+        $order = Order::where('id', $order_id)->first();
 
         if (!$order) {
             return response()->json(['success' => false, 'msg' => 'something wrong.']);
         }
+
+        $previousStatus = (int)$order->order_status;
 
         // save the cancellation user Details
         $authData = Auth::user();
@@ -371,7 +382,7 @@ class OrderController extends Controller
             $currentUser='Country Sub Admin';
         }
 
-        if ($status == 4) {
+        if ((int)$status === 4 && $previousStatus !== 4) {
             $order->cancelled_by= $currentUser;
             $order->cancelled_user= $authData->id;
             $this->updateStockOnCancelOrder($order_id);

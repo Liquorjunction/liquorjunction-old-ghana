@@ -582,10 +582,11 @@ class ProductController extends Controller
                         ];
 
                         $get_variant_data = ProductVariants::where('id', $value['id'])->first();
-                        $soldQty = $get_variant_data ? ($get_variant_data->sold_qty ?? 0) : 0;
+                        $soldQty = $get_variant_data ? max(0, (int)($get_variant_data->sold_qty ?? 0)) : 0;
                         $enteredAvailableQty = max((int)($value['variant_qty'] ?? 0), 0);
 
                         $variantData["available_qty"] = $enteredAvailableQty;
+                        $variantData["sold_qty"] = $soldQty;
                         $variantData["variant_qty"] = $enteredAvailableQty + $soldQty;
 
                         ProductVariants::where('id', $value['id'])->update($variantData);

@@ -51,6 +51,17 @@ class WebsiteLoginController extends Controller
         $this->user_id = isset(auth()->guard('user')->user()->id) ? auth()->guard('user')->user()->id : '';
     }
 
+    public function getLoginRedirectUrl()
+    {
+        if (Session::has('buy_now_info') || Session::get('checkout_value') == 1 || str_contains((string)Session::get('url.intended'), '/checkout')) {
+            Session::forget('url.intended');
+            return route('checkout');
+        } elseif (Session::has('url.intended')) {
+            return Session::pull('url.intended');
+        }
+        return route('frontend.home');
+    }
+
     public function redirectToGoogle()
     {
         return Socialite::driver('google')->stateless()->redirect();
@@ -135,9 +146,10 @@ class WebsiteLoginController extends Controller
             if ($finduser) {
 
                 Auth::guard('user')->login($finduser);
+                Helper::afterLoginAddUserCartItemData();
 
                 session()->flash('success', 'Login successfully');
-                return redirect()->route('frontend.home');
+                return redirect()->to($this->getLoginRedirectUrl());
             } else {
                 $userExist = MainUser::where(function ($query) use ($user) {
                     if (!empty($user->email)) {
@@ -183,8 +195,9 @@ class WebsiteLoginController extends Controller
                 ]);
 
                 Auth::guard('user')->login($newUser);
+                Helper::afterLoginAddUserCartItemData();
                 session()->flash('success', 'Login successfully');
-                return redirect()->route('frontend.home')->with('key', $newUser);
+                return redirect()->to($this->getLoginRedirectUrl())->with('key', $newUser);
             }
         } catch (Exception $e) {
             // dd($e->getMessage());
@@ -214,8 +227,9 @@ class WebsiteLoginController extends Controller
 
             if ($finduser) {
                 Auth::guard('user')->login($finduser);
+                Helper::afterLoginAddUserCartItemData();
                 session()->flash('success', 'Login successfully');
-                return redirect()->route('frontend.home');
+                return redirect()->to($this->getLoginRedirectUrl());
             } else {
 
                 $userExist = MainUser::where(function ($query) use ($user) {
@@ -263,8 +277,9 @@ class WebsiteLoginController extends Controller
                 ]);
 
                 Auth::guard('user')->login($newUser);
+                Helper::afterLoginAddUserCartItemData();
                 session()->flash('success', 'Login successfully');
-                return redirect()->route('frontend.home');
+                return redirect()->to($this->getLoginRedirectUrl());
             }
         } catch (Exception $e) {
             // dd($e->getMessage());
@@ -295,9 +310,10 @@ class WebsiteLoginController extends Controller
             if ($finduser) {
 
                 Auth::guard('user')->login($finduser);
+                Helper::afterLoginAddUserCartItemData();
 
                 session()->flash('success', 'Login successfully');
-                return redirect()->route('frontend.home');
+                return redirect()->to($this->getLoginRedirectUrl());
             } else {
 
                 $userExist = MainUser::where(function ($query) use ($appleUser) {
@@ -345,9 +361,10 @@ class WebsiteLoginController extends Controller
                 ]);
 
                 Auth::guard('user')->login($newUser);
+                Helper::afterLoginAddUserCartItemData();
 
                 session()->flash('success', 'Login successfully');
-                return redirect()->route('frontend.home')->with('key', $newUser);
+                return redirect()->to($this->getLoginRedirectUrl())->with('key', $newUser);
             }
         } catch (Exception $e) {
             session()->flash('error', 'Something went wrong. Please try again.');
@@ -704,6 +721,9 @@ class WebsiteLoginController extends Controller
     {
 
         $checkout_value = Session::get('checkout_value') ? Session::get('checkout_value') : 0;
+        if (Session::has('buy_now_info') || str_contains((string)Session::get('url.intended'), '/checkout')) {
+            $checkout_value = 1;
+        }
         $counter = Session::get('counter');
         $pack_size = Session::get('pack_size');
 
@@ -773,11 +793,17 @@ class WebsiteLoginController extends Controller
                         //     return redirect()::to($checkoutUrl);
                         // }
                         // return response()->json(['success' => 'true']);
+                        $redirect_url = $this->getLoginRedirectUrl();
+                        if ($redirect_url == route('checkout')) {
+                            $checkout_value = 1;
+                        }
+
                         return response()->json([
                             'success' => true,
                             'checkout_value' => $checkout_value,
                             'counter' => $counter,
                             'pack_size' => $pack_size,
+                            'redirect_url' => $redirect_url,
                         ]);
                     } else {
                         return response()->json(array('status' => 'error_password', 'errors' => \Helper::language('email_or_password_is_invalid')), 500);
@@ -938,10 +964,16 @@ class WebsiteLoginController extends Controller
                     // Get updated cart
                     $cartItems = \Helper::getUserCartItems();
 
-                    if (count($cartItems) > 0) {
+                    if (count($cartItems) > 0 || Session::has('buy_now_info') || Session::get('checkout_value') == 1 || str_contains((string)Session::get('url.intended'), '/checkout')) {
+                        Session::forget('url.intended');
                         return response()->json([
                             'success' => 'true',
                             'redirect' => route('checkout') // 👈 your checkout route
+                        ]);
+                    } elseif (session()->has('url.intended')) {
+                        return response()->json([
+                            'success' => 'true',
+                            'redirect' => session()->pull('url.intended')
                         ]);
                     }
 

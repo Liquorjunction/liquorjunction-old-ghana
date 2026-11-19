@@ -2708,17 +2708,25 @@ class UserController extends Controller
             $orderInformation = Order::with('order_details', 'orderInfo', 'transcations')->where('id', $request->order_id)->where('user_id', $userData->id)->first();
 
             //dd($orderInformation);
-            if (!empty($orderInformation)) {
-                foreach ($orderInformation->order_details as $key => $order_detail) {
-                    $order_quantity = $order_detail->quantity;
-                    $varinat_id = $order_detail->variant_id;
+            if (!empty($orderInformation) && (int)$orderInformation->order_status === 1) {
+                $transaction = $orderInformation->transcations;
+                $paymentType = $transaction ? (int)$transaction->payment_type : null;
+                $wasStockDeducted = ((int)$orderInformation->is_stock_updated === 1) || ($paymentType === 3);
 
-                    $varinat_info = ProductVariants::where('id', $varinat_id)->first();
-                    if ($varinat_info != "") {
-                        $varinat_info->sold_qty = ($varinat_info->sold_qty - $order_quantity);
-                        $varinat_info->available_qty = ($varinat_info->available_qty + $order_quantity);
-                        $varinat_info->save();
+                if ($wasStockDeducted) {
+                    foreach ($orderInformation->order_details as $key => $order_detail) {
+                        $order_quantity = (int)$order_detail->quantity;
+                        $varinat_id = $order_detail->variant_id;
+
+                        $varinat_info = ProductVariants::where('id', $varinat_id)->first();
+                        if ($varinat_info != "") {
+                            $varinat_info->sold_qty = max(0, (int)$varinat_info->sold_qty - $order_quantity);
+                            $varinat_info->available_qty = (int)$varinat_info->available_qty + $order_quantity;
+                            $varinat_info->save();
+                        }
                     }
+                    $orderInformation->is_stock_updated = 2;
+                    $orderInformation->save();
                 }
                 $mainArr = [];
                 $order_status = Order::where('id', $orderInformation->id)->update(['order_status' => 4]);

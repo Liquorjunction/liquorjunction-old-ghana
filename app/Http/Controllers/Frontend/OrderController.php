@@ -195,16 +195,24 @@ class OrderController extends Controller
         }
 
         // Process order details
-        foreach ($orderInformation->order_details as $order_detail) {
-            $order_quantity = $order_detail->quantity;
-            $variant_id = $order_detail->variant_id;
+        $transaction = $orderInformation->transcations;
+        $paymentType = $transaction ? (int)$transaction->payment_type : null;
+        $wasStockDeducted = ((int)$orderInformation->is_stock_updated === 1) || ($paymentType === 3);
 
-            $variant_info = ProductVariants::where('id', $variant_id)->first();
-            if ($variant_info) {
-                $variant_info->sold_qty -= $order_quantity;
-                $variant_info->available_qty += $order_quantity;
-                $variant_info->save();
+        if ($wasStockDeducted) {
+            foreach ($orderInformation->order_details as $order_detail) {
+                $order_quantity = (int)$order_detail->quantity;
+                $variant_id = $order_detail->variant_id;
+
+                $variant_info = ProductVariants::where('id', $variant_id)->first();
+                if ($variant_info) {
+                    $variant_info->sold_qty = max(0, (int)$variant_info->sold_qty - $order_quantity);
+                    $variant_info->available_qty = (int)$variant_info->available_qty + $order_quantity;
+                    $variant_info->save();
+                }
             }
+            $orderInformation->is_stock_updated = 2;
+            $orderInformation->save();
         }
 
         // Update the order status to cancelled (4)

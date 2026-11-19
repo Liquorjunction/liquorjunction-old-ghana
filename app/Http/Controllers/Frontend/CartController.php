@@ -723,6 +723,8 @@ class CartController extends Controller
         }
 
         Session::put('buy_now_info', $data);
+        Session::put('checkout_value', 1);
+        Session::put('url.intended', route('checkout'));
 
         return response()->json(['success' => true]);
     }

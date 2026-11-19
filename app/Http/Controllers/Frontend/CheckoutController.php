@@ -76,6 +76,7 @@ class CheckoutController extends Controller
             Session::put('checkout_value', 1);
             Session::put('pack_size', $request->pack_size);
             Session::put('counter', $request->counter);
+            Session::put('url.intended', route('checkout'));
             return redirect('login');
         }
 
@@ -83,22 +84,21 @@ class CheckoutController extends Controller
             Session::forget('checkout_in_progress');
         }
 
-        if (Session::get('checkout_value') == 1) {
-            $variantIds = $request->pack_size ? $request->pack_size : Session::get('pack_size');
-            $variant_quantity = $request->counter ? $request->counter : Session::get('counter');
-        } else {
-            $variantIds = $request->pack_size;
-            $variant_quantity = $request->counter;
-        }
-
         $is_page_reload = $request->input('page_reload_flag') == '1';
+
         // Handle Buy Now session - load once
-        if ((empty($variantIds) || empty($variant_quantity)) && Session::has('buy_now_info')  && !$is_page_reload) {
+        if (Session::has('buy_now_info') && !$is_page_reload) {
             $buyNowData = Session::get('buy_now_info');
             $variantIds = $buyNowData['variantId'] ?? null;
             $variant_quantity = $buyNowData['quantity'] ?? null;
 
             $is_buy_now = 1;
+        } elseif (Session::get('checkout_value') == 1) {
+            $variantIds = $request->pack_size ? $request->pack_size : Session::get('pack_size');
+            $variant_quantity = $request->counter ? $request->counter : Session::get('counter');
+        } else {
+            $variantIds = $request->pack_size;
+            $variant_quantity = $request->counter;
         }
 
         // Clear session values related to cart selection
