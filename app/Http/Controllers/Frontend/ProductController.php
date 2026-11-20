@@ -1750,8 +1750,8 @@ class ProductController extends Controller
         }
 
         return response()->json([
-            'orignal_price' => $original_price,
-            'discounted_price' => $discounted_price,
+            'orignal_price' => Helper::numberFormat($original_price),
+            'discounted_price' => Helper::numberFormat($discounted_price),
             'product_stock' => $instock,
             'available_qty' => (int) $varinat_info->available_qty,
             'is_in_cart' => $is_in_cart

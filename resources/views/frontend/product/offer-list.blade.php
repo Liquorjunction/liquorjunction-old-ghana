@@ -295,11 +295,11 @@ aria-labelledby="offcanvasRightLabel" style="display: flex; flex-direction: colu
         
             <div class="values">
                 <span id="range1">
-                    {{ $product_min_price->min_price . Helper::Settings('currency_symbol') ?: '0' }}
+                    {{ Helper::numberFormat($product_min_price->min_price ?? 0) . Helper::Settings('currency_symbol') }}
                 </span>
                 <span> &dash; </span>
                 <span id="range2">
-                    {{ $product_max_price->max_price . Helper::Settings('currency_symbol') ?: '0' }}
+                    {{ Helper::numberFormat($product_max_price->max_price ?? 0) . Helper::Settings('currency_symbol') }}
                 </span>
             </div>
         

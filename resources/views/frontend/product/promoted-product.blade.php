@@ -31,7 +31,7 @@
                                         <h5 class="mb-2">{{@$product->product_name}}</h5>
                                         <p>{{@$product->short_description}}</p>
                                          @if(!empty($user_id))
-                                         <h6 class="mb-0 text-black">{{@$setting->currency_symbol}}{{ isset($product->discount_price) ? $product->discount_price : $product->retail_price}}<span class="d-inline-block body-normal disable-price">{{@$setting->currency_symbol}}{{@$product->retail_price}}</span></h6>
+                                         <h6 class="mb-0 text-black">{{@$setting->currency_symbol}}{{ Helper::numberFormat(isset($product->discount_price) ? $product->discount_price : $product->retail_price) }}<span class="d-inline-block body-normal disable-price">{{@$setting->currency_symbol}}{{ Helper::numberFormat(@$product->retail_price) }}</span></h6>
                                          @else
                                          <!-- <h6 class="mb-0 text-red">Login For Price</h6> -->
                                          <button class="text-red small-common-btn hvr-radial-out">Login For Price</button>

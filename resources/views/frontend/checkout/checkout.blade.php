@@ -4,6 +4,13 @@
 @include('sweetalert::alert')
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 
+@php
+    $allowedLocationsTree = \App\Services\AddressValidationService::getAllowedLocationsTree();
+@endphp
+<script>
+    window.allowedServiceLocations = window.allowedServiceLocations || {!! json_encode($allowedLocationsTree) !!};
+</script>
+
 <style>
     .star {
         color: red;
@@ -1334,11 +1341,11 @@
 
                                     @if ($final_price < $single_original_price)
                                         <h5>
-                                            {{ $final_price }}{{ Helper::Settings('currency_symbol') }}
-                                            <span>{{ $single_original_price }}{{ Helper::Settings('currency_symbol') }}</span>
+                                            {{ Helper::numberFormat($final_price) }}{{ Helper::Settings('currency_symbol') }}
+                                            <span>{{ Helper::numberFormat($single_original_price) }}{{ Helper::Settings('currency_symbol') }}</span>
                                         </h5>
                                     @else
-                                        <h5>{{ $single_original_price }}{{ Helper::Settings('currency_symbol') }}</h5>
+                                        <h5>{{ Helper::numberFormat($single_original_price) }}{{ Helper::Settings('currency_symbol') }}</h5>
                                     @endif
                                 </li>
 
@@ -2152,6 +2159,13 @@
                     $("#user_address_error").text('Delivery location is not set on map for the selected address. Please click "Set on Map" or "Edit" to pin location.');
                     if (!firstErrorElement) firstErrorElement = checkedRadio.closest('.address-group');
                     error++;
+                } else {
+                    var servCheck = checkSelectedAddressServiceability(checkedRadio);
+                    if (!servCheck.serviceable) {
+                        showAddressServiceabilityError(servCheck.message);
+                        if (!firstErrorElement) firstErrorElement = checkedRadio.closest('.address-group');
+                        error++;
+                    }
                 }
             }
         } else {
@@ -2343,17 +2357,145 @@
         });
 
     }
+    window.isSelectedAddressServiceable = true;
+
+    function checkSelectedAddressServiceability(radioEl) {
+        if (!radioEl || !radioEl.length) {
+            return { serviceable: true };
+        }
+
+        var attrServ = radioEl.attr('data-serviceable');
+        var attrMsg = radioEl.attr('data-service-message');
+        if (attrServ === '0' && attrMsg) {
+            return {
+                serviceable: false,
+                message: attrMsg
+            };
+        }
+
+        if (!window.allowedServiceLocations || !window.allowedServiceLocations.length) {
+            return { serviceable: true };
+        }
+
+        var countryId = radioEl.attr('data-country-id');
+        var countryName = (radioEl.attr('data-country-name') || '').trim();
+        var regionId = radioEl.attr('data-region-id');
+        var regionTitle = (radioEl.attr('data-region-title') || radioEl.attr('data-state') || '').trim();
+        var areaId = radioEl.attr('data-area-id');
+        var areaTitle = (radioEl.attr('data-area-title') || radioEl.attr('data-city') || '').trim();
+
+        // 1. Country Check
+        var matchedCountry = null;
+        for (var i = 0; i < window.allowedServiceLocations.length; i++) {
+            var c = window.allowedServiceLocations[i];
+            if (countryId && String(c.id) === String(countryId)) {
+                matchedCountry = c;
+                break;
+            }
+            if (countryName && c.name && (countryName.toLowerCase() === c.name.toLowerCase() || countryName.toLowerCase().indexOf(c.name.toLowerCase()) !== -1 || c.name.toLowerCase().indexOf(countryName.toLowerCase()) !== -1)) {
+                matchedCountry = c;
+                break;
+            }
+        }
+
+        var allowedCountriesList = window.allowedServiceLocations.map(function(x){ return x.name; }).join(', ');
+
+        if (!matchedCountry) {
+            return {
+                serviceable: false,
+                type: 'country',
+                message: 'Delivery not available in ' + (countryName || 'this country') + '. Only Available in: ' + allowedCountriesList
+            };
+        }
+
+        // 2. Region Check
+        var matchedRegion = null;
+        var regions = matchedCountry.regions || [];
+        for (var j = 0; j < regions.length; j++) {
+            var r = regions[j];
+            if (regionId && String(r.id) === String(regionId)) {
+                matchedRegion = r;
+                break;
+            }
+            if (regionTitle && r.title && (regionTitle.toLowerCase() === r.title.toLowerCase() || regionTitle.toLowerCase().indexOf(r.title.toLowerCase()) !== -1 || r.title.toLowerCase().indexOf(regionTitle.toLowerCase()) !== -1)) {
+                matchedRegion = r;
+                break;
+            }
+        }
+
+        var allowedRegionsList = regions.map(function(x){ return x.title; }).join(', ');
+
+        if (!matchedRegion) {
+            return {
+                serviceable: false,
+                type: 'region',
+                country: matchedCountry,
+                message: 'Delivery not available in ' + (regionTitle || 'this region') + '. Only Available in: ' + allowedRegionsList
+            };
+        }
+
+        // 3. Area Check
+        var matchedArea = null;
+        var areas = matchedRegion.areas || [];
+        for (var k = 0; k < areas.length; k++) {
+            var a = areas[k];
+            if (areaId && String(a.id) === String(areaId)) {
+                matchedArea = a;
+                break;
+            }
+            if (areaTitle && a.title && (areaTitle.toLowerCase() === a.title.toLowerCase() || areaTitle.toLowerCase().indexOf(a.title.toLowerCase()) !== -1 || areaTitle.toLowerCase().indexOf(areaTitle.toLowerCase()) !== -1)) {
+                matchedArea = a;
+                break;
+            }
+        }
+
+        var allowedAreasList = areas.map(function(x){ return x.title; }).join(', ');
+
+        if (!matchedArea) {
+            return {
+                serviceable: false,
+                type: 'area',
+                country: matchedCountry,
+                region: matchedRegion,
+                message: 'Delivery not available in ' + (areaTitle || 'this location') + '. Only Available in: ' + allowedAreasList
+            };
+        }
+
+        return {
+            serviceable: true,
+            country: matchedCountry,
+            region: matchedRegion,
+            area: matchedArea
+        };
+    }
+
+    function showAddressServiceabilityError(msg) {
+        window.isSelectedAddressServiceable = false;
+        $("#user_address_error").text(msg);
+    }
+
+    function clearAddressServiceabilityError() {
+        window.isSelectedAddressServiceable = true;
+        $("#user_address_error").text('');
+    }
+
     $(document).ready(function() {
         var checkedRadio = $("input[name='address_radio']:checked");
         if (checkedRadio.length) {
             var user_address_id = checkedRadio.val();
             checkDeliveryAddressByArea(user_address_id);
         }
+
+        // Listen for address change via radio button selection
+        $(document).on('change', "input[name='address_radio']", function() {
+            var selectedId = $(this).val();
+            checkDeliveryAddressByArea(selectedId);
+        });
     });
 
     function parseAmount(text) {
-            return parseFloat(text.replace(/[^\d.-]/g, '')) || 0;
-        }
+        return parseFloat(text.replace(/[^\d.-]/g, '')) || 0;
+    }
 
     function checkDeliveryAddressByArea(user_address_id) {
         var purchase_type = $("input[name='purchase_radio']:checked").val() || $("input[name='purchase_radio']").val();
@@ -2361,26 +2503,51 @@
 
         // Check if selected address has map location
         var radioEl = $("#radioAddress" + user_address_id);
+        if (!radioEl.length) {
+            radioEl = $("input[name='address_radio']:checked");
+        }
+
         var hasLoc = radioEl.attr('data-has-location');
         if (hasLoc === '0' || hasLoc === 0) {
+            clearAddressServiceabilityError();
             $("#user_address_error").text('Delivery location is not set on map for the selected address. Please click "Set on Map" or "Edit" to pin location.');
             if (typeof scrollAddressIntoView === 'function') {
                 scrollAddressIntoView(radioEl.closest('.address-group'), false);
             }
-        } else {
-            $("#user_address_error").text('');
+            return;
         }
 
-        if (purchase_type == 1) {
+        // Check serviceability of Country, Region, and Area
+        var servCheck = checkSelectedAddressServiceability(radioEl);
+        if (!servCheck.serviceable) {
+            showAddressServiceabilityError(servCheck.message);
 
-            var checked = $("#radioAddress"+user_address_id).attr("checked");
-            
-            if(!checked){
-                $("input[name='address_radio']").removeAttr("checked");
-                $("#radioAddress"+user_address_id).attr("checked", true);
+            $("#inp-delivery-fee").val(0);
+            $("#delivery_fee").text("Not Available").addClass('text-danger');
+            $("#delivery_charge").removeClass('delivery-display');
+            $("#delivery_fee").removeClass('delivery-display');
+            $("#delivery_li").show();
+
+            let grandTotalElement = document.getElementById('grand-total-amount');
+            let currentTotal = parseAmount(grandTotalElement.innerText) - previousDeliveryFee;
+            $("#grand-total-amount").text(currentTotal.toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
+            $("#inp-grand-total-amount").val(currentTotal.toFixed(2));
+
+            if (typeof scrollAddressIntoView === 'function') {
+                scrollAddressIntoView(radioEl.closest('.address-group'), false);
             }
+            return;
+        }
 
+        clearAddressServiceabilityError();
+        $("#delivery_fee").removeClass('text-danger');
 
+        if (purchase_type == 1) {
+            var checked = $("#radioAddress" + user_address_id).prop("checked");
+            if (!checked) {
+                $("input[name='address_radio']").prop("checked", false);
+                $("#radioAddress" + user_address_id).prop("checked", true);
+            }
 
             var coupon_code_id = $("#coupon_code_id").val();
             var is_buy_now = $('#buy-now').val();
@@ -2397,32 +2564,43 @@
                     is_buy_now: is_buy_now,
                     pvariant_Ids: pvariant_Ids,
                     buy_quantity: buy_quantity,
-                    currentTotal:currentTotal,
+                    currentTotal: currentTotal,
                     previousDeliveryFee: previousDeliveryFee
                 },
                 url: "{{ route('userAreaTax') }}",
                 success: function(response) {
+                    if (response.serviceable === false || response.error) {
+                        showAddressServiceabilityError(response.message || 'Delivery not available in selected location.');
+                        $("#inp-delivery-fee").val(0);
+                        $("#delivery_fee").text("Not Available").addClass('text-danger');
+                        $("#delivery_charge").removeClass('delivery-display');
+                        $("#delivery_fee").removeClass('delivery-display');
+                        let grandTotal = parseFloat(response.grand_total_amount);
+                        $("#grand-total-amount").text(grandTotal.toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
+                        $("#inp-grand-total-amount").val(grandTotal.toFixed(2));
+                        $("#delivery_li").show();
+                        return;
+                    }
+
+                    clearAddressServiceabilityError();
+                    $("#delivery_fee").removeClass('text-danger');
+
                     if (response.coupon_code_price != "") {
-                        $('#coupon_code_amount_text').text('-' + response.coupon_code_price + "{{Helper::Settings('currency_symbol')}}");
+                        $('#coupon_code_amount_text').text('-' + parseFloat(response.coupon_code_price || 0).toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
                     }
                     let grandTotal = parseFloat(response.grand_total_amount);
                     let deliveryFee = parseFloat(response.delivery_fee);
-                    if(deliveryFee>0)
-                    {
+                    if (deliveryFee > 0) {
                         $("#delivery_fee").text(deliveryFee.toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
                         $("#delivery_charge").removeClass('delivery-display');
                         $("#delivery_fee").removeClass('delivery-display');
-                    }
-                    else
-                    {
-                         $("#delivery_fee").text("Yay! free delivery");
+                    } else {
+                        $("#delivery_fee").text("Yay! free delivery");
                     }
 
                     $("#inp-delivery-fee").val(deliveryFee);
                     $("#grand-total-amount").text(grandTotal.toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
                     $("#inp-grand-total-amount").val(grandTotal.toFixed(2));
-                
-
                     $("#delivery_li").show();
                 }
             });
@@ -2596,7 +2774,7 @@
                     if (response.code_id == "") {
                         $("#coupon_error").text(response.message).css('color', 'red');
                     } else {
-                        $('#coupon_code_amount_text').text('-' + response.coupon_code_price + " {{Helper::Settings('currency_symbol')}}");
+                        $('#coupon_code_amount_text').text('-' + parseFloat(response.coupon_code_price || 0).toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
                         $("#li-coupon").show();
                         $("#delivery_li").show();
 
@@ -2623,18 +2801,18 @@
 
 
                         $("#applied-code").text(coupon_code);
-                        $("#coupon-saved-msg").html(`You just saved <strong>${response.coupon_code_price} {{Helper::Settings('currency_symbol')}}</strong> on your order`);
+                        $("#coupon-saved-msg").html(`You just saved <strong>${parseFloat(response.coupon_code_price || 0).toFixed(2)} {{Helper::Settings('currency_symbol')}}</strong> on your order`);
 
                         $("#coupon_percentage").val(response.coupon_percentage);
                         $("#coupon_code_id").val(response.code_id);
                         $("#coupon_code_amount").val(parseFloat(response.coupon_code_price));
                         $("#coupon_min_amount").val(response.minimum_amount || 0);
-                        $("#tax-amount").text(response.tax_amount + " {{Helper::Settings('currency_symbol')}}");
+                        $("#tax-amount").text(parseFloat(response.tax_amount || 0).toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
 
                        Swal.fire({
                             icon: 'success',
                             title: `<span style="color: #FBB516; font-weight: bold;">${coupon_code}</span> Applied!`,
-                            html: `Hurray! You saved <strong>${response.coupon_code_price} {{Helper::Settings('currency_symbol')}}</strong> from this coupon.`,
+                            html: `Hurray! You saved <strong>${parseFloat(response.coupon_code_price || 0).toFixed(2)} {{Helper::Settings('currency_symbol')}}</strong> from this coupon.`,
                             showConfirmButton: false,
                             timer: 2000,
                             timerProgressBar: true,
@@ -3244,7 +3422,7 @@
                     if (response.reward_id == "") {
                         $("#reward_error").text(response.message).css('color', 'red');
                     } else {
-                        $('#reward_amount_text').text('-' + response.rewardAmount + " {{Helper::Settings('currency_symbol')}}");
+                        $('#reward_amount_text').text('-' + parseFloat(response.rewardAmount || 0).toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
                         $("#li-reward").show();
                         $("#delivery_li").show();
 
@@ -3274,7 +3452,7 @@
                         $("#conversion_rate").val(response.conversionRate);
                         $("#reward_id").val(response.reward_id);
                         $("#reward_points").val(parseFloat(response.reward));
-                        $("#tax-amount").text(response.tax_amount + " {{Helper::Settings('currency_symbol')}}");
+                        $("#tax-amount").text(parseFloat(response.tax_amount || 0).toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
 
                         $(".calculation-container").hide();
                         $("#reward-button").hide();
@@ -3405,14 +3583,14 @@
                         $("#coupon_applied").val("1");
                         $("#coupon_code").val(couponCode);
 
-                        $("#coupon_code_amount_text").text('-' + response.coupon_code_price + " {{Helper::Settings('currency_symbol')}}");
+                        $("#coupon_code_amount_text").text('-' + parseFloat(response.coupon_code_price || 0).toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
                         $("#grand-total-amount").text((grandTotal.toFixed(2)) + " {{Helper::Settings('currency_symbol')}}");
                         $("#inp-grand-total-amount").val((grandTotal.toFixed(2)));
                         $("#coupon_percentage").val(response.coupon_percentage);
                         $("#coupon_code_id").val(response.code_id);
                         $("#coupon_code_amount").val(response.coupon_code_price);
                         $("#coupon_min_amount").val(response.minimum_amount || 0);
-                        $("#tax-amount").text(response.tax_amount + " {{Helper::Settings('currency_symbol')}}");
+                        $("#tax-amount").text(parseFloat(response.tax_amount || 0).toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
                     }
                 }
             });
@@ -3528,10 +3706,10 @@
                     $("#inp-delivery-fee").val(deliveryFee.toFixed(2));
 
                     // update reward UI again, just like in your applyReward()
-                    $("#reward_amount_text").text('-' + response.rewardAmount + " {{Helper::Settings('currency_symbol')}}");
+                    $("#reward_amount_text").text('-' + parseFloat(response.rewardAmount || 0).toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
                      $("#grand-total-amount").text((grandTotal.toFixed(2)) + " {{Helper::Settings('currency_symbol')}}");
                     $("#inp-grand-total-amount").val((grandTotal.toFixed(2)));
-                    $("#tax-amount").text(response.tax_amount + " {{Helper::Settings('currency_symbol')}}");
+                    $("#tax-amount").text(parseFloat(response.tax_amount || 0).toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
 
                     $("#reward_applied").val("1");
                     $("#reward_points_applied").val(rewardPoints);

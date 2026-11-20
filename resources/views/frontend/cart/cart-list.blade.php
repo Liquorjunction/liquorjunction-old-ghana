@@ -167,6 +167,38 @@
                     height: 400px !important;
                 }
         }
+
+        /* Cart Product Image & Increment/Decrement Counter Rounded */
+        .product-img a,
+        .cart-item-lists .product-img a {
+            border-radius: 20px !important;
+            overflow: hidden !important;
+        }
+        .product-img a img,
+        .cart-item-lists .product-img a img {
+            border-radius: 16px !important;
+        }
+        .counter {
+            border-radius: 20px !important;
+            overflow: hidden !important;
+        }
+        .cart-item-lists .product-detail ul li {
+            border-top: none !important;
+        }
+        .counter .counter__input {
+            border: none !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            padding: 0 40px !important;
+        }
+        .counter__increment,
+        .counter__decrement {
+            border-radius: 20px !important;
+        }
+        .grey-card {
+            border-radius: 20px !important;
+        }
 </style>
 
     <div class="bread-crumb-block">
@@ -345,11 +377,11 @@
 
                                                         @if($final_price < $single_original_price)
                                                             <h5>
-                                                                {{ $final_price }}{{ Helper::Settings('currency_symbol') }}
-                                                                <span>{{ $single_original_price }}{{ Helper::Settings('currency_symbol') }}</span>
+                                                                {{ Helper::numberFormat($final_price) }}{{ Helper::Settings('currency_symbol') }}
+                                                                <span>{{ Helper::numberFormat($single_original_price) }}{{ Helper::Settings('currency_symbol') }}</span>
                                                             </h5>
                                                         @else
-                                                            <h5>{{ $single_original_price }}{{ Helper::Settings('currency_symbol') }}</h5>
+                                                            <h5>{{ Helper::numberFormat($single_original_price) }}{{ Helper::Settings('currency_symbol') }}</h5>
                                                         @endif
                                                                                                             
                                                     </li>
@@ -368,7 +400,7 @@
                                                         $total_quantity += $qty;
                                                         
                                                     @endphp
-                                                    <li>
+                                                    <li class="border-top-0">
 
                                                         <span class="counter mb-0">
                                                                 <input class="counter__input" type="text"
@@ -626,14 +658,14 @@
 
                                                 @if($final_price < $original_price)
                                                     <span class="sell-price">
-                                                        {{ $final_price }}{{ Helper::Settings('currency_symbol') }}
+                                                        {{ Helper::numberFormat($final_price) }}{{ Helper::Settings('currency_symbol') }}
                                                     </span>
                                                     <span class="original-price">
-                                                        {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                                        {{ Helper::numberFormat($original_price) }}{{ Helper::Settings('currency_symbol') }}
                                                     </span>
                                                 @else
                                                     <span class="sell-price">
-                                                        {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                                        {{ Helper::numberFormat($original_price) }}{{ Helper::Settings('currency_symbol') }}
                                                     </span>
                                                 @endif
                                             </div>
@@ -797,14 +829,14 @@
 
                                                 @if($final_price < $original_price)
                                                     <span class="sell-price">
-                                                        {{ $final_price }}{{ Helper::Settings('currency_symbol') }}
+                                                        {{ Helper::numberFormat($final_price) }}{{ Helper::Settings('currency_symbol') }}
                                                     </span>
                                                     <span class="original-price">
-                                                        {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                                        {{ Helper::numberFormat($original_price) }}{{ Helper::Settings('currency_symbol') }}
                                                     </span>
                                                 @else
                                                     <span class="sell-price">
-                                                        {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                                        {{ Helper::numberFormat($original_price) }}{{ Helper::Settings('currency_symbol') }}
                                                     </span>
                                                 @endif
                                             </div>

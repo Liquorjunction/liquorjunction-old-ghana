@@ -436,7 +436,7 @@
                 </tr>
                 <tr>
                 <td><strong>Total Tax Inclusive Value(i+ii+iii+iv)</strong></td>
-                <td align="right"><strong>{{ round(@Helper::numberFormat(@$subTotal +  @$nhil + @$getFund + @$vat)) }} {{ @$settings->currency_symbol }}</strong></td>
+                <td align="right"><strong>{{ @Helper::numberFormat(@$subTotal +  @$nhil + @$getFund + @$vat) }} {{ @$settings->currency_symbol }}</strong></td>
                 </tr>
             </table>
             </td>
@@ -461,7 +461,7 @@
                 </tr>
                 <tr>
                 <td><strong>Total (paid by client taxes inclusive)</strong></td>
-                <td align="right"><strong>{{ round(@Helper::numberFormat(@$subTotal + @$nhil + @$getFund + @$vat + @$orderData->gift_card + (@$orderData->order_type == 1 ? @$orderData->delivery_fee : 0) )) }} {{ @$settings->currency_symbol }}</strong></td>
+                <td align="right"><strong>{{ @Helper::numberFormat(@$subTotal + @$nhil + @$getFund + @$vat + @$orderData->gift_card + (@$orderData->order_type == 1 ? @$orderData->delivery_fee : 0) ) }} {{ @$settings->currency_symbol }}</strong></td>
                 </tr>
             </table>
             </td>

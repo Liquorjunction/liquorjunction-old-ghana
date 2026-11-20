@@ -687,9 +687,9 @@ if ($user_id) {
                                                             <div style="font-weight:600; font-size:15px;">{{ $item['name'] ?? '' }}</div>
                                                             <div class="cart-item-qty-display mini-cart-qty-{{ $item['variant_id'] }}" style="font-size:13px; color:#888;">Qty: {{ $item['qty'] ?? 1 }}</div>
                                                             <div style="font-size:14px; color:#242424; font-weight:600;">
-                                                                {{ $item['price'] ?? '0.00' }} {{ Helper::Settings('currency_symbol') }}
+                                                                {{ Helper::numberFormat($item['price'] ?? 0) }} {{ Helper::Settings('currency_symbol') }}
                                                                 @if(!empty($item['original_price']) && (float)$item['original_price'] > (float)$item['price'])
-                                                                    <del class="cart-original-price" style="font-weight:400; color:#858584; text-decoration:line-through; margin-left:8px; font-size:13px;">{{ $item['original_price'] }} {{ Helper::Settings('currency_symbol') }}</del>
+                                                                    <del class="cart-original-price" style="font-weight:400; color:#858584; text-decoration:line-through; margin-left:8px; font-size:13px;">{{ Helper::numberFormat($item['original_price']) }} {{ Helper::Settings('currency_symbol') }}</del>
                                                                 @endif
                                                             </div>
                                                         </div>
@@ -767,9 +767,11 @@ if ($user_id) {
                                 var html = '';
                                 if (items && items.length > 0) {
                                     items.forEach(function(item) {
-                                        var priceHtml = `${item.price} {{ Helper::Settings('currency_symbol') }}`;
+                                        var formattedPrice = parseFloat(item.price || 0).toFixed(2);
+                                        var priceHtml = `${formattedPrice} {{ Helper::Settings('currency_symbol') }}`;
                                         if (item.original_price && Number(item.original_price) > Number(item.price)) {
-                                            priceHtml += ` <del class="cart-original-price">${item.original_price} {{ Helper::Settings('currency_symbol') }}</del>`;
+                                            var formattedOrigPrice = parseFloat(item.original_price).toFixed(2);
+                                            priceHtml += ` <del class="cart-original-price">${formattedOrigPrice} {{ Helper::Settings('currency_symbol') }}</del>`;
                                         }
 
                                         html += `<div class="cart-item d-flex align-items-center mb-2" data-variant-id="${item.variant_id}" style="border-bottom:1px solid #eee; padding-bottom:8px; position:relative;">

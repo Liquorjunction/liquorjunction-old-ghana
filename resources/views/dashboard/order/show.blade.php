@@ -384,7 +384,7 @@
                                     <tr style="border-top: 1px solid #cbd5e1; font-weight: 700;">
                                         <td>Total Tax Inclusive Value</td>
                                         <td align="right">
-                                            {{ round(@Helper::numberFormat(@$subTotal + @$nhil + @$getFund + @$vat)) }} {{ @$settings->currency_symbol }}
+                                            {{ @Helper::numberFormat(@$subTotal + @$nhil + @$getFund + @$vat) }} {{ @$settings->currency_symbol }}
                                         </td>
                                     </tr>
                                 </table>

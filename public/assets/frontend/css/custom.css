@@ -81,3 +81,170 @@
 #auto-box li.active {
     background: #FBB516;
 }
+
+/* ========================================================
+   Rounded / Curved Design Overrides (border-radius: 20px)
+   ======================================================== */
+
+/* 1. All Form Inputs, Selects, Textareas & Search Boxes */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+select,
+textarea,
+.form-select,
+.form-control,
+.header-search-form input[type="search"],
+.subscription-form input[type="email"],
+.loyalty-points-form-group input,
+.phone-number input,
+.input-group.phone-number input {
+    border-radius: 20px !important;
+}
+
+/* Give standard inputs comfortable horizontal padding for 20px curve */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="hidden"]) {
+    padding-left: 18px;
+    padding-right: 18px;
+}
+
+/* Phone input with country code dropdown retains left padding */
+.phone-number input,
+.input-group.phone-number input {
+    padding-left: 80px !important;
+}
+
+/* Textarea comfortable rounded styling */
+textarea {
+    border-radius: 20px !important;
+    padding: 14px 18px !important;
+}
+
+/* 2. Product Cards & Content Cards */
+.bs-box,
+.offers-box,
+.product-card,
+.product-box,
+.product-listing-col .bs-box,
+.our-highlights-box,
+.blog-box {
+    border-radius: 20px !important;
+}
+
+/* Product Detail Image Preview Blocks */
+.product-img-block,
+.product-img-thumb-block,
+.small-container .show-small-img,
+.show-zoom {
+    border-radius: 20px !important;
+    overflow: hidden;
+}
+
+/* 3. Buttons */
+.solid-button,
+.outline-theme-btn,
+.icon-border-btn,
+.common-border-btn,
+.larg-border-btn,
+.small-common-btn,
+.border-btn,
+.small-border-btn,
+.common-btn,
+.add-to-cart,
+.reward-button,
+.subscription-form .solid-button,
+.calculation-container .remove-btn {
+    border-radius: 20px !important;
+}
+
+/* 4. Cards, Containers, Lists & Modals (jaha border di hui he) */
+.registration-card,
+.thank-you-block {
+    border-radius: 20px !important;
+}
+
+.modal-content {
+    border-radius: 20px !important;
+    overflow: hidden;
+}
+
+.modal-header {
+    border-top-left-radius: 20px !important;
+    border-top-right-radius: 20px !important;
+}
+
+.cart-item-lists {
+    border-radius: 20px !important;
+    overflow: hidden;
+}
+
+.shipping-container,
+.reward-container,
+.reward-boxes .box,
+.card-payment-group,
+.coupon-box,
+.coupon-success-box,
+.reward-success-box,
+.address-box,
+.order-summary-block {
+    border-radius: 20px !important;
+}
+
+/* 5. Cart & Order List Product Images */
+.product-img,
+.product-img a,
+.product-img img,
+.cart-item-lists .product-img a,
+.cart-item-lists .product-img img,
+.cart-product-item .product-img,
+.cart-product-item .product-img a,
+.cart-product-item .product-img img,
+.single-product .product-img,
+.single-product .product-img a,
+.single-product .product-img img,
+.cart-item-list .product-img a,
+.order-list .product-img a,
+.recent-order .product-img a {
+    border-radius: 20px !important;
+    overflow: hidden;
+}
+
+/* 6. Increment / Decrement Counter Buttons & Container */
+.counter {
+    border-radius: 20px !important;
+    overflow: hidden;
+}
+
+.counter .counter__input {
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 40px !important;
+    height: 100% !important;
+}
+
+.counter__increment,
+.counter__decrement,
+.btn-increment,
+.btn-decrement,
+.counters__increment,
+.counters__decrement {
+    border-radius: 20px !important;
+}
+
+/* 7. Cart Price Summary Grey Card */
+.cart-price-block .grey-card,
+.price-details.grey-card,
+.grey-card {
+    border-radius: 20px !important;
+    overflow: hidden;
+}
+
+/* 8. Remove unwanted separator line inside cart product detail list */
+.cart-item-lists .product-detail ul li,
+.cart-product-item .product-detail ul li,
+.single-product .product-detail ul li {
+    border-top: none !important;
+}
+
+
+

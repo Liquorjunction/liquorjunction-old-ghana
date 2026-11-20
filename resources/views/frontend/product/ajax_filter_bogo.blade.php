@@ -45,10 +45,10 @@
             <span class="text-sm grey-text">{{@$result->variant_size? $result->variant_size.' '.$product_unit :''}}</span>
             <div class="price-wrapper">
                 @if($result->variant_discounted_price=='' || $result->variant_discounted_price==0)
-                    <span class="sell-price"> {{@$result->variant_price? $result->variant_price.Helper::Settings( 'currency_symbol') :''}}</span>                                        
+                    <span class="sell-price"> {{@$result->variant_price? Helper::numberFormat($result->variant_price).Helper::Settings( 'currency_symbol') :''}}</span>                                        
                 @else
-                    <span class="sell-price"> {{@$result->variant_discounted_price?    $result->variant_discounted_price.Helper::Settings( 'currency_symbol') :''}}</span>
-                    <span class="original-price">{{@$result->variant_price? $result->variant_price.Helper::Settings( 'currency_symbol') :''}}</span>
+                    <span class="sell-price"> {{@$result->variant_discounted_price? Helper::numberFormat($result->variant_discounted_price).Helper::Settings( 'currency_symbol') :''}}</span>
+                    <span class="original-price">{{@$result->variant_price? Helper::numberFormat($result->variant_price).Helper::Settings( 'currency_symbol') :''}}</span>
                 @endif
             </div>
             @if(!empty($result->average_rating))

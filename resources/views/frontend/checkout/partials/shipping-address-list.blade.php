@@ -6,10 +6,36 @@
     $fullAddress = Helper::formatUserAddress($data, false);
     $phoneNumber = '(+' . $data->phonecode . ') ' . $data->phone;
     $hasMapLocation = (!empty($data->latitude) && !empty($data->longitude));
+
+    $servCheck = \App\Services\AddressValidationService::checkServiceability($data, 'Delivery');
+    $isServiceable = $servCheck['serviceable'];
+    $servMessage = $servCheck['message'] ?? '';
+    $countryName = $data->country ? $data->country->name : ($data->country_name ?? '');
+    $regionTitle = $data->region ? $data->region->title : ($data->region_title ?? ($data->state ?? ''));
+    $areaTitle = $data->area ? $data->area->title : ($data->area_title ?? ($data->city ?? ''));
 @endphp
 <div class="address-group radio-group {{ $key >= 3 ? 'extra-shipping-address d-none' : '' }}" id="addressGroupItem_{{$data->id}}">
     <div class="radio-btn w-100" style="min-width: 0;">
-        <input id="radioAddress{{$data->id}}" {{ $isSelected ? 'checked' : "" }} type="radio" value="{{$data->id}}" name="address_radio" class="addressRadioCurrent" data-has-location="{{ $hasMapLocation ? '1' : '0' }}" />
+        <input id="radioAddress{{$data->id}}" 
+            {{ $isSelected ? 'checked' : "" }} 
+            type="radio" 
+            value="{{$data->id}}" 
+            name="address_radio" 
+            class="addressRadioCurrent" 
+            data-has-location="{{ $hasMapLocation ? '1' : '0' }}"
+            data-serviceable="{{ $isServiceable ? '1' : '0' }}"
+            data-service-message="{{ $servMessage }}"
+            data-country-id="{{ $data->country_id ?? '' }}"
+            data-country-name="{{ $countryName }}"
+            data-region-id="{{ $data->region_id ?? '' }}"
+            data-region-title="{{ $regionTitle }}"
+            data-area-id="{{ $data->area_id ?? '' }}"
+            data-area-title="{{ $areaTitle }}"
+            data-state="{{ $data->state ?? '' }}"
+            data-city="{{ $data->city ?? '' }}"
+            data-lat="{{ $data->latitude ?? '' }}"
+            data-lng="{{ $data->longitude ?? '' }}"
+        />
         <label onclick="checkDeliveryAddressByArea('{{$data->id}}')" for="radioAddress{{$data->id}}"></label>
         <div class="detail w-100" style="min-width: 0;">
             <div class="d-flex align-items-center flex-wrap gap-2 mb-1">

@@ -457,12 +457,12 @@
                                                             <ul>
                                                                 @if (@$result->product_total_amount != 0)
                                                                     <li class="product-pricing">
-                                                                        <h5>{{ @$result->product_total_amount . Helper::Settings('currency_symbol') }}<span>{{ $result->product_original_amount . Helper::Settings('currency_symbol') }}</span>
+                                                                        <h5>{{ Helper::numberFormat(@$result->product_total_amount) . Helper::Settings('currency_symbol') }}<span>{{ Helper::numberFormat($result->product_original_amount) . Helper::Settings('currency_symbol') }}</span>
                                                                         </h5>
                                                                     </li>
                                                                 @else
                                                                     <li class="product-pricing">
-                                                                        <h5>{{ @$result->product_original_amount . Helper::Settings('currency_symbol') }}
+                                                                        <h5>{{ Helper::numberFormat(@$result->product_original_amount) . Helper::Settings('currency_symbol') }}
                                                                         </h5>
                                                                     </li>
                                                                 @endif

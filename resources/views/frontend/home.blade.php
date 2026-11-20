@@ -398,14 +398,14 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                                     <div class="price-wrapper">
                                         @if($final_price < $original_price)
                                             <span class="sell-price">
-                                                {{ $final_price }}{{ Helper::Settings('currency_symbol') }}
+                                                {{ Helper::numberFormat($final_price) }}{{ Helper::Settings('currency_symbol') }}
                                             </span>
                                             <span class="original-price">
-                                                {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                                {{ Helper::numberFormat($original_price) }}{{ Helper::Settings('currency_symbol') }}
                                             </span>
                                         @else
                                             <span class="sell-price">
-                                                {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                                {{ Helper::numberFormat($original_price) }}{{ Helper::Settings('currency_symbol') }}
                                             </span>
                                         @endif
                                     </div>
@@ -469,14 +469,14 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                                 <div class="price-wrapper">
                                     @if($final_price < $original_price)
                                         <span class="sell-price">
-                                            {{ $final_price }}{{ Helper::Settings('currency_symbol') }}
+                                            {{ Helper::numberFormat($final_price) }}{{ Helper::Settings('currency_symbol') }}
                                         </span>
                                         <span class="original-price">
-                                            {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                            {{ Helper::numberFormat($original_price) }}{{ Helper::Settings('currency_symbol') }}
                                         </span>
                                     @else
                                         <span class="sell-price">
-                                            {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                            {{ Helper::numberFormat($original_price) }}{{ Helper::Settings('currency_symbol') }}
                                         </span>
                                     @endif
                                 </div>
@@ -701,14 +701,14 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
 
                                         @if($final_price < $original_price)
                                             <span class="sell-price">
-                                                {{ $final_price }}{{ Helper::Settings('currency_symbol') }}
+                                                {{ Helper::numberFormat($final_price) }}{{ Helper::Settings('currency_symbol') }}
                                             </span>
                                             <span class="original-price">
-                                                {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                                {{ Helper::numberFormat($original_price) }}{{ Helper::Settings('currency_symbol') }}
                                             </span>
                                         @else
                                             <span class="sell-price">
-                                                {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                                {{ Helper::numberFormat($original_price) }}{{ Helper::Settings('currency_symbol') }}
                                             </span>
                                         @endif
                                 </div>

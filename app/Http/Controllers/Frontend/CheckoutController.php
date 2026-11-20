@@ -167,21 +167,15 @@ class CheckoutController extends Controller
 
         if (!empty($user_id)) {
             $userData = \DB::table('main_users')->where('id', $user_id)->where('status', 1)->first();
-            $UserAddressData = UserAddress::withWhereHas('country', function ($query) {
-                $query->where('status', 1);
-            })->withWhereHas('region', function ($query) {
-                $query->where('status', 1);
-            })->withWhereHas('area', function ($query) {
-                $query->where('status', 1);
-            })->where([['user_id', $user_id], ['status', 1]])->orderBy('is_selected_address_id', 'desc')->orderBy('id', 'desc')->get();
+            $UserAddressData = UserAddress::with(['country', 'region', 'area'])
+                ->where([['user_id', $user_id], ['status', 1]])
+                ->orderBy('is_selected_address_id', 'desc')
+                ->orderBy('id', 'desc')
+                ->get();
 
-            $UserBillAddressData = UserBillAddress::withWhereHas('country', function ($query) {
-                $query->where('status', 1);
-            })->withWhereHas('region', function ($query) {
-                $query->where('status', 1);
-            })->withWhereHas('area', function ($query) {
-                $query->where('status', 1);
-            })->where([['user_id', $user_id], ['status', 1], ['default', 1]])->get();
+            $UserBillAddressData = UserBillAddress::with(['country', 'region', 'area'])
+                ->where([['user_id', $user_id], ['status', 1], ['default', 1]])
+                ->get();
         } else {
             // Guest User representation (NO main_users row)
             $userData = (object)[
@@ -731,25 +725,15 @@ class CheckoutController extends Controller
 
         $selectedShippingId = $request->input('selected_shipping_id');
 
-        $UserAddressData = UserAddress::withWhereHas('country', function ($query) {
-            $query->where('status', 1);
-        })->withWhereHas('region', function ($query) {
-            $query->where('status', 1);
-        })->withWhereHas('area', function ($query) {
-            $query->where('status', 1);
-        })->where([['user_id', $user_id], ['status', 1]])
-        ->orderBy('is_selected_address_id', 'desc')
-        ->orderBy('id', 'desc')
-        ->get();
+        $UserAddressData = UserAddress::with(['country', 'region', 'area'])
+            ->where([['user_id', $user_id], ['status', 1]])
+            ->orderBy('is_selected_address_id', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
 
-        $UserBillAddressData = UserBillAddress::withWhereHas('country', function ($query) {
-            $query->where('status', 1);
-        })->withWhereHas('region', function ($query) {
-            $query->where('status', 1);
-        })->withWhereHas('area', function ($query) {
-            $query->where('status', 1);
-        })->where([['user_id', $user_id], ['status', 1], ['default', 1]])
-        ->get();
+        $UserBillAddressData = UserBillAddress::with(['country', 'region', 'area'])
+            ->where([['user_id', $user_id], ['status', 1], ['default', 1]])
+            ->get();
 
         $user = \DB::table('main_users')->where('id', $user_id)->where('status', 1)->first();
 
@@ -1296,6 +1280,18 @@ class CheckoutController extends Controller
         if (!empty($user_address_id)) {
             if ($user_address_id === 'guest' || ($isGuest && empty($user_id))) {
                 $gAddr = session()->get('guest_shipping_address');
+                $servCheck = \App\Services\AddressValidationService::checkServiceability($gAddr, 'Delivery');
+                if (!$servCheck['serviceable']) {
+                    return response()->json([
+                        'serviceable' => false,
+                        'message' => $servCheck['message'],
+                        'coupon_code_price' => @Helper::numberFormat($coupon_code_price),
+                        'delivery_fee' => 0,
+                        'grand_total_amount' => @Helper::numberFormat($grand_total_amount),
+                        'min_purchase_amount' => 0,
+                    ]);
+                }
+
                 $area = $gAddr ? Area::find($gAddr['area_id']) : null;
                 if ($area) {
                     $area_tax_rate = @Helper::numberFormat($area->rate);
@@ -1313,24 +1309,54 @@ class CheckoutController extends Controller
                 }
             } else {
                 $user_address_data = UserAddress::with(['country', 'region', 'area'])->where([['user_id', $user_id], ['status', 1], ['id', $user_address_id]])->first();
-                if ($user_address_data && $user_address_data->area) {
-                    $area_tax_rate = @Helper::numberFormat($user_address_data->area->rate);
-                    $deliveryAmount = @Helper::numberFormat($user_address_data->area->delivery_amount);
-                    $deliveryFee = @Helper::numberFormat($user_address_data->area->delivery_fee);
-                    $min_purchase_amount = $deliveryAmount;
-
-                    if ($grand_total_amount > $deliveryAmount) {
-                        $area_tax_rate = 0;
-                    } else {
-                        $area_tax_rate = $deliveryFee;
+                if ($user_address_data) {
+                    $servCheck = \App\Services\AddressValidationService::checkServiceability($user_address_data, 'Delivery');
+                    if (!$servCheck['serviceable']) {
+                        return response()->json([
+                            'serviceable' => false,
+                            'message' => $servCheck['message'],
+                            'coupon_code_price' => @Helper::numberFormat($coupon_code_price),
+                            'delivery_fee' => 0,
+                            'grand_total_amount' => @Helper::numberFormat($grand_total_amount),
+                            'min_purchase_amount' => 0,
+                        ]);
                     }
 
-                    $grand_total_amount = @Helper::numberFormat($grand_total_amount + $area_tax_rate);
+                    if ($user_address_data->area) {
+                        $area_tax_rate = @Helper::numberFormat($user_address_data->area->rate);
+                        $deliveryAmount = @Helper::numberFormat($user_address_data->area->delivery_amount);
+                        $deliveryFee = @Helper::numberFormat($user_address_data->area->delivery_fee);
+                        $min_purchase_amount = $deliveryAmount;
+
+                        if ($grand_total_amount > $deliveryAmount) {
+                            $area_tax_rate = 0;
+                        } else {
+                            $area_tax_rate = $deliveryFee;
+                        }
+
+                        $grand_total_amount = @Helper::numberFormat($grand_total_amount + $area_tax_rate);
+                    }
+                } else {
+                    return response()->json([
+                        'serviceable' => false,
+                        'message' => 'Selected delivery address is invalid or not found.',
+                        'coupon_code_price' => @Helper::numberFormat($coupon_code_price),
+                        'delivery_fee' => 0,
+                        'grand_total_amount' => @Helper::numberFormat($grand_total_amount),
+                        'min_purchase_amount' => 0,
+                    ]);
                 }
             }
         }
 
-        return response()->json(['message' => '', 'coupon_code_price' => @Helper::numberFormat($coupon_code_price), 'delivery_fee' => @Helper::numberFormat($area_tax_rate), 'grand_total_amount' => @Helper::numberFormat($grand_total_amount), 'min_purchase_amount' => @Helper::numberFormat($min_purchase_amount),]);
+        return response()->json([
+            'serviceable' => true,
+            'message' => '',
+            'coupon_code_price' => @Helper::numberFormat($coupon_code_price),
+            'delivery_fee' => @Helper::numberFormat($area_tax_rate),
+            'grand_total_amount' => @Helper::numberFormat($grand_total_amount),
+            'min_purchase_amount' => @Helper::numberFormat($min_purchase_amount),
+        ]);
     }
 
     public function applyCoupon(Request $request)
@@ -1659,6 +1685,15 @@ class CheckoutController extends Controller
                     return response()->json([
                         'error' => true,
                         'message' => 'Please add a delivery address to complete your order.',
+                        'type' => 'address'
+                    ]);
+                }
+
+                $servCheck = AddressValidationService::checkServiceability($guestAddrData, 'Delivery');
+                if (!$servCheck['serviceable']) {
+                    return response()->json([
+                        'error' => true,
+                        'message' => $servCheck['message'],
                         'type' => 'address'
                     ]);
                 }

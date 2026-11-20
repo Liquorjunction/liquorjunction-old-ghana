@@ -369,12 +369,12 @@ video::-webkit-media-controls-timeline {
                             <div class="product-pricing text-start">
                                 <h5>
                                     <originalprice id="discounted-price">
-                                        {{ $final_price }} {{ Helper::Settings('currency_symbol') }}
+                                        {{ Helper::numberFormat($final_price) }} {{ Helper::Settings('currency_symbol') }}
                                     </originalprice>
 
                                     @if ($final_price < $original_price)
                                         <span id="orignal-price">
-                                            {{ $original_price }} {{ Helper::Settings('currency_symbol') }}
+                                            {{ Helper::numberFormat($original_price) }} {{ Helper::Settings('currency_symbol') }}
                                         </span>
                                     @endif
                                 </h5>
@@ -694,14 +694,14 @@ video::-webkit-media-controls-timeline {
 
                                                     @if($final_price < $original_price)
                                                         <span class="sell-price">
-                                                            {{ $final_price }}{{ Helper::Settings('currency_symbol') }}
+                                                            {{ Helper::numberFormat($final_price) }}{{ Helper::Settings('currency_symbol') }}
                                                         </span>
                                                         <span class="original-price">
-                                                            {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                                            {{ Helper::numberFormat($original_price) }}{{ Helper::Settings('currency_symbol') }}
                                                         </span>
                                                     @else
                                                         <span class="sell-price">
-                                                            {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                                            {{ Helper::numberFormat($original_price) }}{{ Helper::Settings('currency_symbol') }}
                                                         </span>
                                                     @endif
                                             </div>
@@ -872,14 +872,14 @@ video::-webkit-media-controls-timeline {
 
                                                     @if($final_price < $original_price)
                                                         <span class="sell-price">
-                                                            {{ $final_price }}{{ Helper::Settings('currency_symbol') }}
+                                                            {{ Helper::numberFormat($final_price) }}{{ Helper::Settings('currency_symbol') }}
                                                         </span>
                                                         <span class="original-price">
-                                                            {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                                            {{ Helper::numberFormat($original_price) }}{{ Helper::Settings('currency_symbol') }}
                                                         </span>
                                                     @else
                                                         <span class="sell-price">
-                                                            {{ $original_price }}{{ Helper::Settings('currency_symbol') }}
+                                                            {{ Helper::numberFormat($original_price) }}{{ Helper::Settings('currency_symbol') }}
                                                         </span>
                                                     @endif
                                                 </div>
@@ -972,13 +972,13 @@ video::-webkit-media-controls-timeline {
                 url: "{{ route('productVariantPrice') }}?variantId=" + id,
                 success: function(response) {                   
                     if (response.discounted_price != "" && response.discounted_price != "0.00" && response.discounted_price != "0") {
-                        $("#discounted-price").text(response.discounted_price +
+                        $("#discounted-price").text(parseFloat(response.discounted_price).toFixed(2) +
                         " {{ Helper::Settings('currency_symbol') }}");
 
-                        $("#orignal-price").text(response.orignal_price +
+                        $("#orignal-price").text(parseFloat(response.orignal_price).toFixed(2) +
                             " {{ Helper::Settings('currency_symbol') }}");
                     } else {
-                        $("#discounted-price").text(response.orignal_price +
+                        $("#discounted-price").text(parseFloat(response.orignal_price).toFixed(2) +
                         " {{ Helper::Settings('currency_symbol') }}");
                         $("#orignal-price").text("");
                     }

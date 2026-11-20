@@ -2029,58 +2029,12 @@ body.modal-open {
 
 
 @php
-
-    $allowedLocationsTree = \App\Models\Country::where('status', 1)->get()->map(function($c) {
-
-        $regions = \App\Models\Region::where('country_id', $c->id)->where('status', 1)->get()->map(function($r) {
-
-            $areas = \App\Models\Area::where('region_id', $r->id)->where('status', 1)->get()->map(function($a) {
-
-                return [
-
-                    'id' => $a->id,
-
-                    'title' => $a->title
-
-                ];
-
-            });
-
-            return [
-
-                'id' => $r->id,
-
-                'title' => $r->title,
-
-                'areas' => $areas->values()->toArray()
-
-            ];
-
-        });
-
-        return [
-
-            'id' => $c->id,
-
-            'name' => $c->name,
-
-            'code' => $c->shortname,
-
-            'phonecode' => $c->phonecode,
-
-            'regions' => $regions->values()->toArray()
-
-        ];
-
-    });
-
+    $allowedLocationsTree = \App\Services\AddressValidationService::getAllowedLocationsTree();
 @endphp
 
 <script>
-
     // System Serviceable Locations Pool (Countries, Regions, Areas configured in Admin / Database)
-
-    window.allowedServiceLocations = {!! json_encode($allowedLocationsTree) !!};
+    window.allowedServiceLocations = window.allowedServiceLocations || {!! json_encode($allowedLocationsTree) !!};
 
 
 

@@ -211,17 +211,10 @@
         }
     });
 
-    // Password toggle in modal
-    $('#toggleInlinePassword').on('click', function() {
-        var pwd = $('#inlineLoginPassword');
-        var icon = $('#inlineEyeIcon');
-        if (pwd.attr('type') === 'password') {
-            pwd.attr('type', 'text');
-            icon.removeClass('fa-eye').addClass('fa-eye-slash');
-        } else {
-            pwd.attr('type', 'password');
-            icon.removeClass('fa-eye-slash').addClass('fa-eye');
-        }
+    // Enter key submit in inline login modal
+    $('#inlineLoginForm').on('submit', function(e) {
+        e.preventDefault();
+        $('#inlineLoginActionBtn').click();
     });
 
     // Inline login submit

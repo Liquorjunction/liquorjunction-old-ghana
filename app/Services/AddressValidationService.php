@@ -125,12 +125,164 @@ class AddressValidationService
     }
 
     /**
-     *      * Verify an existing UserAddress or UserBillAddress model instance for order placement.
-     *      *
-     *      * @param mixed $addressModel
-     *      * @param string $label
-     *      * @return array ['valid' => bool, 'message' => string]
-     *      */
+     * Get the complete hierarchical tree of currently allowed / active
+     * Countries, Regions, and Areas.
+     */
+    public static function getAllowedLocationsTree(): array
+    {
+        return Country::where('status', 1)->get()->map(function($c) {
+            $regions = Region::where('country_id', $c->id)->where('status', 1)->get()->map(function($r) {
+                $areas = Area::where('region_id', $r->id)->where('status', 1)->get()->map(function($a) {
+                    return [
+                        'id' => $a->id,
+                        'title' => $a->title
+                    ];
+                });
+                return [
+                    'id' => $r->id,
+                    'title' => $r->title,
+                    'areas' => $areas->values()->toArray()
+                ];
+            });
+            return [
+                'id' => $c->id,
+                'name' => $c->name,
+                'code' => $c->shortname,
+                'phonecode' => $c->phonecode,
+                'regions' => $regions->values()->toArray()
+            ];
+        })->values()->toArray();
+    }
+
+    /**
+     * Check if a given address model or array has an allowed Country, Region, and Area.
+     * Generates error format matching the modal:
+     * "[Delivery/Billing] not available in <name>. Only Available in: <allowed_names>"
+     *
+     * @param mixed $address (UserAddress, UserBillAddress, or array)
+     * @param string $label ('Delivery' or 'Billing')
+     * @return array ['serviceable' => bool, 'message' => string, 'country' => mixed, 'region' => mixed, 'area' => mixed]
+     */
+    public static function checkServiceability($address, string $label = 'Delivery'): array
+    {
+        if (!$address) {
+            return [
+                'serviceable' => false,
+                'message' => "Please select a {$label} address."
+            ];
+        }
+
+        $isModel = is_object($address);
+        $countryId = $isModel ? ($address->country_id ?? null) : ($address['country_id'] ?? null);
+        $regionId = $isModel ? ($address->region_id ?? null) : ($address['region_id'] ?? null);
+        $areaId = $isModel ? ($address->area_id ?? null) : ($address['area_id'] ?? null);
+
+        $countryName = $isModel
+            ? ($address->country?->name ?? $address->country_name ?? '')
+            : ($address['country_name'] ?? ($address['country'] ?? ''));
+
+        $regionTitle = $isModel
+            ? ($address->region?->title ?? $address->region_title ?? $address->state ?? '')
+            : ($address['region_title'] ?? ($address['state'] ?? ''));
+
+        $areaTitle = $isModel
+            ? ($address->area?->title ?? $address->area_title ?? $address->city ?? '')
+            : ($address['area_title'] ?? ($address['city'] ?? ''));
+
+        $allowedCountries = Country::where('status', 1)->get();
+        if ($allowedCountries->isEmpty()) {
+            return ['serviceable' => true];
+        }
+
+        $cList = $allowedCountries->pluck('name')->filter()->implode(', ');
+
+        // 1. Country Check
+        $country = null;
+        if (!empty($countryId)) {
+            $country = $allowedCountries->firstWhere('id', $countryId);
+        }
+        if (!$country && !empty($countryName)) {
+            $country = $allowedCountries->first(function($c) use ($countryName) {
+                return strcasecmp($c->name, $countryName) === 0
+                    || stripos($c->name, $countryName) !== false
+                    || stripos($countryName, $c->name) !== false;
+            });
+        }
+
+        if (!$country) {
+            $cDisplay = $countryName ?: 'this country';
+            return [
+                'serviceable' => false,
+                'message' => "{$label} not available in {$cDisplay}. Only Available in: {$cList}"
+            ];
+        }
+
+        // 2. Region Check
+        $allowedRegions = Region::where('country_id', $country->id)->where('status', 1)->get();
+        $rList = $allowedRegions->pluck('title')->filter()->implode(', ');
+
+        $region = null;
+        if (!empty($regionId)) {
+            $region = $allowedRegions->firstWhere('id', $regionId);
+        }
+        if (!$region && !empty($regionTitle)) {
+            $region = $allowedRegions->first(function($r) use ($regionTitle) {
+                return strcasecmp($r->title, $regionTitle) === 0
+                    || stripos($r->title, $regionTitle) !== false
+                    || stripos($regionTitle, $r->title) !== false;
+            });
+        }
+
+        if (!$region) {
+            $rDisplay = $regionTitle ?: 'this region';
+            return [
+                'serviceable' => false,
+                'country' => $country,
+                'message' => "{$label} not available in {$rDisplay}. Only Available in: {$rList}"
+            ];
+        }
+
+        // 3. Area Check
+        $allowedAreas = Area::where('region_id', $region->id)->where('status', 1)->get();
+        $aList = $allowedAreas->pluck('title')->filter()->implode(', ');
+
+        $area = null;
+        if (!empty($areaId)) {
+            $area = $allowedAreas->firstWhere('id', $areaId);
+        }
+        if (!$area && !empty($areaTitle)) {
+            $area = $allowedAreas->first(function($a) use ($areaTitle) {
+                return strcasecmp($a->title, $areaTitle) === 0
+                    || stripos($a->title, $areaTitle) !== false
+                    || stripos($areaTitle, $a->title) !== false;
+            });
+        }
+
+        if (!$area) {
+            $aDisplay = $areaTitle ?: 'this location';
+            return [
+                'serviceable' => false,
+                'country' => $country,
+                'region' => $region,
+                'message' => "{$label} not available in {$aDisplay}. Only Available in: {$aList}"
+            ];
+        }
+
+        return [
+            'serviceable' => true,
+            'country' => $country,
+            'region' => $region,
+            'area' => $area
+        ];
+    }
+
+    /**
+     * Verify an existing UserAddress or UserBillAddress model instance for order placement.
+     *
+     * @param mixed $addressModel
+     * @param string $label
+     * @return array ['valid' => bool, 'message' => string]
+     */
     public static function verifyAddressModel($addressModel, string $label = 'Delivery address'): array
     {
         if (!$addressModel) {
@@ -157,36 +309,18 @@ class AddressValidationService
             ];
         }
 
-        $countryId = $addressModel->country_id;
-        $regionId = $addressModel->region_id;
-        $areaId = $addressModel->area_id;
-
-        // Verify Country
-        $country = $addressModel->country ?: Country::where('id', $countryId)->where('status', 1)->first();
-        if (!$country || intval($country->status) !== 1) {
+        $prefix = (stripos($label, 'billing') !== false) ? 'Billing' : 'Delivery';
+        $servCheck = self::checkServiceability($addressModel, $prefix);
+        if (!$servCheck['serviceable']) {
             return [
                 'valid' => false,
-                'message' => "$label has an invalid or inactive country."
+                'message' => $servCheck['message']
             ];
         }
 
-        // Verify Region
-        $region = $addressModel->region ?: Region::where('id', $regionId)->where('country_id', $countryId)->where('status', 1)->first();
-        if (!$region || intval($region->status) !== 1 || intval($region->country_id) !== intval($countryId)) {
-            return [
-                'valid' => false,
-                'message' => "$label region is invalid or does not belong to the selected country."
-            ];
-        }
-
-        // Verify Area
-        $area = $addressModel->area ?: Area::where('id', $areaId)->where('region_id', $regionId)->where('status', 1)->first();
-        if (!$area || intval($area->status) !== 1 || intval($area->region_id) !== intval($regionId)) {
-            return [
-                'valid' => false,
-                'message' => "$label area is invalid or does not belong to the selected region."
-            ];
-        }
+        $country = $servCheck['country'];
+        $region = $servCheck['region'];
+        $area = $servCheck['area'];
 
         // Check Coordinates against Allowed Service Locations
         return self::checkCoordinatesInAllowedServiceArea($country, $region, $area, $lat, $lng, $label);
