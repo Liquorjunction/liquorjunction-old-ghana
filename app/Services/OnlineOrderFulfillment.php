@@ -68,8 +68,8 @@ class OnlineOrderFulfillment
 
         $notification = new Notification();
         $notification->order_id = $paidOrder->id;
-        $notification->sender_id = $userId;
-        $notification->receiver_id = $userId;
+        $notification->sender_id = $userId ?: 0;
+        $notification->receiver_id = $userId ?: 0;
         $notification->notification_type = 1;
         $notification->title = 'Online Order Confirm';
         $notification->message = 'Online Order Confirm';
@@ -77,9 +77,9 @@ class OnlineOrderFulfillment
         $notification->save();
 
         $adminNotification = new AdminNotifications();
-        $adminNotification->sender_id = $userId;
+        $adminNotification->sender_id = $userId ?: 0;
         $adminNotification->order_id = $paidOrder->id;
-        $adminNotification->receiver_id = $userId;
+        $adminNotification->receiver_id = 1;
         $adminNotification->notification_type = 1;
         $adminNotification->title = 'Online Order Confirm';
         $adminNotification->message = 'Online Order Confirm';
@@ -95,7 +95,9 @@ class OnlineOrderFulfillment
             ]);
         }
 
-        Cart::where('user_id', $userId)->update(['status' => 2]);
+        if (!empty($userId)) {
+            Cart::where('user_id', $userId)->update(['status' => 2]);
+        }
 
         return true;
     }

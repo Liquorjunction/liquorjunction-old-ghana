@@ -21,6 +21,33 @@ class userAuth
         // Check if user is authenticated under 'user' guard
         // dd(isset(auth()->guard('user')->user()->id));
         if (!Auth::guard('user')->check()) {
+            // Allow active guest checkout session to access checkout and related endpoints
+            if (session()->get('is_guest_checkout')) {
+                $guestAllowedRoutes = [
+                    'checkout',
+                    'checkout/*',
+                    'store-checkout',
+                    'user-area-tax',
+                    'selected-address',
+                    'store-address',
+                    'store-bill-address',
+                    'get-address-details/*',
+                    'getsubcatlist',
+                    'getarealist',
+                    'upadte-address',
+                    'update-bill-address',
+                    'apply-coupon',
+                    'apply-reward',
+                    'buy-now/*',
+                    'move-buy-now-to-cart',
+                ];
+                foreach ($guestAllowedRoutes as $pattern) {
+                    if ($request->is($pattern)) {
+                        return $next($request);
+                    }
+                }
+            }
+
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => false,

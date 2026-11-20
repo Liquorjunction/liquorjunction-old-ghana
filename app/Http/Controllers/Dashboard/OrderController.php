@@ -91,11 +91,11 @@ class OrderController extends Controller
 
          DB::table('admin_notifications')-> where('order_id',$id)->update(['is_read' => 1]);
 
-        $orderData = Order::join('main_users', 'main_users.id', '=', 'order.user_id')
+        $orderData = Order::leftJoin('main_users', 'main_users.id', '=', 'order.user_id')
             ->join('order_info', 'order_info.order_id', '=', 'order.id')
             ->join('order_status', 'order_status.id', '=', 'order.status')
             ->leftjoin('countries', 'countries.id', '=', 'order_info.country_id')
-            ->rightjoin('transactions', 'transactions.order_id', '=', 'order.id')
+            ->leftjoin('transactions', 'transactions.order_id', '=', 'order.id')
             ->join('order_detail', 'order_detail.order_id', '=', 'order.id')
             ->select('order.*', 'order_info.customer_name as customer_name', 'order_info.customer_email', 'order_info.delivery_fee as delivery_fee','order_info.reward_amount', 'order_info.order_from', 'order_info.customer_mobile as customer_mobile', 'countries.name as country_name', 'transactions.payment_type', 'transactions.trans_no', 'transactions.payment_status as payment_status', 'order_status.name as delivery_status', 'order_detail.variant_size', 'order_detail.variant_unit','order_detail.is_bogo', 'order_info.promocode_name', 'order_info.store_pickup_address', 'order_info.delivery_fee', 'main_users.first_name', 'main_users.last_name', 'main_users.email', 'main_users.phone', 'main_users.phone_code')->where('order.id', $id)->first();
 
@@ -104,12 +104,12 @@ class OrderController extends Controller
             if($orderData->cancelled_by=='Admin' || $orderData->cancelled_by=='Country Admin'  || $orderData->cancelled_by=='Country Sub Admin' )
             {
                 $userDetails = DB::table('users')->where('id', $orderData->cancelled_user)->first();
-                $userName=$userDetails->name;
+                $userName=$userDetails ? $userDetails->name : '';
             }
             else if($orderData->cancelled_by=='Customer' || $orderData->cancelled_by=='Wholesaler' || $orderData->cancelled_by=='SubAdmin')
             {
                 $userDetails = DB::table('main_users')->where('id', $orderData->cancelled_user)->first();
-                $userName=$userDetails->first_name.' '.$userDetails->last_name;
+                $userName=$userDetails ? ($userDetails->first_name.' '.$userDetails->last_name) : ($orderData->customer_name ?? 'Customer');
             }
 
 
@@ -164,11 +164,11 @@ class OrderController extends Controller
 
     public function print($id)
     {
-        $orderData = Order::join('main_users', 'main_users.id', '=', 'order.user_id')
+        $orderData = Order::leftJoin('main_users', 'main_users.id', '=', 'order.user_id')
             ->join('order_info', 'order_info.order_id', '=', 'order.id')
             ->join('order_status', 'order_status.id', '=', 'order.status')
             ->leftjoin('countries', 'countries.id', '=', 'order_info.country_id')
-            ->rightjoin('transactions', 'transactions.order_id', '=', 'order.id')
+            ->leftjoin('transactions', 'transactions.order_id', '=', 'order.id')
             ->join('order_detail', 'order_detail.order_id', '=', 'order.id')
             ->select('order.*', 'order_info.customer_name as customer_name', 'order_info.customer_email', 'order_info.delivery_fee as delivery_fee','order_info.reward_amount' ,'order_info.order_from', 'order_info.customer_mobile as customer_mobile', 'countries.name as country_name', 'transactions.payment_type', 'transactions.trans_no', 'transactions.payment_status as payment_status', 'order_status.name as delivery_status', 'order_detail.variant_size', 'order_detail.variant_unit', 'order_detail.is_bogo','order_info.promocode_name', 'order_info.store_pickup_address', 'order_info.delivery_fee','main_users.first_name','main_users.last_name','main_users.email','main_users.phone','main_users.phone_code')->where('order.id', $id)->first();
 
@@ -263,11 +263,11 @@ class OrderController extends Controller
         $note = $request->input('note');
  
         // Send Invoice to Client
-        $orderData = Order::join('main_users', 'main_users.id', '=', 'order.user_id')
+        $orderData = Order::leftJoin('main_users', 'main_users.id', '=', 'order.user_id')
         ->join('order_info', 'order_info.order_id', '=', 'order.id')
         ->join('order_status', 'order_status.id', '=', 'order.status')
         ->leftjoin('countries', 'countries.id', '=', 'order_info.country_id')
-        ->rightjoin('transactions', 'transactions.order_id', '=', 'order.id')
+        ->leftjoin('transactions', 'transactions.order_id', '=', 'order.id')
         ->join('order_detail', 'order_detail.order_id', '=', 'order.id')
         ->select('order.*', 'order_info.customer_name as customer_name', 'order_info.customer_email', 'order_info.delivery_fee as delivery_fee','order_info.reward_amount' ,'order_info.order_from', 'order_info.customer_mobile as customer_mobile', 'countries.name as country_name', 'transactions.payment_type', 'transactions.trans_no', 'transactions.payment_status as payment_status', 'order_status.name as delivery_status', 'order_detail.variant_size', 'order_detail.variant_unit', 'order_detail.is_bogo','order_info.promocode_name', 'order_info.store_pickup_address', 'order_info.delivery_fee','main_users.first_name','main_users.last_name','main_users.email','main_users.phone','main_users.phone_code')->where('order.id', $order_id)->first();
 
@@ -342,18 +342,20 @@ class OrderController extends Controller
 
 
             // Update the loyalty points status
-            $rewardCreditPoints = LoyaltyPoints::where('user_id', $orderData->user_id)->where('id',$orderData->loyalty_credit_point_id)->where('type', 'credit')->first();
+            if (!empty($orderData->user_id)) {
+                $rewardCreditPoints = LoyaltyPoints::where('user_id', $orderData->user_id)->where('id',$orderData->loyalty_credit_point_id)->where('type', 'credit')->first();
 
-            if ($rewardCreditPoints) {
-                $rewardCreditPoints->status = 1;
-                $rewardCreditPoints->save();
-            }
+                if ($rewardCreditPoints) {
+                    $rewardCreditPoints->status = 1;
+                    $rewardCreditPoints->save();
+                }
 
-            $rewardDebitPoints = LoyaltyPoints::where('user_id', $orderData->user_id)->where('id',$orderData->loyalty_debit_point_id)->where('type', 'debit')->first();
+                $rewardDebitPoints = LoyaltyPoints::where('user_id', $orderData->user_id)->where('id',$orderData->loyalty_debit_point_id)->where('type', 'debit')->first();
 
-            if ($rewardDebitPoints) {
-                $rewardDebitPoints->status = 1;
-                $rewardDebitPoints->save();
+                if ($rewardDebitPoints) {
+                    $rewardDebitPoints->status = 1;
+                    $rewardDebitPoints->save();
+                }
             }
     
         }
@@ -397,7 +399,7 @@ class OrderController extends Controller
         if ($status == 3 || $status == 4 || $status == 5 || $status == 6) {
             // Send Notification code
             $user_id = $order->user_id;
-            $userData = DB::table('main_users')->where('id', $user_id)->first();
+            $userData = $user_id ? DB::table('main_users')->where('id', $user_id)->first() : null;
 
             if ($status == 3) {
                 $title = "Delivered";
@@ -422,15 +424,15 @@ class OrderController extends Controller
 
             $notification = new Notification();
             $notification->order_id = @$order->id;
-            $notification->sender_id = @$user_id;
-            $notification->receiver_id = @$user_id;
+            $notification->sender_id = $user_id ?: 0;
+            $notification->receiver_id = $user_id ?: 0;
             $notification->notification_type = 1;
             $notification->title = @$title;
             $notification->message = @$message;
             $notification->is_read = 0;
             $notification->save();
 
-            if ($status == 3 && $userData->device_token != "") {
+            if ($status == 3 && $userData && !empty($userData->device_token)) {
 
                 $device_token = $userData->device_token;
                 $response = \Helper::sendNotification($device_token, $title, $message, @$order->id, @$order_number);
@@ -439,7 +441,8 @@ class OrderController extends Controller
         }
         if ($order->save()) {
             if ($status == 3 || $status == 4 || $status == 5 || $status == 6) {
-                $customer_details = DB::table('main_users')->find($order->user_id);
+                $customer_details = $order->user_id ? DB::table('main_users')->find($order->user_id) : null;
+                $orderInfo = DB::table('order_info')->where('order_id', $order->id)->first();
                 $setting = Setting::find(1);
                 if ($status == 3) {
                     $template_id = 16;
@@ -454,39 +457,34 @@ class OrderController extends Controller
                 $emaildetail = EmailTemplate::find($template_id);
                 $fromEmail = env('MAIL_FROM_ADDRESS', 'info@liquorjunctionghana.com'); 
                 $logo = asset('assets/dashboard/images/Logo/logo.png');
-                $sendemail = @$customer_details->email;
+                $sendemail = $customer_details->email ?? ($orderInfo->customer_email ?? null);
+                $customerFirstName = $customer_details->first_name ?? ($orderInfo->customer_name ?? 'Customer');
                 $data = array(
-                    'user_name' => @$customer_details->first_name,
-                    'sendname' => @$customer_details->first_name,
+                    'user_name' => @$customerFirstName,
+                    'sendname' => @$customerFirstName,
                     'sendemail' => @$sendemail,
                     'id' => $template_id,
                     'order' => $order,
                     'order_status' => $message,
-                    'from_email' =>config('mail.from.address'),
+                    'from_email' => config('mail.from.address'),
                 );
 
-                try {
+                if (!empty($sendemail) && $emaildetail) {
+                    try {
 
-                    Mail::send('emails.orderstatuschanged', $data, function ($message) use ($data, $emaildetail,$pdfFilePath,$status) {
-                        $message->to($data['sendemail'], 'Liquor')->subject($emaildetail->subject);
-                        $message->from($data['from_email'], $emaildetail->title);
+                        Mail::send('emails.orderstatuschanged', $data, function ($message) use ($data, $emaildetail,$pdfFilePath,$status) {
+                            $message->to($data['sendemail'], 'Liquor')->subject($emaildetail->subject);
+                            $message->from($data['from_email'], $emaildetail->title);
 
-                        // if (file_exists($pdfFilePath)) {
-                        //     $message->attach($pdfFilePath);
-                        //     // unlink($pdfFilePath);
-                        // } else {
-                        //     // Log or handle the error if the file doesn't exist
-                        //     \Log::error("PDF file not found: " . $pdfFilePath);
-                        // }
+                            if ($status == 3 && $pdfFilePath && file_exists($pdfFilePath)) {
+                                $message->attach($pdfFilePath);
+                            }   
 
-                        if ($status == 3 && file_exists($pdfFilePath)) {
-                            $message->attach($pdfFilePath);
-                        }   
-
-                    });
-                } catch (\Throwable $th) {
-                    //throw $th;
-                    \Log::error("Email failed for Order ID: $order_id | Error: " . $th->getMessage());
+                        });
+                    } catch (\Throwable $th) {
+                        //throw $th;
+                        \Log::error("Email failed for Order ID: $order_id | Error: " . $th->getMessage());
+                    }
                 }
             }
             return response()->json(['success' => true, 'msg' => 'Order Status Changed.']);
@@ -556,12 +554,12 @@ class OrderController extends Controller
         }
 
 
-        $totalAr = Order::join('main_users', 'main_users.id', '=', 'order.user_id')
+        $totalAr = Order::leftJoin('main_users', 'main_users.id', '=', 'order.user_id')
             ->join('order_info', 'order_info.order_id', '=', 'order.id')
             ->join('order_status', 'order_status.id', '=', 'order.order_status')
             ->leftjoin('countries', 'countries.id', '=', 'order_info.country_id')
-            ->rightjoin('transactions', 'transactions.order_id', '=', 'order.id')
-            ->select('order.*', 'order_info.customer_name as customer_name', 'order_info.customer_mobile as customer_mobile','order_info.promocode_name' ,'countries.name as country_name', 'transactions.payment_type', 'transactions.payment_status as payment_status', 'order_status.name as delivery_status', 'main_users.is_guest_user')
+            ->leftjoin('transactions', 'transactions.order_id', '=', 'order.id')
+            ->select('order.*', 'order_info.customer_name as customer_name', 'order_info.customer_mobile as customer_mobile','order_info.promocode_name' ,'countries.name as country_name', 'transactions.payment_type', 'transactions.payment_status as payment_status', 'order_status.name as delivery_status', 'order.client_type', 'main_users.is_guest_user')
             // ->where('order.status', 1)
             ->whereIn('order.status', [1, 2]) 
             ->groupby('order.order_id');
@@ -674,7 +672,21 @@ class OrderController extends Controller
             $totalAr->whereDate('order.order_date', '<=', $to_date);
         }
         if ($user_type_filter != "") {
-            $totalAr->where('main_users.is_guest_user', $user_type_filter);
+            if ($user_type_filter == "1") {
+                $totalAr->where(function($q) {
+                    $q->where('order.client_type', 'guest')
+                      ->orWhere('main_users.is_guest_user', 1);
+                });
+            } else {
+                $totalAr->where(function($q) {
+                    $q->where('order.client_type', 'registered')
+                      ->orWhere(function($sub) {
+                          $sub->where('main_users.is_guest_user', 0)->where(function($s) {
+                              $s->whereNull('order.client_type')->orWhere('order.client_type', '!=', 'guest');
+                          });
+                      });
+                });
+            }
         }
         if (!empty($payment_type_filter)) {
             $totalAr->where('transactions.payment_type', $payment_type_filter);
@@ -862,8 +874,8 @@ class OrderController extends Controller
                 "checkbox" => '<label class="ui-check m-a-0"> <input type="checkbox" name="ids[]" value="' . $data->id . '" class="has-value" onchange="checkChange();" data-id="' . $data->id . '"><i class="dark-white"></i> <input class="form-control row_no has-value" name="row_ids[]" type="hidden" value="' . $data->id . '"> </label>',
                 "id" => isset($data->order_id) ? $data->order_id : '',
                 "customer_name" => isset($data->customer_name) ? ucfirst($data->customer_name) : '',
-                "user_type" => $data->is_guest_user ? '<span class="badge badge-warning">Guest</span>' : '<span class="badge badge-success">Register</span>',
-                "customer_mobile" => @'+'. $data->customer_mobile,
+                "user_type" => ($data->client_type === 'guest' || $data->is_guest_user) ? '<span class="badge badge-warning">Guest</span>' : '<span class="badge badge-success">Register</span>',
+                "customer_mobile" => !empty($data->customer_mobile) ? (str_starts_with($data->customer_mobile, '+') ? $data->customer_mobile : '+' . $data->customer_mobile) : '-',
                 "country_name" => isset($data->country_name) ? $data->country_name : '-',
                 "order_type" => isset($order_type) ? $order_type : '',
                 "cancelled_by"=>isset($data->cancelled_by) ? $data->cancelled_by : '',

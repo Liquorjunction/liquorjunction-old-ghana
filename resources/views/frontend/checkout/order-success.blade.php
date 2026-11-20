@@ -16,18 +16,18 @@
                             @endif
                         </h6>
 
-                        @if (isset($earnedpoints) && $earnedpoints > 0 && isset($orderData->user) && !$orderData->user->is_guest_user)
+                        @if (isset($earnedpoints) && $earnedpoints > 0 && isset($orderData->user) && !$orderData->user->is_guest_user && (!isset($orderData->client_type) || $orderData->client_type !== 'guest'))
                             <div class="reward-message mt-4 mb-4 p-4 text-center rounded shadow-sm" style="background: #fff8e1; border-left: 6px solid #fbc02d;">
                                 <h5 class="mb-2" style="color: #f57f17;">🎉 You've earned <strong>{{ $earnedpoints }}</strong> reward points!</h5>
                                 <p class="mb-0" style="color: #5d4037;">
-                                    You can redeem these points on your next purchase for discounts, cash value, or other exciting rewards. 
-                                    Keep shopping and keep earning!
-                                </p>
-                            </div>
-                        @endif
+                                     You can redeem these points on your next purchase for discounts, cash value, or other exciting rewards. 
+                                     Keep shopping and keep earning!
+                                 </p>
+                             </div>
+                         @endif
 
-                        <p>{{ @Helper::language('thank_you_content') }}</p>
-                        @if(isset($orderData->user) && $orderData->user->is_guest_user == '1')
+                         <p>{{ @Helper::language('thank_you_content') }}</p>
+                         @if((isset($orderData->user) && $orderData->user->is_guest_user == '1') || (isset($orderData) && $orderData->client_type == 'guest'))
                             <div class="guest-register-message mt-4 mb-4 p-4 text-center rounded shadow-sm" style="background: #e3f2fd; border-left: 6px solid #1976d2;">
                                 <h5 class="mb-2" style="color: #1976d2;">Want to track your orders and earn rewards?</h5>
                                 <p class="mb-3" style="color: #333;">Register now to unlock full account benefits, track your order history, and earn reward points on every purchase!</p>

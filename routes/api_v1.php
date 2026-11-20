@@ -45,6 +45,7 @@ Route::group(['middleware' => 'headerauthwithoutlogin'], function () {
     Route::get('catalog-filters', [CatalogController::class, 'filters'])->name('catalogFilters');
     //UserController API
     //Date:18-01-2023
+    Route::match(['GET', 'POST'], 'check-existing-user', [UserController::class, 'checkExistingUser'])->name('api.checkExistingUser');
     Route::post('register', 'UserController@register');
     Route::post('/social_register', [UserController::class, 'social_register'])->name('social_register');
     Route::post('login', 'UserController@login');

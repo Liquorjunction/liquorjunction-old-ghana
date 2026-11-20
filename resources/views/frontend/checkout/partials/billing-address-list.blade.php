@@ -1,4 +1,4 @@
-@if (!$user || $user->is_guest_user != 1)
+@if ($user && $user->is_guest_user != 1)
     @if($UserBillAddressData->isEmpty())
         <div class="py-3 px-3 text-center border rounded bg-light mb-3" style="border-radius: 8px;">
             <p class="text-muted small mb-2"><i class="fa fa-info-circle text-warning me-1"></i> No separate billing address saved yet.</p>

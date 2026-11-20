@@ -455,12 +455,49 @@ class MyProfileController extends Controller
     {
         $user_id = $this->user_id;
         $checkout_page = @$request->checkout_page;
+        $isGuest = session()->get('is_guest_checkout') || empty($user_id);
 
         $check = $this->validateAndAuthorizeAddressData($request, false);
         if (!$check['valid']) {
             return response()->json(['success' => false, 'message' => $check['message']], 422);
         }
         $d = $check['data'];
+
+        if ($isGuest) {
+            $area = \App\Models\Area::with(['region.country'])->find($d['area_id']);
+            $region = $area ? $area->region : \App\Models\Region::find($d['region_id']);
+            $country = $region ? $region->country : \App\Models\Country::find($d['country_id']);
+
+            $guestAddress = [
+                'id'                     => 'guest',
+                'user_id'                => null,
+                'name'                   => $d['name'],
+                'phonecode'              => $d['phonecode'],
+                'phone'                  => $d['phone'],
+                'zip_code'               => $d['zip_code'],
+                'city'                   => $d['city'],
+                'address'                => $d['address'],
+                'country_id'             => $d['country_id'],
+                'region_id'              => $d['region_id'],
+                'area_id'                => $d['area_id'],
+                'latitude'               => $d['latitude'],
+                'longitude'              => $d['longitude'],
+                'is_selected_address_id' => 1,
+                'status'                 => 1,
+                'delivery_options'       => $request->delivery_options ?? 1,
+                'delivery_instructions'  => $request->instruction ?? null,
+                'country_name'           => $country ? $country->name : '',
+                'region_title'           => $region ? $region->title : '',
+                'area_title'             => $area ? $area->title : '',
+                'delivery_fee'           => $area ? (float)$area->delivery_fee : 0,
+                'delivery_amount'        => $area ? (float)$area->delivery_amount : 0,
+                'rate'                   => $area ? (float)$area->rate : 0,
+            ];
+
+            session()->put('guest_shipping_address', $guestAddress);
+            \RealRashid\SweetAlert\Facades\Alert::success(\Helper::language('success'), __('backend.user_address_added_successfully'));
+            return response()->json(['success' => 'true', 'id' => 'guest', 'type' => 'shipping', 'action' => 'add', 'is_guest' => true]);
+        }
 
         $add_address = new UserAddress();
         $add_address->user_id = $user_id;
@@ -501,12 +538,44 @@ class MyProfileController extends Controller
     public function storeBillAddress(Request $request)
     {
         $user_id = $this->user_id;
+        $isGuest = session()->get('is_guest_checkout') || empty($user_id);
 
         $check = $this->validateAndAuthorizeAddressData($request, true);
         if (!$check['valid']) {
             return response()->json(['success' => false, 'message' => $check['message']], 422);
         }
         $d = $check['data'];
+
+        if ($isGuest) {
+            $area = \App\Models\Area::with(['region.country'])->find($d['area_id']);
+            $region = $area ? $area->region : \App\Models\Region::find($d['region_id']);
+            $country = $region ? $region->country : \App\Models\Country::find($d['country_id']);
+
+            $guestBillAddress = [
+                'id'           => 'guest_bill',
+                'user_id'      => null,
+                'name'         => $d['name'],
+                'phonecode'    => $d['phonecode'],
+                'phone'        => $d['phone'],
+                'zip_code'     => $d['zip_code'],
+                'city'         => $d['city'],
+                'address'      => $d['address'],
+                'country_id'   => $d['country_id'],
+                'region_id'    => $d['region_id'],
+                'area_id'      => $d['area_id'],
+                'latitude'     => $d['latitude'],
+                'longitude'    => $d['longitude'],
+                'default'      => 1,
+                'status'       => 1,
+                'country_name' => $country ? $country->name : '',
+                'region_title' => $region ? $region->title : '',
+                'area_title'   => $area ? $area->title : '',
+            ];
+
+            session()->put('guest_billing_address', $guestBillAddress);
+            \RealRashid\SweetAlert\Facades\Alert::success(\Helper::language('success'), __('backend.user_address_added_successfully'));
+            return response()->json(['success' => 'true', 'id' => 'guest_bill', 'type' => 'billing', 'action' => 'add', 'is_guest' => true]);
+        }
 
         $default = $request->input('isDefault', 1);
         if ($default === null || $default === '') {
@@ -551,12 +620,49 @@ class MyProfileController extends Controller
     public function updateAddress(Request $request)
     {   
         $user_id = $this->user_id;
+        $isGuest = session()->get('is_guest_checkout') || empty($user_id) || $request->input('edit_address_id') === 'guest';
 
         $check = $this->validateAndAuthorizeAddressData($request, false);
         if (!$check['valid']) {
             return response()->json(['success' => false, 'message' => $check['message']], 422);
         }
         $d = $check['data'];
+
+        if ($isGuest) {
+            $area = \App\Models\Area::with(['region.country'])->find($d['area_id']);
+            $region = $area ? $area->region : \App\Models\Region::find($d['region_id']);
+            $country = $region ? $region->country : \App\Models\Country::find($d['country_id']);
+
+            $guestAddress = [
+                'id'                     => 'guest',
+                'user_id'                => null,
+                'name'                   => $d['name'],
+                'phonecode'              => $d['phonecode'],
+                'phone'                  => $d['phone'],
+                'zip_code'               => $d['zip_code'],
+                'city'                   => $d['city'],
+                'address'                => $d['address'],
+                'country_id'             => $d['country_id'],
+                'region_id'              => $d['region_id'],
+                'area_id'                => $d['area_id'],
+                'latitude'               => $d['latitude'],
+                'longitude'              => $d['longitude'],
+                'is_selected_address_id' => 1,
+                'status'                 => 1,
+                'delivery_options'       => $request->delivery_options ?? 1,
+                'delivery_instructions'  => $request->instruction ?? null,
+                'country_name'           => $country ? $country->name : '',
+                'region_title'           => $region ? $region->title : '',
+                'area_title'             => $area ? $area->title : '',
+                'delivery_fee'           => $area ? (float)$area->delivery_fee : 0,
+                'delivery_amount'        => $area ? (float)$area->delivery_amount : 0,
+                'rate'                   => $area ? (float)$area->rate : 0,
+            ];
+
+            session()->put('guest_shipping_address', $guestAddress);
+            \RealRashid\SweetAlert\Facades\Alert::success(\Helper::language('success'), __('backend.user_address_update_successfully'));
+            return response()->json(['success' => 'true', 'id' => 'guest', 'type' => 'shipping', 'action' => 'edit', 'is_guest' => true]);
+        }
 
         // Strict ownership check (prevent IDOR tampering)
         $edit_address = UserAddress::where('user_id', $user_id)->where('id', $request->edit_address_id)->first();
@@ -651,6 +757,35 @@ class MyProfileController extends Controller
     public function getAddressDetails($type, $id)
     {
         $user_id = $this->user_id;
+        $isGuest = session()->get('is_guest_checkout') || $id === 'guest' || $id === 'guest_bill' || empty($user_id);
+
+        if ($isGuest) {
+            $sessionKey = ($type == 'bill' || $type == 'billing' || $id === 'guest_bill') ? 'guest_billing_address' : 'guest_shipping_address';
+            $addrData = session()->get($sessionKey);
+            if (!$addrData) {
+                return response()->json(['success' => false, 'message' => 'Address not found'], 404);
+            }
+            $address = (object)$addrData;
+            $regions = [];
+            if (!empty($address->country_id)) {
+                $regions = \App\Models\Region::where('country_id', $address->country_id)->where('status', 1)->orderby('title', 'ASC')->get(['id', 'title']);
+            }
+            $areas = [];
+            if (!empty($address->region_id)) {
+                $areas = \App\Models\Area::where('region_id', $address->region_id)->where('status', 1)->orderby('title', 'ASC')->get(['id', 'title']);
+            }
+
+            return response()->json([
+                'success'            => true,
+                'address'            => $address,
+                'regions'            => $regions,
+                'areas'              => $areas,
+                'selected_region_id' => $address->region_id ?? '',
+                'selected_area_id'   => $address->area_id ?? '',
+                'is_guest'           => true
+            ]);
+        }
+
         if ($type == 'bill' || $type == 'billing') {
             $address = UserBillAddress::with(['country', 'region', 'area'])
                 ->where('user_id', $user_id)
@@ -780,18 +915,13 @@ class MyProfileController extends Controller
     {
         /* dd();Cart*/
         $user_id = auth()->guard('user')->id();
-        $cartdata = \DB::table('cart')->where('user_id', $user_id)->where('status', 1)->get();
+        $userdata = $user_id ? \DB::table('main_users')->where('id', $user_id)->first() : null;
 
-        $userdata = \DB::table('main_users')->where('id', $user_id)->first();
-
-        if (!empty($cartdata) && count($cartdata) > 0) {
-            //$ismail = $this->attachment_remind_order($userdata->email, $userdata->name);
-            Auth::guard('user')->logout();
-        } else {
+        if (Auth::guard('user')->check()) {
             Auth::guard('user')->logout();
         }
 
-        // 🧹 Clear extra user/checkout/otp temporary session keys on logout
+        // 🧹 Clear extra user/checkout/otp and guest sessions on logout
         Session::forget([
             'id',
             'first_name',
@@ -808,20 +938,37 @@ class MyProfileController extends Controller
             'counter',
             'current_lat',
             'current_long',
-            'user_id'
+            'user_id',
+            // 🛑 GUEST USER SESSIONS FORGET:
+            'is_guest_checkout',
+            'guest_id',
+            'guest_email',
+            'guest_phone',
+            'guest_phone_code',
+            'guest_name',
+            'guest_token',
+            'guest_shipping_address',
+            'guest_billing_address',
+            'guest_delivery_address',
+            'cart_info',
         ]);
-        if($userdata->is_guest_user != 1){
-                    if($userdata->remember_token == null){
-            $remember_token = \Str::random(64);
-            MainUser::where('id', $user_id)->update(['remember_token' => $remember_token ]);
-        }else{
-            MainUser::where('id', $user_id)->update(['remember_token' => $userdata->remember_token ]);
-        }
+
+        if (!empty($userdata) && $userdata->is_guest_user != 1) {
+            if ($userdata->remember_token == null) {
+                $remember_token = \Str::random(64);
+                MainUser::where('id', $user_id)->update(['remember_token' => $remember_token]);
+            } else {
+                MainUser::where('id', $user_id)->update(['remember_token' => $userdata->remember_token]);
+            }
         }
 
         /*\Cookie::queue(\Cookie::forget('admin_email'));
         \Cookie::queue(\Cookie::forget('admin_password'));*/
-        return response()->json(['success' => 'true']);
+        if (request()->ajax() || request()->wantsJson()) {
+            return response()->json(['success' => 'true']);
+        }
+
+        return redirect('/');
     }
 
     public function attachment_remind_order($email, $name)

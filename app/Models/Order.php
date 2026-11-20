@@ -38,6 +38,8 @@ class Order extends Model
         'status',
         'is_stock_updated', 
         'user_id',
+        'client_type',
+        'guest_user_id',
         'created_at', 
         'updated_at' 
     ];
@@ -67,6 +69,21 @@ class Order extends Model
     public function user()
     {
         return $this->belongsTo(MainUser::class);
+    }
+
+    public function guestUser()
+    {
+        return $this->belongsTo(GuestUser::class, 'guest_user_id');
+    }
+
+    public function isGuest(): bool
+    {
+        return $this->client_type === 'guest' || !empty($this->guest_user_id);
+    }
+
+    public function isRegistered(): bool
+    {
+        return $this->client_type === 'registered' || (!empty($this->user_id) && empty($this->guest_user_id));
     }
 
 

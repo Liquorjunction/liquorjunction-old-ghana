@@ -253,18 +253,30 @@
                   </p>
 
                   <div class="section-title" style="margin-bottom: 10px;">CUSTOMER DETAILS</div>
-                  @if (!empty($orderData->first_name) || !empty($orderData->last_name))
-                      <strong>Name</strong> - {{ trim($orderData->first_name . ' ' . $orderData->last_name) }}<br />
+                  @php
+                      $custName = trim(($orderData->first_name ?? '') . ' ' . ($orderData->last_name ?? ''));
+                      if (empty($custName)) {
+                          $custName = $orderData->customer_name ?? 'Guest Customer';
+                      }
+                      $custEmail = !empty($orderData->email) ? $orderData->email : ($orderData->customer_email ?? '');
+                      $rawCustPhone = trim((string)(@$orderData->customer_mobile ?: @$orderData->phone ?: ''));
+                      $custPhoneCode = (!empty($orderData->phone_code) && $orderData->phone_code != '0') ? '+' . ltrim($orderData->phone_code, '+') : '';
+                      if (!empty($rawCustPhone)) {
+                          $custPhone = str_starts_with($rawCustPhone, '+') ? $rawCustPhone : (($custPhoneCode ? $custPhoneCode . ' ' : '+') . $rawCustPhone);
+                      } else {
+                          $custPhone = '';
+                      }
+                  @endphp
+                  @if (!empty($custName))
+                      <strong>Name</strong> - {{ $custName }}<br />
                   @endif
 
-                  @if (!empty($orderData->email))
-                      <strong>Email</strong> - {{ $orderData->email }}<br />
+                  @if (!empty($custEmail))
+                      <strong>Email</strong> - {{ $custEmail }}<br />
                   @endif
 
-                  @if (!empty($orderData->phone_code) && !empty($orderData->phone))
-                      <strong>Phone</strong> - +{{ ltrim($orderData->phone_code, '+') }} {{ $orderData->phone }}<br />
-                  @elseif (!empty($orderData->phone))
-                      <strong>Phone</strong> - {{ $orderData->phone }}<br />
+                  @if (!empty($custPhone))
+                      <strong>Phone</strong> - {{ $custPhone }}<br />
                   @endif
 
 

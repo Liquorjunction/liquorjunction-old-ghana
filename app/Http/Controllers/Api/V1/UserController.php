@@ -16,6 +16,8 @@ use App\Models\EmailTemplate;
 use App\Models\UserAddress;
 use App\Models\UserBillAddress;
 use App\Models\ProductVariants;
+use App\Models\GuestUser;
+use App\Services\GuestUserService;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Mail;
@@ -63,6 +65,58 @@ class UserController extends Controller
     public function generateToken()
     {
         return md5(rand(1, 10) . microtime());
+    }
+
+    /**
+     * Check whether an email or phone number is already registered to an existing real user account.
+     * Endpoint: POST or GET /api/v1/check-existing-user
+     */
+    public function checkExistingUser(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:30'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => strval(0),
+                'message' => 'Validation error',
+                'error' => $validator->messages(),
+                'result' => null
+            ], 200);
+        }
+
+        $email = $request->input('email');
+        $phone = $request->input('phone');
+
+        // Optional fallback: single 'value' parameter (can be email or phone)
+        if (empty($email) && empty($phone) && $request->has('value')) {
+            $val = trim($request->input('value'));
+            if (filter_var($val, FILTER_VALIDATE_EMAIL)) {
+                $email = $val;
+            } else {
+                $phone = $val;
+            }
+        }
+
+        if (empty($email) && empty($phone)) {
+            return response()->json([
+                'code' => strval(0),
+                'message' => 'Please provide email or phone number to check',
+                'result' => null
+            ], 200);
+        }
+
+        $guestService = app(GuestUserService::class);
+        $check = $guestService->checkExistingUser($email, $phone);
+
+        return response()->json([
+            'code' => strval(1),
+            'success' => 'true',
+            'message' => 'success',
+            'result' => $check
+        ], 200);
     }
 
     public function register(Request $request)
@@ -139,191 +193,90 @@ class UserController extends Controller
         }
 
         // User existence check
-        $userExist = null;
         if ($isGuest) {
-            $value = trim($request->email);
+            $value = trim($request->email ?? '');
             $email = null;
             $phone = null;
             if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                $email = $value;
+                $email = strtolower($value);
             } elseif (preg_match('/^[0-9]{8,15}$/', $value)) {
                 $phone = $value;
             }
-            $userExist = MainUser::where(function ($query) use ($email, $phone) {
+            if (!empty($request->phone)) {
+                $phone = trim($request->phone);
+            }
+
+            // Check if email or phone is already registered as an active real user
+            $registeredUser = MainUser::where(function ($query) use ($email, $phone) {
                 if ($email) {
                     $query->where('email', $email);
                 }
                 if ($phone) {
                     $query->orWhere('phone', $phone);
                 }
-            })->first();
-        } else {
-            $userExist = MainUser::where(function ($query) use ($request) {
-                if ($request->email) {
-                    $query->where('email', $request->email);
-                }
-                if ($request->phone) {
-                    $query->orWhere('phone', $request->phone);
-                }
-            })->first();
-        }
+            })->where('status', '!=', '2')->where('is_otp_verify', 1)->where('is_guest_user', '0')->first();
 
-        if ($userExist) {
-            if ($userExist->is_guest_user == 1) {
-                    $productVariants = json_decode($request->product_variants, true);
-            if (!empty($productVariants)) {
-
-                foreach ($productVariants as $productId => $variants) {
-                    foreach ($variants as $variantId => $qty) {
-
-                        $variant = ProductVariants::find($variantId);
-                        if (!$variant) continue;
- 
-                        $price = $variant->variant_discounted_price ?: $variant->variant_price;
-
-                        Cart::updateOrCreate(
-                            [
-                                'user_id' => $userExist->id,
-                                'product_id' => $productId,
-                                'product_variant_id' => $variantId,
-                            ],
-                            [
-                                'quantity' => $qty,
-                                'product_price' => $variant->variant_price,
-                                'offer_price' => $variant->variant_discounted_price,
-                                'total_price' => $price * $qty,
-                                'status' => 1,
-                                'order_type' => 1,
-                            ]
-                        );
-                    }
-                }
-            }
-                Helper::afterLoginAddUserCartItemData();
-                // Already verified → direct login
-                if ($isGuest && $userExist->is_otp_verify == 1) {
-                    $response = [
-                        'otp' => '',
-                        'otp_expire_time' => '',
-                        'uniqid' => strval(@$userExist->uniqid ?: ''),
-                        'remember_token' => strval(@$userExist->remember_token ?: '')
-                    ];
-                    return response()->json([
-                        'success' => 'true',
-                        'guest_otp' => true,
-                        'result' => $response,
-                        'redirect' => 'checkout',
-                    ]);
-                }
-                // Not verified → resend OTP
-                $userExist->otp = $otp;
-                $userExist->otp_expire_time = $otp_expire_time;
-                $userExist->save();
-                $logo = \Config::get('app.url') . 'public/assets/dashboard/images/liquor.png';
-                $url_link = \URL::to("/");
-                try {
-                    $this->attachment_otp_email($userExist->email, $otp, $userExist->first_name, $logo, $url_link);
-                } catch (\Exception $e) {}
-                $response = [
-                    'otp' => strval(@$userExist->otp ?: ''),
-                    'otp_expire_time' => strval(@$userExist->otp_expire_time ?: ''),
-                    'uniqid' => strval(@$userExist->uniqid ?: ''),
-                    'remember_token' => strval(@$userExist->remember_token ?: '')
-                ];
-                Helper::afterLoginAddUserCartItemData();
-                return response()->json([
-                    'success' => 'true',
-                    'guest_otp' => true,
-                    'result' => $response,
-                    'redirect' => 'checkout',
-                ]);
-            } else {
-                // For non-guest or non-guest-user, show already exists error as before
+            if ($registeredUser) {
                 $errors = [];
-                if ($isGuest) {
-                    if ($userExist->email === $request->email) {
-                        $errors['email'] = ['The email address is already registered.'];
-                    }
-                    if ($userExist->phone === $request->email) {
-                        $errors['email'] = ['The phone number is already registered.'];
-                    }
-                } else {
-                    if ($userExist->email === $request->email) {
-                        $errors['email'] = ['The email address is already registered.'];
-                    }
-                    if ($userExist->phone === $request->phone) {
-                        $errors['phone'] = ['The phone number is already registered.'];
-                    }
+                if ($email && $registeredUser->email === $email) {
+                    $errors['email'] = ['The email address is already registered.'];
+                }
+                if ($phone && $registeredUser->phone === $phone) {
+                    $errors['phone'] = ['The phone number is already registered.'];
                 }
                 return response()->json($errors, 422);
             }
-        } else if ($isGuest) {
-            Helper::afterLoginAddUserCartItemData();
-            // New guest user: direct login, no OTP validation required
-            $user = new MainUser;
-            $uniqid = uniqid();
-            $user->uniqid = $uniqid;
-            $user->label_type = 1;
-            $user->first_name = $request->name ?? '';
-            $user->last_name  = $request->last_name ?? '';
-            $value = $request->email;
-            $email = null;
-            $phone = null;
-            if (!empty($value)) {
-                if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                    $email = $value;
-                } elseif (preg_match('/^[0-9]{8,15}$/', $value)) {
-                    $phone = $value;
-                }
+
+            // Create or update in guest_users table ONLY (NO main_users row)
+            $guestService = app(GuestUserService::class);
+            $guestUser = $guestService->createOrUpdateGuest([
+                'name'  => $request->name ?? ($request->firstname ? ($request->firstname . ' ' . ($request->lastname ?? '')) : 'Guest User'),
+                'email' => $email,
+                'phone' => $phone,
+            ]);
+
+            $guestUniqid = 'GUEST_' . $guestUser->id;
+            $guestToken = $guestUser->token ?: Str::random(40);
+            if (empty($guestUser->token)) {
+                $guestUser->token = $guestToken;
+                $guestUser->save();
             }
-            $user->email = $email;
-            $user->phone = $phone;
-            $user->age = $request->age ?? '';
-            $user->phone_code = $request->phone_code ?? '';
-            $user->otp = null;
-            $user->otp_expire_time = null;
-            $user->is_otp_verify = 1; // Mark as verified
-            $user->user_type = 1;
-            $user->status = 1; // Mark as active
-            $user->is_guest_user = 1;
-            $user->is_verify_user = 1;
-            $user->remember_token = $token;
-            $user->save();
-            Helper::afterLoginAddUserCartItemData();
+
+            // Store cart items for this guest session using uniqid in cart table
             $productVariants = json_decode($request->product_variants, true);
             if (!empty($productVariants)) {
+                Cart::where('uniqid', $guestUniqid)->delete();
 
                 foreach ($productVariants as $productId => $variants) {
                     foreach ($variants as $variantId => $qty) {
-
                         $variant = ProductVariants::find($variantId);
                         if (!$variant) continue;
 
                         $price = $variant->variant_discounted_price ?: $variant->variant_price;
 
-                        Cart::updateOrCreate(
-                            [
-                                'user_id' => $user->id,
-                                'product_id' => $productId,
-                                'product_variant_id' => $variantId,
-                            ],
-                            [
-                                'quantity' => $qty,
-                                'product_price' => $variant->variant_price,
-                                'offer_price' => $variant->variant_discounted_price,
-                                'total_price' => $price * $qty,
-                                'status' => 1,
-                                'order_type' => 1,
-                            ]
-                        );
+                        Cart::create([
+                            'uniqid' => $guestUniqid,
+                            'user_id' => 0,
+                            'product_id' => $productId,
+                            'product_variant_id' => $variantId,
+                            'quantity' => $qty,
+                            'product_price' => $variant->variant_price,
+                            'offer_price' => $variant->variant_discounted_price,
+                            'total_price' => $price * $qty,
+                            'status' => 1,
+                            'order_type' => 1,
+                        ]);
                     }
                 }
             }
+
             $response = [
                 'otp' => '',
                 'otp_expire_time' => '',
-                'uniqid' => strval(@$user->uniqid ?: ''),
-                'remember_token' => strval(@$user->remember_token ?: '')
+                'uniqid' => $guestUniqid,
+                'remember_token' => $guestToken,
+                'is_guest_user' => 1,
+                'guest_id' => $guestUser->id,
             ];
             return response()->json([
                 'success' => 'true',
@@ -331,6 +284,27 @@ class UserController extends Controller
                 'result' => $response,
                 'redirect' => 'checkout',
             ]);
+        }
+
+        // Normal user existence check
+        $userExist = MainUser::where(function ($query) use ($request) {
+            if ($request->email) {
+                $query->where('email', $request->email);
+            }
+            if ($request->phone) {
+                $query->orWhere('phone', $request->phone);
+            }
+        })->first();
+
+        if ($userExist) {
+            $errors = [];
+            if ($userExist->email === $request->email) {
+                $errors['email'] = ['The email address is already registered.'];
+            }
+            if ($userExist->phone === $request->phone) {
+                $errors['phone'] = ['The phone number is already registered.'];
+            }
+            return response()->json($errors, 422);
         }
 
         // New normal user
@@ -353,6 +327,9 @@ class UserController extends Controller
         $user->is_otp_verify = 0;
         $user->password = isset($request->password) ? \Hash::make($request->password) : '';
         $user->save();
+        try {
+            app(GuestUserService::class)->linkGuestOrdersToUser($user);
+        } catch (\Throwable $e) {}
         $logo = \Config::get('app.url') . 'public/assets/dashboard/images/liquor.png';
         $url_link = \URL::to("/");
         $url = $url_link . '/';
@@ -481,6 +458,9 @@ class UserController extends Controller
             }
 
             $user->save();
+            try {
+                app(GuestUserService::class)->linkGuestOrdersToUser($user);
+            } catch (\Throwable $e) {}
         } else {
             // create new user
 
@@ -555,6 +535,9 @@ class UserController extends Controller
             }
 
             $user->save();
+            try {
+                app(GuestUserService::class)->linkGuestOrdersToUser($user);
+            } catch (\Throwable $e) {}
         }
 
         // Prepare response
@@ -983,11 +966,14 @@ class UserController extends Controller
                     } else {
                                         // Normal user flow
                     MainUser::where('uniqid', $userdata->uniqid)->update([
-                                                'is_verify_user' => 1,
+                        'is_verify_user' => 1,
                         'is_otp_verify' => 1,
                         'is_phone' => @$request->device_type,
                         'device_token' => @$request->firebase_token,
-                        ]);
+                    ]);
+                    try {
+                        app(GuestUserService::class)->linkGuestOrdersToUser($userdata);
+                    } catch (\Throwable $e) {}
                     $ismail = $this->sendRegisterToUser($userdata);
                     $response = [
                                                 'otp' => strval(@$userdata->otp ?: ''),
@@ -1617,23 +1603,34 @@ class UserController extends Controller
             }
         
         if ($post) {
-                        $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
-            
-            $updatepsw = MainUser::where('id', $userData->id)->update(
-                                array(
-                                        'remember_token' => '',
+            $isGuest = str_starts_with($request->uniqid, 'GUEST_');
+            if ($isGuest) {
+                $guestId = (int) str_replace('GUEST_', '', $request->uniqid);
+                GuestUser::where('id', $guestId)->update([
+                    'token' => '',
+                ]);
+                Cart::where('uniqid', $request->uniqid)->delete();
+
+                $result['code'] = strval(1);
+                $result['message'] = 'success';
+                $mainResult = $result;
+                return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
+
+            $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
+
+            if ($userData) {
+                MainUser::where('id', $userData->id)->update([
+                    'remember_token' => '',
                     'device_token' => '',
-                    )
-                );
-            
-            
+                ]);
+            }
+
             $result['code'] = strval(1);
             $result['message'] = 'success';
-            // $result['result']       = [];
-            
             $mainResult = $result;
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
-            } else {
+        } else {
                         $result['code'] = strval(0);
             $result['message'] = 'something_went_wrong';
             $result['result'] = [];
@@ -1914,6 +1911,17 @@ class UserController extends Controller
         }
 
         if ($post) {
+            if (str_starts_with($request->uniqid, 'GUEST_')) {
+                $result['code'] = strval(1);
+                $result['message'] = 'no_data_found';
+                $result['result'] = [
+                    'shipping_address' => [],
+                    'billing_address' => [],
+                ];
+                $mainResult = $result;
+                return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
+
             $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
             $user_id = $userData->id;
             if (!empty($userData)) {
@@ -1974,12 +1982,18 @@ class UserController extends Controller
             return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
         }
         if ($post) {
-            $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
+            $isGuest = str_starts_with($request->uniqid, 'GUEST_');
+            $guestId = $isGuest ? (int) str_replace('GUEST_', '', $request->uniqid) : 0;
+            $userData = !$isGuest ? DB::table('main_users')->where('uniqid', $request->uniqid)->first() : null;
 
             // status 1 = paid/active, status 2 = unpaid online (pending or failed payment).
             // Website My Orders shows both; unpaid online must appear so Failed/Pending can show.
             $orderData = Order::with('order_details', 'orderInfo', 'transcations')
-                ->where('user_id', $userData->id)
+                ->when($isGuest, function ($q) use ($guestId) {
+                    $q->where('guest_user_id', $guestId);
+                }, function ($q) use ($userData) {
+                    $q->where('user_id', $userData ? $userData->id : 0);
+                })
                 ->whereIn('status', [1, 2])
                 ->orderBy('id', 'desc');
             //dd($orderData);
@@ -2389,7 +2403,9 @@ class UserController extends Controller
         }
 
         if ($post) {
-            $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
+            $isGuest = str_starts_with($request->uniqid, 'GUEST_');
+            $guestId = $isGuest ? (int) str_replace('GUEST_', '', $request->uniqid) : 0;
+            $userData = !$isGuest ? DB::table('main_users')->where('uniqid', $request->uniqid)->first() : null;
             if ($request->check_status == 1) {
 
                 $validator = \Validator::make($request->all(), [
@@ -2403,7 +2419,13 @@ class UserController extends Controller
                     ], 200);
                 }
 
-                $orderInformation = Order::with('order_details', 'orderInfo', 'transcations')->where('order_id', $request->order_number)->where('user_id', $userData->id)->first();
+                $orderInformation = Order::with('order_details', 'orderInfo', 'transcations')
+                    ->where('order_id', $request->order_number)
+                    ->when($isGuest, function ($q) use ($guestId) {
+                        $q->where('guest_user_id', $guestId);
+                    }, function ($q) use ($userData) {
+                        $q->where('user_id', $userData ? $userData->id : 0);
+                    })->first();
             } else {
                 $validator = \Validator::make($request->all(), [
                     'order_id' => 'required',
@@ -2416,11 +2438,17 @@ class UserController extends Controller
                     ], 200);
                 }
 
-                $orderInformation = Order::with('order_details', 'orderInfo', 'transcations')->where('id', $request->order_id)->where('user_id', $userData->id)->first();
+                $orderInformation = Order::with('order_details', 'orderInfo', 'transcations')
+                    ->where('id', $request->order_id)
+                    ->when($isGuest, function ($q) use ($guestId) {
+                        $q->where('guest_user_id', $guestId);
+                    }, function ($q) use ($userData) {
+                        $q->where('user_id', $userData ? $userData->id : 0);
+                    })->first();
             }
 
             // Get Invoice Details
-            $print_order_id = $request->order_id;
+            $print_order_id = !empty($request->order_id) ? $request->order_id : ($orderInformation ? $orderInformation->id : null);
             $fileName = 'order_' . $print_order_id . '.pdf';
             $directory = public_path('uploads/invoices');
             $filePath = $directory . '/' . $fileName;
@@ -2432,7 +2460,7 @@ class UserController extends Controller
             }
 
             if (!file_exists($filePath)) {
-                $orderData = Order::join('main_users', 'main_users.id', '=', 'order.user_id')
+                $orderData = Order::leftJoin('main_users', 'main_users.id', '=', 'order.user_id')
                     ->join('order_info', 'order_info.order_id', '=', 'order.id')
                     ->join('order_status', 'order_status.id', '=', 'order.status')
                     ->leftjoin('countries', 'countries.id', '=', 'order_info.country_id')
@@ -2501,17 +2529,22 @@ class UserController extends Controller
                 $vat = ($taxes[3]->tax_value / 100) * ($subTotal);
 
                 // Generate PDF
-                $pdf = Pdf::loadView('frontend.layouts.orders', compact('orderData', 'orderDetails', 'settings', 'nhil', 'getFund', 'vat', 'subTotal', 'bogoDiscount', 'totalAmount'));
+                try {
+                    $pdf = Pdf::loadView('frontend.layouts.orders', compact('orderData', 'orderDetails', 'settings', 'nhil', 'getFund', 'vat', 'subTotal', 'bogoDiscount', 'totalAmount'));
 
-                // Make directory if not exists
-                if (!is_dir($directory)) {
-                    mkdir($directory, 0777, true);
+                    // Make directory if not exists
+                    if (!is_dir($directory)) {
+                        mkdir($directory, 0777, true);
+                    }
+
+                    file_put_contents($filePath, $pdf->output());
+
+                    //$publicUrl = asset('uploads/invoices/' . $fileName);
+                    $publicUrl = asset('uploads/invoices/' . $fileName) . '?v=' . time();
+                } catch (\Throwable $pdfEx) {
+                    \Log::warning('Invoice PDF generation skipped/failed: ' . $pdfEx->getMessage());
+                    $publicUrl = '';
                 }
-
-                file_put_contents($filePath, $pdf->output());
-
-                //$publicUrl = asset('uploads/invoices/' . $fileName);
-                $publicUrl = asset('uploads/invoices/' . $fileName) . '?v=' . time();
             }
 
 
@@ -2615,7 +2648,7 @@ class UserController extends Controller
                         $product_discount_amount += $disc_price *  $effectiveQty;
                     }
 
-                    $ratingData = Helper::getProductsRatingOrderId($userData->id, $data->product_id, $orderInformation->id);
+                    $ratingData = Helper::getProductsRatingOrderId($userData ? $userData->id : 0, $data->product_id, $orderInformation->id);
 
                     if ($orderInformation->order_status == 3) {
                         $rating = (@$ratingData->ratings) ? @$ratingData->ratings : '';
@@ -2704,8 +2737,17 @@ class UserController extends Controller
         }
 
         if ($post) {
-            $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
-            $orderInformation = Order::with('order_details', 'orderInfo', 'transcations')->where('id', $request->order_id)->where('user_id', $userData->id)->first();
+            $isGuest = str_starts_with($request->uniqid, 'GUEST_');
+            $guestId = $isGuest ? (int) str_replace('GUEST_', '', $request->uniqid) : 0;
+            $userData = !$isGuest ? DB::table('main_users')->where('uniqid', $request->uniqid)->first() : null;
+
+            $orderInformation = Order::with('order_details', 'orderInfo', 'transcations')
+                ->where('id', $request->order_id)
+                ->when($isGuest, function ($q) use ($guestId) {
+                    $q->where('guest_user_id', $guestId);
+                }, function ($q) use ($userData) {
+                    $q->where('user_id', $userData ? $userData->id : 0);
+                })->first();
 
             //dd($orderInformation);
             if (!empty($orderInformation) && (int)$orderInformation->order_status === 1) {
@@ -2910,6 +2952,17 @@ class UserController extends Controller
         }
 
         if ($post) {
+            if (str_starts_with($request->uniqid, 'GUEST_')) {
+                $result['code'] = strval(1);
+                $result['message'] = 'no_data_found';
+                $result['result'] = [
+                    'shipping_address' => [],
+                    'billing_address' => [],
+                ];
+                $mainResult = $result;
+                return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
+
             $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
             $UserAddressData = UserAddress::withWhereHas('country', function ($query) {
                 $query->where('status', 1);
@@ -2988,6 +3041,17 @@ class UserController extends Controller
         }
 
         if ($post) {
+            if (str_starts_with($request->uniqid, 'GUEST_')) {
+                $result['code'] = strval(1);
+                $result['message'] = 'no_data_found';
+                $result['result'] = [
+                    'shipping_address' => [],
+                    'billing_address' => [],
+                ];
+                $mainResult = $result;
+                return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+            }
+
             $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
 
             //$userAddress = DB::table('user_address')->where('user_id',$userData->id)->where('status',1)->get();
@@ -3209,6 +3273,69 @@ class UserController extends Controller
         logger()->info($request->type);
 
         if ($post) {
+            if (str_starts_with($request->uniqid, 'GUEST_')) {
+                if ($request->type == 1 || $request->type == 2) {
+                    $validator = \Validator::make($request->all(), [
+                        'name' => 'required',
+                        'phone' => 'required',
+                        'phonecode' => 'required',
+                        'country_id' => 'required',
+                        'region_id' => 'required',
+                        'area_id' => 'required',
+                        'address' => 'required',
+                    ]);
+
+                    if ($validator->fails()) {
+                        return response()->json([
+                            'status_code' => strval(0),
+                            'error' => $validator->messages(),
+                            'data' => null
+                        ], 200);
+                    }
+
+                    $validRegion = DB::table('regions')->where('id', $request->region_id)->where('country_id', $request->country_id)->where('status', 1)->first();
+                    if (!$validRegion) {
+                        return response()->json([
+                            'status_code' => strval(0),
+                            'error' => ['region_id' => ['Selected region does not belong to the selected country.']],
+                            'data' => null
+                        ], 200);
+                    }
+                    $validArea = DB::table('area')->where('id', $request->area_id)->where('region_id', $request->region_id)->where('status', 1)->first();
+                    if (!$validArea) {
+                        return response()->json([
+                            'status_code' => strval(0),
+                            'error' => ['area_id' => ['Selected area does not belong to the selected region.']],
+                            'data' => null
+                        ], 200);
+                    }
+
+                    $result['code'] = strval(1);
+                    $result['message'] = ($request->type == 2) ? 'address_updated_successfully' : 'address_added_successfully';
+                    $result['address_id'] = '0';
+                    $result['bill_address_id'] = '0';
+                    $result['result'] = [
+                        'address_id' => '0',
+                        'bill_address_id' => '0',
+                        'name' => strval($request->name),
+                        'phone' => strval($request->phone),
+                        'phonecode' => strval($request->phonecode),
+                        'address' => strval($request->address),
+                        'city' => strval($request->city ?? ''),
+                        'zip_code' => strval($request->zip_code ?? ''),
+                        'latitude' => strval($request->latitude ?? ''),
+                        'longitude' => strval($request->longitude ?? ''),
+                    ];
+                    $mainResult = $result;
+                    return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+                } else {
+                    $result['code'] = strval(1);
+                    $result['message'] = 'address_removed_successfully';
+                    $mainResult = $result;
+                    return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+                }
+            }
+
             if ($request->type == 2) {
                 $validator = \Validator::make($request->all(), [
                     'name' => 'required',
@@ -3465,6 +3592,69 @@ class UserController extends Controller
         }
 
         if ($post) {
+            if (str_starts_with($request->uniqid, 'GUEST_')) {
+                if ($request->type == 1 || $request->type == 2) {
+                    $validator = \Validator::make($request->all(), [
+                        'name' => 'required',
+                        'phone' => 'required',
+                        'phonecode' => 'required',
+                        'country_id' => 'required',
+                        'region_id' => 'required',
+                        'area_id' => 'required',
+                        'address' => 'required',
+                    ]);
+
+                    if ($validator->fails()) {
+                        return response()->json([
+                            'status_code' => strval(0),
+                            'error' => $validator->messages(),
+                            'data' => null
+                        ], 200);
+                    }
+
+                    $validRegion = DB::table('regions')->where('id', $request->region_id)->where('country_id', $request->country_id)->where('status', 1)->first();
+                    if (!$validRegion) {
+                        return response()->json([
+                            'status_code' => strval(0),
+                            'error' => ['region_id' => ['Selected region does not belong to the selected country.']],
+                            'data' => null
+                        ], 200);
+                    }
+                    $validArea = DB::table('area')->where('id', $request->area_id)->where('region_id', $request->region_id)->where('status', 1)->first();
+                    if (!$validArea) {
+                        return response()->json([
+                            'status_code' => strval(0),
+                            'error' => ['area_id' => ['Selected area does not belong to the selected region.']],
+                            'data' => null
+                        ], 200);
+                    }
+
+                    $result['code'] = strval(1);
+                    $result['message'] = ($request->type == 2) ? 'address_updated_successfully' : 'address_added_successfully';
+                    $result['address_id'] = '0';
+                    $result['bill_address_id'] = '0';
+                    $result['result'] = [
+                        'address_id' => '0',
+                        'bill_address_id' => '0',
+                        'name' => strval($request->name),
+                        'phone' => strval($request->phone),
+                        'phonecode' => strval($request->phonecode),
+                        'address' => strval($request->address),
+                        'city' => strval($request->city ?? ''),
+                        'zip_code' => strval($request->zip_code ?? ''),
+                        'latitude' => strval($request->latitude ?? ''),
+                        'longitude' => strval($request->longitude ?? ''),
+                    ];
+                    $mainResult = $result;
+                    return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+                } else {
+                    $result['code'] = strval(1);
+                    $result['message'] = 'address_removed_successfully';
+                    $mainResult = $result;
+                    return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
+                }
+            }
+
             if ($request->type == 2) {
                 $validator = \Validator::make($request->all(), [
                     'name' => 'required',

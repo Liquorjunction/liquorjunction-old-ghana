@@ -64,6 +64,7 @@ static function getUserCartItems()
 
         $carts = \DB::table('cart')
             ->leftJoin('product', 'product.id', '=', 'cart.product_id')
+            ->leftJoin('product_variants', 'product_variants.id', '=', 'cart.product_variant_id')
             ->leftJoin('product_image', function ($join) {
                 $join->on('product_image.product_id', '=', 'product.id')
                      ->where('product_image.status', 1);
@@ -71,6 +72,8 @@ static function getUserCartItems()
             ->select(
                 'cart.*',
                 'product.product_name',
+                'product_variants.variant_price',
+                'product_variants.variant_discounted_price',
                 'product_image.image'
             )
             ->where('cart.user_id', $user->id)
@@ -79,21 +82,32 @@ static function getUserCartItems()
 
         foreach ($carts as $cart) {
 
-            // ✅ FINAL PRICE (single source of truth)
-            $price = $cart->product_price;
+            // Single source of truth: calculate price consistent with checkout & cart page
+            $originalPrice = (float)(
+                (!empty($cart->variant_price) && (float)$cart->variant_price > 0)
+                    ? $cart->variant_price
+                    : ($cart->product_price ?? 0)
+            );
+            $finalPrice = $originalPrice;
 
-            if ($cart->is_offer && !$cart->is_bogo) {
-                $price = $cart->offer_price ?? $price;
+            $isOffer = !empty($cart->is_offer);
+            $isBogo = !empty($cart->is_bogo);
+            $offerType = $cart->offer_type ?? null;
+            $discountAmount = (float)($cart->discount_amount ?? 0);
 
-                // Apply discount if exists
-                if (!empty($cart->discount_amount)) {
-                    if ($cart->offer_type == 'percentage') {
-                        $price -= ($price * $cart->discount_amount / 100);
-                    } else {
-                        $price -= $cart->discount_amount;
-                    }
+            if ($isOffer && !$isBogo) {
+                if ($offerType === 'flat') {
+                    $finalPrice = max(0, $originalPrice - $discountAmount);
+                } elseif ($offerType === 'percentage') {
+                    $finalPrice = max(0, $originalPrice - ($originalPrice * $discountAmount / 100));
                 }
+            } elseif (!empty($cart->variant_discounted_price) && (float)$cart->variant_discounted_price > 0) {
+                $finalPrice = (float)$cart->variant_discounted_price;
+            } elseif (!empty($cart->offer_price) && (float)$cart->offer_price > 0) {
+                $finalPrice = (float)$cart->offer_price;
             }
+
+            $qty = (int)($cart->quantity ?? 1);
 
             $cartItems[] = [
                 'id' => $cart->id,
@@ -101,14 +115,15 @@ static function getUserCartItems()
                 'encoded_product_id' => Helper::encodeUrl($cart->product_id),
                 'name' => $cart->product_name ?? 'Product',
                 'variant_id' => $cart->product_variant_id,
-                'qty' => $cart->quantity,
-                'price' => round($price, 2),
-                'total' => round($price * $cart->quantity, 2),
+                'qty' => $qty,
+                'price' => round($finalPrice, 2),
+                'original_price' => round($originalPrice, 2),
+                'total' => round($finalPrice * $qty, 2),
 
-                'is_bogo' => $cart->is_bogo,
-                'is_offer' => $cart->is_offer,
-                'offer_type' => $cart->offer_type,
-                'discount_amount' => $cart->discount_amount,
+                'is_bogo' => $isBogo ? 1 : 0,
+                'is_offer' => $isOffer ? 1 : 0,
+                'offer_type' => $offerType,
+                'discount_amount' => $discountAmount,
 
                 'image' => $cart->image 
                     ? asset('uploads/product/' . $cart->image)
@@ -124,66 +139,70 @@ static function getUserCartItems()
     // =========================
     $sessionCart = session()->get('cart_info', []);
 
+    if (!empty($sessionCart)) {
 
-if (!empty($sessionCart)) {
+        foreach ($sessionCart as $product_id => $variants) {
 
-    foreach ($sessionCart as $product_id => $variants) {
-
-        // 🔥 Fetch product + image together
-        $product = \DB::table('product')
-            ->leftJoin('product_image', function ($join) {
-                $join->on('product_image.product_id', '=', 'product.id')
-                     ->where('product_image.status', 1);
-            })
-            ->select('product.product_name', 'product_image.image')
-            ->where('product.id', $product_id)
-            ->first();
-
-        foreach ($variants as $variant_id => $item) {
-
-            $variant = \DB::table('product_variants')
-                ->where('id', $variant_id)
+            // 🔥 Fetch product + image together
+            $product = \DB::table('product')
+                ->leftJoin('product_image', function ($join) {
+                    $join->on('product_image.product_id', '=', 'product.id')
+                         ->where('product_image.status', 1);
+                })
+                ->select('product.product_name', 'product_image.image')
+                ->where('product.id', $product_id)
                 ->first();
 
-            $price = $variant->variant_price ?? 0;
+            foreach ($variants as $variant_id => $item) {
 
-            if (!empty($item['is_offer']) && empty($item['is_bogo'])) {
-                $price = $variant->variant_discounted_price ?? $price;
+                $variant = \DB::table('product_variants')
+                    ->where('id', $variant_id)
+                    ->first();
 
-                if (!empty($item['discount_amount'])) {
-                    if ($item['offer_type'] == 'percentage') {
-                        $price -= ($price * $item['discount_amount'] / 100);
-                    } else {
-                        $price -= $item['discount_amount'];
+                $originalPrice = (float)($variant->variant_price ?? 0);
+                $finalPrice = $originalPrice;
+
+                $isOffer = !empty($item['is_offer']);
+                $isBogo = !empty($item['is_bogo']);
+                $offerType = $item['offer_type'] ?? null;
+                $discountAmount = (float)($item['discount_amount'] ?? 0);
+
+                if ($isOffer && !$isBogo) {
+                    if ($offerType === 'flat') {
+                        $finalPrice = max(0, $originalPrice - $discountAmount);
+                    } elseif ($offerType === 'percentage') {
+                        $finalPrice = max(0, $originalPrice - ($originalPrice * $discountAmount / 100));
                     }
+                } elseif (!empty($variant->variant_discounted_price) && (float)$variant->variant_discounted_price > 0) {
+                    $finalPrice = (float)$variant->variant_discounted_price;
                 }
+
+                $qty = (int)($item['quantity'] ?? 1);
+
+                $cartItems[] = [
+                    'id' => $product_id . '_' . $variant_id,
+                    'product_id' => $product_id,
+                    'encoded_product_id' => Helper::encodeUrl($product_id),
+                    'name' => $product->product_name ?? 'Product',
+                    'variant_id' => $variant_id,
+                    'qty' => $qty,
+                    'price' => round($finalPrice, 2),
+                    'original_price' => round($originalPrice, 2),
+                    'total' => round($finalPrice * $qty, 2),
+
+                    'is_bogo' => $isBogo ? 1 : 0,
+                    'is_offer' => $isOffer ? 1 : 0,
+                    'offer_type' => $offerType,
+                    'discount_amount' => $discountAmount,
+
+                    // ✅ IMAGE FROM DB (same as logged-in user)
+                    'image' => !empty($product->image)
+                        ? asset('uploads/product/' . $product->image)
+                        : asset('assets/frontend/images/no-image.png'),
+                ];
             }
-
-            $qty = $item['quantity'] ?? 1;
-
-            $cartItems[] = [
-                'id' => $product_id . '_' . $variant_id,
-                'product_id' => $product_id,
-                'encoded_product_id' => Helper::encodeUrl($product_id),
-                'name' => $product->product_name ?? 'Product',
-                'variant_id' => $variant_id,
-                'qty' => $qty,
-                'price' => round($price, 2),
-                'total' => round($price * $qty, 2),
-
-                'is_bogo' => $item['is_bogo'] ?? 0,
-                'is_offer' => $item['is_offer'] ?? 0,
-                'offer_type' => $item['offer_type'] ?? null,
-                'discount_amount' => $item['discount_amount'] ?? null,
-
-                // ✅ IMAGE FROM DB (same as logged-in user)
-                'image' => !empty($product->image)
-                    ? asset('uploads/product/' . $product->image)
-                    : asset('assets/frontend/images/no-image.png'),
-            ];
         }
     }
-}
 
     return $cartItems;
 }
@@ -2053,10 +2072,14 @@ if (!empty($sessionCart)) {
     public static function getCartOfferStatus($variant_id)
     {
         $get_cart_array = Session::get('cart_info');
-        foreach ($get_cart_array as $key => $variant_array) {
-            foreach ($variant_array as $key1 => $item) {
-                if ($key1 == $variant_id && isset($item['is_offer'])) {
-                    return (int) $item['is_offer'];
+        if (!empty($get_cart_array) && is_array($get_cart_array)) {
+            foreach ($get_cart_array as $key => $variant_array) {
+                if (is_array($variant_array)) {
+                    foreach ($variant_array as $key1 => $item) {
+                        if ($key1 == $variant_id && isset($item['is_offer'])) {
+                            return (int) $item['is_offer'];
+                        }
+                    }
                 }
             }
         }
@@ -2065,8 +2088,45 @@ if (!empty($sessionCart)) {
 
     static function getUserCartQuantity($variantId, $user_id)
     {
-        $cart_varinat_info = Cart::where('cart.product_variant_id', $variantId)->where('cart.user_id', $user_id)->where('cart.status', 1)->first();
-        return $cart_varinat_info->quantity;
+        if (!empty($user_id)) {
+            $cart_varinat_info = Cart::where('cart.product_variant_id', $variantId)
+                ->where('cart.user_id', $user_id)
+                ->where('cart.status', 1)
+                ->first();
+            if ($cart_varinat_info) {
+                return (int) $cart_varinat_info->quantity;
+            }
+        }
+
+        // Check guest cart in session ('cart_info')
+        $sessionCart = Session::get('cart_info');
+        if (!empty($sessionCart) && is_array($sessionCart)) {
+            foreach ($sessionCart as $productId => $variants) {
+                if (is_array($variants)) {
+                    foreach ($variants as $vid => $item) {
+                        if ((int)$vid === (int)$variantId) {
+                            if (is_array($item) && isset($item['quantity'])) {
+                                return (int) $item['quantity'];
+                            } elseif (is_array($item) && isset($item['qty'])) {
+                                return (int) $item['qty'];
+                            } elseif (is_numeric($item)) {
+                                return (int) $item;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check Buy Now session
+        if (Session::has('buy_now_info')) {
+            $buyNow = Session::get('buy_now_info');
+            if (isset($buyNow['variantId']) && (int)$buyNow['variantId'] === (int)$variantId) {
+                return (int) ($buyNow['quantity'] ?? 1);
+            }
+        }
+
+        return 0;
     }
 
     static function sendTwilioSMS($to, $message)

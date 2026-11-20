@@ -178,6 +178,14 @@ Route::middleware(['PreventBackHistory'])->group(function () {
     Route::get('/thankyou/{id}/{earnedpoints}', [CheckoutController::class, 'orderSuccess'])->name('orderSuccess');
     Route::get('/thankyou-card/{userid}/{orderid}/{amount}/{earnedpoints}', [CheckoutController::class, 'orderSuccessCard'])->name('orderSuccessCard');
 
+    // Guest Checkout Security & Validation (Existing User Check, Inline Login)
+    Route::post('/checkout/check-existing-user', [\App\Http\Controllers\Frontend\GuestAuthController::class, 'checkExistingUser'])->name('checkout.check-existing-user')->middleware('throttle:60,1');
+    Route::post('/checkout/inline-login', [\App\Http\Controllers\Frontend\GuestAuthController::class, 'inlineLogin'])->name('checkout.inline-login')->middleware('throttle:5,1');
+
+    // Public Region & Area Cascading Dropdowns (Used in Register, Checkout, Address Modals)
+    Route::post('/getsubcatlist', [MyProfileController::class, 'getSubcatlist'])->name('getsubcatlist');
+    Route::post('/getarealist', [MyProfileController::class, 'getArealist'])->name('getarealist');
+
     /*--------------------------------------------------------------------------
     | Strictly Protected Routes (Active Authenticated User or OTP-Verified Guest)
     |--------------------------------------------------------------------------*/
@@ -208,7 +216,6 @@ Route::middleware(['PreventBackHistory'])->group(function () {
         Route::get('/reward-points', [MyProfileController::class, 'points'])->name('reward-points');
         Route::get('/change-password', [MyProfileController::class, 'changePassword'])->name('userchange-password');
         Route::post('/update-password', [MyProfileController::class, 'updatePassword'])->name('update-password');
-        Route::post('/user-logout', [MyProfileController::class, 'logoutUser'])->name('user-logout');
         Route::get('/community', [MyProfileController::class, 'community'])->name('community');
         Route::post('/read-notification', [MyProfileController::class, 'readNotification'])->name('read-notification');
 
@@ -225,8 +232,6 @@ Route::middleware(['PreventBackHistory'])->group(function () {
         Route::post('/address-remove', [MyProfileController::class, 'addressRemove'])->name('addressremove');
         Route::post('/billaddressremove', [MyProfileController::class, 'billaddressremove'])->name('billaddressremove');
         Route::get('/get-address-details/{type}/{id}', [MyProfileController::class, 'getAddressDetails'])->name('get-address-details');
-        Route::post('/getsubcatlist', [MyProfileController::class, 'getSubcatlist'])->name('getsubcatlist');
-        Route::post('/getarealist', [MyProfileController::class, 'getArealist'])->name('getarealist');
 
         // Orders Management
         Route::get('/my-order', [OrderController::class, 'index'])->name('myOrder');
@@ -276,7 +281,8 @@ Route::get('auth/facebook', [WebsiteLoginController::class, 'redirectToFacebook'
 Route::get('auth/facebook/callback', [WebsiteLoginController::class, 'handleFacebookCallback']);
 Route::get('auth/apple', [WebsiteLoginController::class, 'redirectToApple'])->name('auth.apple');
 Route::post('applecallbackliquor', [WebsiteLoginController::class, 'handleAppleCallback']);
-// Route::post('/user/logout', [WebsiteLoginController::class, 'logoutUser'])->name('user-logout');
+Route::match(['GET', 'POST'], '/user-logout', [MyProfileController::class, 'logoutUser'])->name('user-logout');
+Route::match(['GET', 'POST'], '/logout', [MyProfileController::class, 'logoutUser'])->name('logout');
 Route::get('/profile', [WebsiteLoginController::class, 'websiteProfile'])->name('websiteprofile');
 //Route::get('/instructor-profile', [WebsiteLoginController::class, 'websiteInstructorProfile'])->name('websiteinstructorprofile');
 //Route::post('/instructor-profile/edit/{id}', [WebsiteLoginController::class, 'websiteInstructorProfileEdit'])->name('websiteinstructorprofileedit');

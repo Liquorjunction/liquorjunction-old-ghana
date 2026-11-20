@@ -890,6 +890,9 @@
 
         // 1. Instant optimistic update - NO LAG, NO DISABLED BUTTONS!
         qtyInput.val(quantity);
+        if (typeof window.updateMiniCartQty === 'function') {
+            window.updateMiniCartQty(variantId, quantity);
+        }
 
         // Optimistically update basket total items
         let totalQty = 0;
@@ -929,6 +932,9 @@
                         }
                         if (response.capped) {
                             qtyInput.val(response.capped_quantity);
+                            if (typeof window.updateMiniCartQty === 'function') {
+                                window.updateMiniCartQty(variantId, response.capped_quantity);
+                            }
                             if (typeof Swal !== 'undefined') {
                                 Swal.fire({
                                     icon: 'warning',
@@ -981,8 +987,14 @@
                     } else {
                         if (response.available_qty !== undefined) {
                             qtyInput.val(response.available_qty);
+                            if (typeof window.updateMiniCartQty === 'function') {
+                                window.updateMiniCartQty(variantId, response.available_qty);
+                            }
                         } else {
                             qtyInput.val(prevQty);
+                            if (typeof window.updateMiniCartQty === 'function') {
+                                window.updateMiniCartQty(variantId, prevQty);
+                            }
                         }
                         if (typeof Swal !== 'undefined') {
                             Swal.fire({
@@ -996,6 +1008,9 @@
                 },
                 error: function() {
                     qtyInput.val(prevQty);
+                    if (typeof window.updateMiniCartQty === 'function') {
+                        window.updateMiniCartQty(variantId, prevQty);
+                    }
                 }
             });
         }, 400);
@@ -1041,6 +1056,9 @@
                                 $(".cart-item-total-count").html('0');
                                 if (typeof floatingCartCount !== 'undefined' && floatingCartCount) {
                                     floatingCartCount.textContent = '0';
+                                }
+                                if (typeof updateCartUI === 'function') {
+                                    updateCartUI();
                                 }
                             } else {
                                 $("#cart_item_" + variant_id).fadeOut(300, function() {

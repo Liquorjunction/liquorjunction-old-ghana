@@ -814,7 +814,6 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
         }
     }
 
-    }
 </script>
 
 

@@ -73,7 +73,9 @@ class WebsiteLoginController extends Controller
     public function showGuestLoginForm()
     {
         $redirectTo = url()->previous();
-        return view('frontend.auth.guest_login', compact('redirectTo'));
+        $phonecode = DB::table('countries')->orderby('phonecode', 'ASC')->where('status', 1)->get();
+        $countryData = DB::table('countries')->orderby('name')->where('status', 1)->get();
+        return view('frontend.auth.guest_login', compact('redirectTo', 'phonecode', 'countryData'));
     }
 
     /**
@@ -147,6 +149,9 @@ class WebsiteLoginController extends Controller
 
                 Auth::guard('user')->login($finduser);
                 Helper::afterLoginAddUserCartItemData();
+                try {
+                    app(\App\Services\GuestUserService::class)->linkGuestOrdersToUser($finduser);
+                } catch (\Throwable $e) {}
 
                 session()->flash('success', 'Login successfully');
                 return redirect()->to($this->getLoginRedirectUrl());
@@ -196,6 +201,9 @@ class WebsiteLoginController extends Controller
 
                 Auth::guard('user')->login($newUser);
                 Helper::afterLoginAddUserCartItemData();
+                try {
+                    app(\App\Services\GuestUserService::class)->linkGuestOrdersToUser($newUser);
+                } catch (\Throwable $e) {}
                 session()->flash('success', 'Login successfully');
                 return redirect()->to($this->getLoginRedirectUrl())->with('key', $newUser);
             }
@@ -278,6 +286,9 @@ class WebsiteLoginController extends Controller
 
                 Auth::guard('user')->login($newUser);
                 Helper::afterLoginAddUserCartItemData();
+                try {
+                    app(\App\Services\GuestUserService::class)->linkGuestOrdersToUser($newUser);
+                } catch (\Throwable $e) {}
                 session()->flash('success', 'Login successfully');
                 return redirect()->to($this->getLoginRedirectUrl());
             }
@@ -311,6 +322,9 @@ class WebsiteLoginController extends Controller
 
                 Auth::guard('user')->login($finduser);
                 Helper::afterLoginAddUserCartItemData();
+                try {
+                    app(\App\Services\GuestUserService::class)->linkGuestOrdersToUser($finduser);
+                } catch (\Throwable $e) {}
 
                 session()->flash('success', 'Login successfully');
                 return redirect()->to($this->getLoginRedirectUrl());
@@ -362,6 +376,9 @@ class WebsiteLoginController extends Controller
 
                 Auth::guard('user')->login($newUser);
                 Helper::afterLoginAddUserCartItemData();
+                try {
+                    app(\App\Services\GuestUserService::class)->linkGuestOrdersToUser($newUser);
+                } catch (\Throwable $e) {}
 
                 session()->flash('success', 'Login successfully');
                 return redirect()->to($this->getLoginRedirectUrl())->with('key', $newUser);
@@ -424,7 +441,8 @@ class WebsiteLoginController extends Controller
             // Validation rules
             if ($isGuest) {
                 $rules = [
-                    'name' => ['required', 'min:3', 'max:30'],
+                    'email' => ['required', 'email', 'max:255'],
+                    'phone' => ['required', 'string', 'min:8', 'max:20'],
                 ];
             } else {
                 $rules = [
@@ -484,190 +502,76 @@ class WebsiteLoginController extends Controller
             $userExist = null;
             $checkout_value = Session::get('checkout_value') ? Session::get('checkout_value') : 0;
             // Check if user exists
-            if($request->has('is_guest_user')){
-                $value = trim($request->email);
+            if ($request->has('is_guest_user')) {
+                $emailVal = strtolower(trim((string)$request->email));
+                $phoneVal = trim((string)$request->phone);
+                $phoneCode = $request->phone_code ?: '233';
 
-                $email = null;
-                $phone = null;
-
-                if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                    $email = $value;
-                } elseif (preg_match('/^[0-9]{8,15}$/', $value)) {
-                    $phone = $value;
-                }
-
-                $userExist = MainUser::where(function ($query) use ($email, $phone) {
-                    if ($email) {
-                        $query->where('email', $email);
+                // Check if account already exists for registered customer
+                $registeredUser = MainUser::where(function ($query) use ($emailVal, $phoneVal) {
+                    if ($emailVal) {
+                        $query->whereRaw('LOWER(email) = ?', [$emailVal]);
                     }
-
-                    if ($phone) {
-                        $query->orWhere('phone', $phone);
+                    if ($phoneVal) {
+                        $query->orWhere('phone', $phoneVal);
                     }
-                })->first();
-            }else{
-                $userExist = MainUser::where(function ($query) use ($request) {
-                    if ($request->email) {
-                        $query->where('email', $request->email);
-                    }
+                })->where('is_guest_user', 0)->first();
 
-                    if ($request->phone) {
-                        $query->orWhere('phone', $request->phone);
-                    }
-                })->first();
-            }
-            if ($userExist) {
-                if ($userExist->is_guest_user == 1) {
-
-                    // ✅ Already verified → direct login
-                    $sessionCart = session()->get('cart_info', []);
-                    if ($request->has('is_guest_user') && $userExist->is_otp_verify == 1) {
-                        $value = request('email');
-
-                        if (!filter_var($value, FILTER_VALIDATE_EMAIL) && !preg_match('/^[0-9]{8,15}$/', $value)) {
-                            return back()->withErrors([
-                                'email' => 'Enter valid email or phone number'
-                            ]);
-                        }
-                        Auth::guard('user')->login($userExist);
-                        Helper::afterLoginAddUserCartItemData();
-
-                        if (!empty($sessionCart) || !empty($checkout_value)) {
-                            return response()->json([
-                                'success' => 'true',
-                                'guest_otp' => true,
-                                'redirect' => route('checkout')
-                            ]);
-                        } else {
-                            return response()->json(['success' => 'true', 'redirect' => route('frontend.home')]);
-                        }
-                    }
-
-                    // ✅ NOT verified → depends on action
-
-                    // 👉 If coming from LOGIN → send OTP
-                    if ($request->has('is_guest_user')) {
-                        $value = request('email');
-
-                        if (!filter_var($value, FILTER_VALIDATE_EMAIL) && !preg_match('/^[0-9]{8,15}$/', $value)) {
-                            return back()->withErrors([
-                                'email' => 'Enter valid email or phone number'
-                            ]);
-                        }
-
-                        if (!empty($sessionCart) || !empty($checkout_value)) {
-                            return response()->json([
-                                'success' => 'true',
-                                'guest_otp' => true,
-                                'redirect' => route('checkout')
-                            ]);
-                        } else {
-                            return response()->json(['success' => 'true', 'redirect' => route('frontend.home')]);
-                        }
-                    }
-                    // 👉 If coming from REGISTER → convert to normal user (NO OTP)
-                    else {
-                        $userExist->first_name = $request->first_name;
-                        $userExist->last_name = $request->last_name;
-                        $userExist->age = $request->age;
-                        $userExist->email = $request->email;
-                        $userExist->phone = $request->phone;
-                        $userExist->phone_code = $request->phone_code ?? $userExist->phone_code;
-
-                        $userExist->is_guest_user = 0;
-                        $userExist->is_otp_verify = 1; // ✅ IMPORTANT (skip OTP)
-                        $userExist->status = 1;
-
-                        if ($request->password) {
-                            $userExist->password = Hash::make($request->password);
-                        }
-
-                        $userExist->save();
-                        Auth::guard('user')->login($userExist);
-                        Helper::afterLoginAddUserCartItemData();
-
-                        return response()->json([
-                            'success' => 'true',
-                            'redirect' => route('frontend.home')
-                        ]);
-                    }
-                } else {
-                    // For non-guest or non-guest-user, show already exists error as before
+                if ($registeredUser) {
                     $errors = [];
-                    if($request->has('is_guest_user')){
-                        if ($userExist->email === $request->email) {
+                    if (strtolower($registeredUser->email) === $emailVal) {
                         $errors['email'] = ['The email address is already registered.'];
-                        }
-                        if ($userExist->phone === $request->email) {
-                            $errors['email'] = ['The phone number is already registered.'];
-                        }
-                    }else{
-                        if ($userExist->email === $request->email) {
-                        $errors['email'] = ['The email address is already registered.'];
-                        }
-                        if ($userExist->phone === $request->phone) {
-                            $errors['phone'] = ['The phone number is already registered.'];
-                        }
+                    }
+                    if ($registeredUser->phone === $phoneVal) {
+                        $errors['phone'] = ['The phone number is already registered.'];
                     }
                     Alert::warning('Warning', $errors);
                     return response()->json($errors, 422);
                 }
-            }else if($request->has('is_guest_user')){
-                    $sessionCart = session()->get('cart_info', []);
 
-                    $user = new MainUser;
-                    $uniqid = uniqid();
-                    $user->uniqid = $uniqid;
-                    $user->label_type = 1;
+                // Pure guest user - ZERO entries in main_users!
+                $guestUserService = app(\App\Services\GuestUserService::class);
+                $guest = $guestUserService->createOrUpdateGuest([
+                    'email' => $emailVal,
+                    'name'  => 'Guest User',
+                    'phone' => $phoneVal,
+                ]);
 
-                    $user->first_name = $request->name ?? '';
-                    $user->last_name  = $request->last_name ?? '';
+                Session::put('is_guest_checkout', true);
+                Session::put('guest_id', $guest->id);
+                Session::put('guest_email', $emailVal);
+                Session::put('guest_phone', $phoneVal);
+                Session::put('guest_phone_code', $phoneCode);
+                Session::put('guest_name', 'Guest User');
+                Session::put('guest_token', $guest->token);
 
-                    $value = $request->email;
+                return response()->json([
+                    'success'   => 'true',
+                    'guest_otp' => true,
+                    'redirect'  => route('checkout')
+                ]);
+            }
 
-                    $email = null;
-                    $phone = null;
+            // Normal Registration Flow
+            $userExist = MainUser::where(function ($query) use ($request) {
+                if ($request->email) {
+                    $query->where('email', $request->email);
+                }
+                if ($request->phone) {
+                    $query->orWhere('phone', $request->phone);
+                }
+            })->first();
 
-                    if (!empty($value)) {
-                        if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                            $email = $value;
-                        } elseif (preg_match('/^[0-9]{8,15}$/', $value)) {
-                            $phone = $value;
-                        }
-                    }
-
-                    $user->email = $email;
-                    $user->phone = $phone;
-
-                    $user->age = $request->age ?? '';
-                    $user->phone_code = $request->phone_code ?? '';
-
-                    $user->otp = 1010;
-                    $user->is_otp_verify = 1;
-
-                    $user->user_type = 1;
-
-                    $user->status = $isGuest ? 1 : 1;
-
-                    $user->is_guest_user = $isGuest ? 1 : 0;
-
-                    if (!$isGuest && !empty($request->password)) {
-                        $user->password = Hash::make($request->password);
-                    }
-
-                    $user->save();
-                    Auth::guard('user')->login($user);
-                    Helper::afterLoginAddUserCartItemData();
-
-                    if (!empty($sessionCart) || !empty($checkout_value)) {
-                            return response()->json([
-                                'success' => 'true',
-                                'guest_otp' => true,
-                                'redirect' => route('checkout')
-                            ]);
-                        } else {
-                            return response()->json(['success' => 'true', 'redirect' => route('frontend.home')]);
-                        }
+            if ($userExist) {
+                $errors = [];
+                if ($userExist->email === $request->email) {
+                    $errors['email'] = ['The email address is already registered.'];
+                }
+                if ($userExist->phone === $request->phone) {
+                    $errors['phone'] = ['The phone number is already registered.'];
+                }
+                Alert::warning('Warning', $errors);
+                return response()->json($errors, 422);
             }
             \Session::put('otp_phone', $request->phone);
             \Session::put('email', $request->email);
@@ -780,6 +684,11 @@ class WebsiteLoginController extends Controller
                         $token = $this->generateToken();
                         MainUser::where('id', $id)->update(['web_token' => $token]);
                         Helper::afterLoginAddUserCartItemData();
+                        try {
+                            app(\App\Services\GuestUserService::class)->linkGuestOrdersToUser($data);
+                        } catch (\Throwable $e) {
+                            \Log::error('Error linking guest orders on login: ' . $e->getMessage());
+                        }
                         // echo "string";exit();
                         Alert::success(\Helper::language('success'), __('backend.login_successfully'));
                         // return redirect()->route('frontend.home');
@@ -954,6 +863,11 @@ class WebsiteLoginController extends Controller
                 \DB::getQueryLog();
                 $ismail = $this->attachment_register_email($user);
                 Alert::success(\Helper::language('success'), __('backend.user_register_successfully'));
+                try {
+                    app(\App\Services\GuestUserService::class)->linkGuestOrdersToUser($user);
+                } catch (\Throwable $e) {
+                    \Log::error('Error linking guest orders on OTP verification: ' . $e->getMessage());
+                }
                 if ($user->is_guest_user == 1) {
 
                     Auth::guard('user')->login($user);

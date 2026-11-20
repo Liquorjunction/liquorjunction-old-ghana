@@ -143,14 +143,14 @@ class OrderReportController extends Controller
         $max_date = $request->enddate ? Carbon::parse($request->enddate)->format('Y-m-d') . ' 23:59:59' : null;
         $datafilter = $request->input('datahidden');
 
-        $user_report = Order::join('main_users', 'main_users.id', '=', 'order.user_id')
+        $user_report = Order::leftJoin('main_users', 'main_users.id', '=', 'order.user_id')
             ->join('order_info', 'order_info.order_id', '=', 'order.id')
             ->join('order_status', 'order_status.id', '=', 'order.order_status')
             ->leftjoin('countries', 'countries.id', '=', 'order_info.country_id')
             ->leftJoin('order_detail', 'order_detail.order_id', '=', 'order.id')
             ->leftJoin('product', 'product.id', '=', 'order_detail.product_id')
             ->leftjoin('users', 'users.id', '=', 'order.id')
-            ->rightjoin('transactions', 'transactions.order_id', '=', 'order.id')
+            ->leftjoin('transactions', 'transactions.order_id', '=', 'order.id')
             ->select(
                 'order.*',
                 'order_info.customer_name as customer_name',

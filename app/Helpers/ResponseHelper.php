@@ -41,6 +41,31 @@ class ResponseHelper
 
     static function userCheckStatus($uniqid,$token){
             $result = [];
+
+            // Support guest users in guest_users table
+            if (is_string($uniqid) && str_starts_with($uniqid, 'GUEST_')) {
+                $guestId = (int) str_replace('GUEST_', '', $uniqid);
+                $guestUser = DB::table('guest_users')->where('id', $guestId)->first();
+                if ($guestUser) {
+                    if (!empty($token) && !empty($guestUser->token) && $guestUser->token !== $token) {
+                        $result['code']     =  strval(-1);
+                        $result['message']  =   'invalid_token';
+                        $result['result']   =   [];
+                        return $result;
+                    }
+                    $result['code']     =  strval(1);
+                    $result['message']  =   'success';
+                    $result['result']   =   [];
+                    $result['is_guest'] =   true;
+                    return $result;
+                } else {
+                    $result['code']     =  strval(-11);
+                    $result['message']  =   'user_not_register_our_system';
+                    $result['result']   =   [];
+                    return $result;
+                }
+            }
+
             $userdata = DB::table('main_users')->where('uniqid',$uniqid)->first();
             // dd($userdata);
             // echo "<pre>";print_r($uniqid);

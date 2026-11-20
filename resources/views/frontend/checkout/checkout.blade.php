@@ -688,12 +688,17 @@
                     </div>
 
                     <!-- End Before Login Form -->
+                    @php
+                        $isGuestUser = !empty($isGuest) || empty($user_id) || (isset($userData->is_guest_user) && $userData->is_guest_user == 1);
+                    @endphp
                     <!-- After Login Form -->
                     <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                         <h5 class="mb-0">Shipping Address</h5>
                         <div class="d-flex align-items-center gap-2">
+                            @if(!$isGuestUser)
                             <a href="{{ route('my-address') }}" class="border-button me-2" style="font-size: 13px; text-transform: none; font-weight: 600;">Manage</a>
-                            <a href="javascript:void(0)" class="add_new_address_div open-address-modal btn btn-sm btn-outline-dark d-inline-flex align-items-center gap-2 py-1 px-3" data-type="shipping" data-action="add" data-is-checkout="1" style="font-size: 12.5px; font-weight: 600; border-radius: 20px;">
+                            @endif
+                            <a href="javascript:void(0)" class="add_new_address_div open-address-modal btn btn-sm btn-outline-dark d-inline-flex align-items-center gap-2 py-1 px-3 {{ ($isGuestUser && $UserAddressData->isNotEmpty()) ? 'd-none' : '' }}" data-type="shipping" data-action="add" data-is-checkout="1" style="font-size: 12.5px; font-weight: 600; border-radius: 20px;">
                                 <i class="fa fa-plus-circle text-warning" style="font-size: 14px;"></i>
                                 <span>Add New</span>
                             </a>
@@ -895,6 +900,16 @@
                                         $('.add_new_bill_address_div').removeClass('d-none');
                                     }
 
+                                    // Guest Shipping "Add New" button visibility (hide once 1 address is added)
+                                    var isGuestClient = {{ $isGuestUser ? 'true' : 'false' }};
+                                    if (data.is_guest !== undefined ? data.is_guest : isGuestClient) {
+                                        if (data.shipping_count > 0) {
+                                            $('.add_new_address_div').addClass('d-none');
+                                        } else {
+                                            $('.add_new_address_div').removeClass('d-none');
+                                        }
+                                    }
+
                                     // Select the target shipping address
                                     var activeId = targetShippingId || data.default_shipping_id;
                                     if (activeId) {
@@ -1037,7 +1052,7 @@
                     $user = auth()->guard('user')->user();
                     @endphp
 
-                    @if($user && !$user->is_guest_user == 1)
+                    @if($user && $user->is_guest_user != 1)
                     <div class="d-flex align-items-center justify-content-between mb-2 mt-5 flex-wrap gap-2">
                         <h5 class="mb-0">Billing Address</h5>
                         <a href="javascript:void(0)" class="add_new_bill_address_div open-address-modal btn btn-sm btn-outline-dark d-inline-flex align-items-center gap-2 py-1 px-3 {{ $UserBillAddressData->isNotEmpty() ? 'd-none' : '' }}" data-type="billing" data-action="add" data-is-checkout="1" style="font-size: 12.5px; font-weight: 600; border-radius: 20px;">
@@ -1063,20 +1078,18 @@
                         </div>
                     </div>
 
-                    {{-- Optional: billing form fields go here --}}
-
-                    @else
-                    {{-- 🟡 Guest user OR no user --}}
-                    {{-- Hide checkbox and send value automatically --}}
-                    <input type="hidden" name="same_address" id="sameAddress" value="1">
-                    @endif
-                    
                     <div id="billingAddressContainer">
                         @include('frontend.checkout.partials.billing-address-list', ['UserBillAddressData' => $UserBillAddressData, 'user' => $user])
                     </div>
                     <p class="mt-2 mb-1"><span class="error red-text" id="billing_address_error"></span></p>
                     <form class="checkout-form billAddressEditform d-none" id="billAddressEditForm">
                     </form>
+
+                    @else
+                    {{-- 🟡 Guest user OR no user --}}
+                    {{-- Hide checkbox and send value automatically --}}
+                    <input type="hidden" name="same_address" id="sameAddress" value="1">
+                    @endif
 
                 </div>
                 <div class="col-xl-4 col-md-6 checkout-col store-contact-information" style="display: none;">
@@ -2461,6 +2474,9 @@
                             $itemRow.fadeOut(300, function() {
                                 $(this).remove();
                                 updateCheckoutTotals();
+                                if (typeof updateCartUI === 'function') {
+                                    updateCartUI();
+                                }
                             });
                         }
                     },
@@ -2713,7 +2729,8 @@
         const addBillBtn = document.querySelector('.add_new_bill_address_div');
 
         if (sameAddressCheckbox) {
-            if (sameAddressCheckbox.checked) {
+            const isSame = sameAddressCheckbox.type === 'checkbox' ? sameAddressCheckbox.checked : (sameAddressCheckbox.value == '1');
+            if (isSame) {
                 if (billingContainer) billingContainer.style.display = 'none';
                 if (addBillBtn) addBillBtn.style.display = 'none';
             }
@@ -2814,6 +2831,9 @@
         // 1. Instant Optimistic UI Update - NO LAG, NO DISABLED STATE!
         qtyInput.val(currentQty);
         qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(currentQty);
+        if (typeof window.updateMiniCartQty === 'function') {
+            window.updateMiniCartQty(variantId, currentQty);
+        }
 
         // 2. Instant Local Totals Update (recalculates subtotal, discount, coupon, tax immediately)
         updateCheckoutTotals();
@@ -2845,6 +2865,9 @@
                             if (response.capped) {
                                 $("#qty_ince_" + variantId).val(response.capped_quantity);
                                 qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(response.capped_quantity);
+                                if (typeof window.updateMiniCartQty === 'function') {
+                                    window.updateMiniCartQty(variantId, response.capped_quantity);
+                                }
                                 if (typeof Swal !== 'undefined') {
                                     Swal.fire({
                                         icon: 'warning',
@@ -2855,14 +2878,23 @@
                                 }
                             }
                             updateCheckoutTotals(response);
+                            if (typeof updateCartUI === 'function') {
+                                updateCartUI();
+                            }
                         } else {
                             if (response.available_qty !== undefined) {
                                 $("#qty_ince_" + variantId).val(response.available_qty);
                                 qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(response.available_qty);
+                                if (typeof window.updateMiniCartQty === 'function') {
+                                    window.updateMiniCartQty(variantId, response.available_qty);
+                                }
                                 updateCheckoutTotals();
                             } else {
                                 $("#qty_ince_" + variantId).val(prevQty);
                                 qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(prevQty);
+                                if (typeof window.updateMiniCartQty === 'function') {
+                                    window.updateMiniCartQty(variantId, prevQty);
+                                }
                                 updateCheckoutTotals();
                             }
                             if (typeof Swal !== 'undefined') {
@@ -2880,6 +2912,9 @@
                     error: function() {
                         $("#qty_ince_" + variantId).val(prevQty);
                         qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(prevQty);
+                        if (typeof window.updateMiniCartQty === 'function') {
+                            window.updateMiniCartQty(variantId, prevQty);
+                        }
                         updateCheckoutTotals();
                     }
                 });
@@ -2904,6 +2939,9 @@
                             if (response.capped) {
                                 $("#qty_ince_" + variantId).val(response.capped_quantity);
                                 qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(response.capped_quantity);
+                                if (typeof window.updateMiniCartQty === 'function') {
+                                    window.updateMiniCartQty(variantId, response.capped_quantity);
+                                }
                                 if (typeof Swal !== 'undefined') {
                                     Swal.fire({
                                         icon: 'warning',
@@ -2914,14 +2952,23 @@
                                 }
                             }
                             updateCheckoutTotals(response);
+                            if (typeof updateCartUI === 'function') {
+                                updateCartUI();
+                            }
                         } else {
                             if (response.available_qty !== undefined) {
                                 $("#qty_ince_" + variantId).val(response.available_qty);
                                 qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(response.available_qty);
+                                if (typeof window.updateMiniCartQty === 'function') {
+                                    window.updateMiniCartQty(variantId, response.available_qty);
+                                }
                                 updateCheckoutTotals();
                             } else {
                                 $("#qty_ince_" + variantId).val(prevQty);
                                 qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(prevQty);
+                                if (typeof window.updateMiniCartQty === 'function') {
+                                    window.updateMiniCartQty(variantId, prevQty);
+                                }
                                 updateCheckoutTotals();
                             }
                             if (typeof Swal !== 'undefined') {
@@ -2937,6 +2984,9 @@
                     error: function() {
                         $("#qty_ince_" + variantId).val(prevQty);
                         qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(prevQty);
+                        if (typeof window.updateMiniCartQty === 'function') {
+                            window.updateMiniCartQty(variantId, prevQty);
+                        }
                         updateCheckoutTotals();
                     }
                 });
@@ -3548,4 +3598,5 @@
 </script>
 
 @include('frontend.components.address-modal')
+@include('frontend.auth.partials.inline_login_modal')
 @endsection

@@ -69,10 +69,12 @@ class CheckoutController extends Controller
 
     public function Checkout(Request $request)
     {
-        $user_id = $this->user_id;
+        $isGuest = session()->get('is_guest_checkout', false);
+        $user_id = Auth::guard('user')->id() ?: $this->user_id;
+
         $is_buy_now = 0;
 
-        if ($this->user_id == '') {
+        if (empty($user_id) && !$isGuest) {
             Session::put('checkout_value', 1);
             Session::put('pack_size', $request->pack_size);
             Session::put('counter', $request->counter);
@@ -115,61 +117,159 @@ class CheckoutController extends Controller
             $variantIds = [$variantIds]; // already handled
         } else {
             // Normal cart-based checkout
-            $cartData = Cart::select(DB::raw('group_concat(product_variant_id) as variantIds'))
-                ->where('user_id', $user_id)
-                ->groupBy('user_id')
-                ->where('status', 1)
-                ->first();
+            if (!empty($user_id)) {
+                $cartData = Cart::select(DB::raw('group_concat(product_variant_id) as variantIds'))
+                    ->where('user_id', $user_id)
+                    ->groupBy('user_id')
+                    ->where('status', 1)
+                    ->first();
 
-            if (empty($cartData->variantIds)) {
-                return Redirect::to('cart');
-            }
-
-            $variantIds = explode(',', $cartData->variantIds);
-            $data = Cart::where('user_id', $user_id)->groupBy('user_id')->where('status', 1)->first();
-            $productData = ProductVariants::whereIn('id', $variantIds)->get();
-
-            foreach ($productData as $result) {
-                $cart_data = Cart::where('product_variant_id', $result->id)->where('user_id', $user_id)->where('status', 1)->first();
-                $offer_price = $result->variant_discounted_price;
-                $varint_pro_price = $result->variant_price;
-
-                if ($result->variant_discounted_price != '' && $result->variant_discounted_price != 0.00) {
-                    $tcart_price = @$result->variant_discounted_price ? ($result->variant_discounted_price * $cart_data->quantity) : 0;
-                } else {
-                    $tcart_price = @$result->variant_price ? ($result->variant_price * $cart_data->quantity) : 0;
+                if (empty($cartData->variantIds)) {
+                    return Redirect::to('cart');
                 }
 
-                $cart_data->product_price = $varint_pro_price;
-                $cart_data->offer_price = $offer_price;
-                $cart_data->total_price = $tcart_price;
-                $cart_data->save();
+                $variantIds = explode(',', $cartData->variantIds);
+                $data = Cart::where('user_id', $user_id)->groupBy('user_id')->where('status', 1)->first();
+                $productData = ProductVariants::whereIn('id', $variantIds)->get();
+
+                foreach ($productData as $result) {
+                    $cart_data = Cart::where('product_variant_id', $result->id)->where('user_id', $user_id)->where('status', 1)->first();
+                    $offer_price = $result->variant_discounted_price;
+                    $varint_pro_price = $result->variant_price;
+
+                    if ($result->variant_discounted_price != '' && $result->variant_discounted_price != 0.00) {
+                        $tcart_price = @$result->variant_discounted_price ? ($result->variant_discounted_price * $cart_data->quantity) : 0;
+                    } else {
+                        $tcart_price = @$result->variant_price ? ($result->variant_price * $cart_data->quantity) : 0;
+                    }
+
+                    $cart_data->product_price = $varint_pro_price;
+                    $cart_data->offer_price = $offer_price;
+                    $cart_data->total_price = $tcart_price;
+                    $cart_data->save();
+                }
+            } else {
+                // Guest Cart from Session
+                $sessionCart = session()->get('cart_info', []);
+                $variantIds = [];
+                if (!empty($sessionCart)) {
+                    foreach ($sessionCart as $pid => $variants) {
+                        foreach ($variants as $vid => $item) {
+                            $variantIds[] = $vid;
+                        }
+                    }
+                }
+                if (empty($variantIds)) {
+                    return Redirect::to('cart');
+                }
             }
         }
 
-        $userData = \DB::table('main_users')->where('id', $user_id)->where('status', 1)->first();
+        if (!empty($user_id)) {
+            $userData = \DB::table('main_users')->where('id', $user_id)->where('status', 1)->first();
+            $UserAddressData = UserAddress::withWhereHas('country', function ($query) {
+                $query->where('status', 1);
+            })->withWhereHas('region', function ($query) {
+                $query->where('status', 1);
+            })->withWhereHas('area', function ($query) {
+                $query->where('status', 1);
+            })->where([['user_id', $user_id], ['status', 1]])->orderBy('is_selected_address_id', 'desc')->orderBy('id', 'desc')->get();
+
+            $UserBillAddressData = UserBillAddress::withWhereHas('country', function ($query) {
+                $query->where('status', 1);
+            })->withWhereHas('region', function ($query) {
+                $query->where('status', 1);
+            })->withWhereHas('area', function ($query) {
+                $query->where('status', 1);
+            })->where([['user_id', $user_id], ['status', 1], ['default', 1]])->get();
+        } else {
+            // Guest User representation (NO main_users row)
+            $userData = (object)[
+                'id'            => null,
+                'first_name'    => session('guest_name', 'Guest'),
+                'last_name'     => 'User',
+                'email'         => session('guest_email', ''),
+                'phone'         => session('guest_phone', ''),
+                'phone_code'    => session('guest_phone_code', '233'),
+                'country_code'  => '',
+                'is_guest_user' => 1,
+            ];
+
+            // Guest Shipping Address from session
+            $guestAddrData = session()->get('guest_shipping_address');
+            $UserAddressData = collect([]);
+            if ($guestAddrData) {
+                $guestAddress = new UserAddress();
+                $guestAddress->forceFill($guestAddrData);
+                $guestAddress->id = 'guest';
+                $guestAddress->setRelation('country', (object)['name' => $guestAddrData['country_name'] ?? '']);
+                $guestAddress->setRelation('region', (object)['title' => $guestAddrData['region_title'] ?? '']);
+                $guestAddress->setRelation('area', (object)[
+                    'id'              => $guestAddrData['area_id'],
+                    'title'           => $guestAddrData['area_title'] ?? '',
+                    'rate'            => $guestAddrData['rate'] ?? 0,
+                    'delivery_fee'    => $guestAddrData['delivery_fee'] ?? 0,
+                    'delivery_amount' => $guestAddrData['delivery_amount'] ?? 0,
+                    'status'          => 1
+                ]);
+                $UserAddressData = collect([$guestAddress]);
+            }
+
+            // Guest Billing Address from session
+            $guestBillData = session()->get('guest_billing_address');
+            $UserBillAddressData = collect([]);
+            if ($guestBillData) {
+                $guestBill = new UserBillAddress();
+                $guestBill->forceFill($guestBillData);
+                $guestBill->id = 'guest_bill';
+                $guestBill->setRelation('country', (object)['name' => $guestBillData['country_name'] ?? '']);
+                $guestBill->setRelation('region', (object)['title' => $guestBillData['region_title'] ?? '']);
+                $guestBill->setRelation('area', (object)[
+                    'id'    => $guestBillData['area_id'],
+                    'title' => $guestBillData['area_title'] ?? '',
+                    'status'=> 1
+                ]);
+                $UserBillAddressData = collect([$guestBill]);
+            }
+        }
+
         $countryData = \DB::table('countries')->orderby('phonecode', 'ASC')->where('status', 1)->get();
         $region = Region::where('status', 1)->orderby('title', 'ASC')->get();
         $area = Area::where('status', 1)->orderby('title', 'ASC')->get();
+        $store_address = DB::table('store_details')->where('status', 1)->get();
 
-        $UserAddressData = UserAddress::withWhereHas('country', function ($query) {
-            $query->where('status', 1);
-        })->withWhereHas('region', function ($query) {
-            $query->where('status', 1);
-        })->withWhereHas('area', function ($query) {
-            $query->where('status', 1);
-        })->where([['user_id', $user_id], ['status', 1]])->orderBy('is_selected_address_id', 'desc')->orderBy('id', 'desc')->get();
+        $productData = ProductVariants::getProductDetalsBasedOnVariant()->whereIn('id', $variantIds)->get();
 
-        $UserBillAddressData = UserBillAddress::withWhereHas('country', function ($query) {
-            $query->where('status', 1);
-        })->withWhereHas('region', function ($query) {
-            $query->where('status', 1);
-        })->withWhereHas('area', function ($query) {
-            $query->where('status', 1);
-        })->where([['user_id', $user_id], ['status', 1], ['default', 1]])->get();
+        if (empty($user_id) && $is_buy_now == 0) {
+            $sessionCart = session()->get('cart_info', []);
+            foreach ($productData as $p) {
+                $item = null;
+                foreach ($sessionCart as $pid => $variants) {
+                    if (isset($variants[$p->id])) {
+                        $item = $variants[$p->id];
+                        break;
+                    }
+                }
+                $qty = (int)($item['quantity'] ?? $item['qty'] ?? 1);
+                $pseudoCart = new Cart();
+                $pseudoCart->user_id = null;
+                $pseudoCart->product_variant_id = $p->id;
+                $pseudoCart->product_id = $p->product_id;
+                $pseudoCart->quantity = $qty;
+                $pseudoCart->product_price = $p->variant_price;
+                $pseudoCart->offer_price = $p->variant_discounted_price ?: $p->variant_price;
+                $pseudoCart->total_price = $pseudoCart->offer_price * $qty;
+                $pseudoCart->is_bogo = !empty($item['is_bogo']) ? 1 : 0;
+                $pseudoCart->is_offer = !empty($item['is_offer']) ? 1 : 0;
+                $pseudoCart->discount_amount = $item['discount_amount'] ?? null;
+                $pseudoCart->offer_type = $item['offer_type'] ?? null;
+                $pseudoCart->status = 1;
 
-        $store_address = DB::table('store_details')->where('id', $user_id)->where('status', 1)->get();
-        $productData = ProductVariants::getProductDetalsBasedOnVariant()->with('cart')->whereIn('id', $variantIds)->get();
+                $p->setRelation('cart', collect([$pseudoCart]));
+            }
+        } else {
+            $productData->load('cart');
+        }
 
         // Buy Now Add-on BOGO logic
         if ($is_buy_now == 1 && Session::has('buy_now_info')) {
@@ -293,6 +393,7 @@ class CheckoutController extends Controller
 
         return view("frontend.checkout.checkout", compact(
             'userData',
+            'isGuest',
             'countryData',
             'area',
             'region',
@@ -567,8 +668,65 @@ class CheckoutController extends Controller
     public function getCheckoutAddresses(Request $request)
     {
         $user_id = $this->user_id;
-        if (empty($user_id)) {
-            return response()->json(['error' => true, 'message' => 'Unauthorized'], 401);
+        $isGuest = session()->get('is_guest_checkout') || empty($user_id);
+
+        if ($isGuest) {
+            $guestAddrData = session()->get('guest_shipping_address');
+            $UserAddressData = collect([]);
+            if ($guestAddrData) {
+                $guestAddress = new UserAddress();
+                $guestAddress->forceFill($guestAddrData);
+                $guestAddress->id = 'guest';
+                $guestAddress->setRelation('country', (object)['name' => $guestAddrData['country_name'] ?? '']);
+                $guestAddress->setRelation('region', (object)['title' => $guestAddrData['region_title'] ?? '']);
+                $guestAddress->setRelation('area', (object)[
+                    'id'              => $guestAddrData['area_id'],
+                    'title'           => $guestAddrData['area_title'] ?? '',
+                    'rate'            => $guestAddrData['rate'] ?? 0,
+                    'delivery_fee'    => $guestAddrData['delivery_fee'] ?? 0,
+                    'delivery_amount' => $guestAddrData['delivery_amount'] ?? 0,
+                    'status'          => 1
+                ]);
+                $UserAddressData = collect([$guestAddress]);
+            }
+
+            $selectedShippingId = $request->input('selected_shipping_id', 'guest');
+            $shippingHtml = view('frontend.checkout.partials.shipping-address-list', [
+                'UserAddressData' => $UserAddressData,
+                'selectedId' => $selectedShippingId
+            ])->render();
+
+            $guestBillData = session()->get('guest_billing_address');
+            $UserBillAddressData = collect([]);
+            if ($guestBillData) {
+                $guestBill = new UserBillAddress();
+                $guestBill->forceFill($guestBillData);
+                $guestBill->id = 'guest_bill';
+                $guestBill->setRelation('country', (object)['name' => $guestBillData['country_name'] ?? '']);
+                $guestBill->setRelation('region', (object)['title' => $guestBillData['region_title'] ?? '']);
+                $guestBill->setRelation('area', (object)[
+                    'id'    => $guestBillData['area_id'],
+                    'title' => $guestBillData['area_title'] ?? '',
+                    'status'=> 1
+                ]);
+                $UserBillAddressData = collect([$guestBill]);
+            }
+
+            $billingHtml = view('frontend.checkout.partials.billing-address-list', [
+                'UserBillAddressData' => $UserBillAddressData,
+                'user' => (object)['first_name' => session('guest_name', 'Guest'), 'last_name' => 'User', 'email' => session('guest_email', '')]
+            ])->render();
+
+            return response()->json([
+                'success'             => true,
+                'is_guest'            => true,
+                'shipping_html'        => $shippingHtml,
+                'billing_html'         => $billingHtml,
+                'shipping_count'       => $UserAddressData->count(),
+                'has_billing'          => $UserBillAddressData->isNotEmpty(),
+                'default_shipping_id'  => $guestAddrData ? 'guest' : null,
+                'billing_id'           => $guestBillData ? 'guest_bill' : null
+            ]);
         }
 
         $selectedShippingId = $request->input('selected_shipping_id');
@@ -607,6 +765,7 @@ class CheckoutController extends Controller
 
         return response()->json([
             'success' => true,
+            'is_guest' => false,
             'shipping_html' => $shippingHtml,
             'billing_html' => $billingHtml,
             'shipping_count' => $UserAddressData->count(),
@@ -680,18 +839,21 @@ class CheckoutController extends Controller
         $storePickupAddress = $order_info->store_pickup_address ?? 'Not provided';
 
         // Fetch customer details
-        $customerDetails = DB::table('main_users')->find($user_id);
+        $customerDetails = !empty($user_id) ? DB::table('main_users')->find($user_id) : null;
+        $customerName = $customerDetails ? trim($customerDetails->first_name . ' ' . $customerDetails->last_name) : ($order_info->customer_name ?? 'Guest User');
+        $customerFirstName = $customerDetails ? $customerDetails->first_name : ($order_info->customer_name ?? 'Guest User');
+        $sendEmail = $customerDetails ? $customerDetails->email : ($order_info->customer_email ?? null);
+        $customerPhone = $customerDetails ? ('+' . $customerDetails->phone_code . ' ' . $customerDetails->phone) : ($order_info->customer_mobile ?? '');
         $setting = Setting::find(1);
         $templateId = 17; // Determine the appropriate template ID
         $emailDetail = EmailTemplate::find($templateId);
         $fromEmail = env('MAIL_FROM_ADDRESS', 'info@liquorjunctionghana.com');
-        $sendEmail = $customerDetails->email;
 
         // Prepare email data
         $data = [
-            'user_name' => $customerDetails->first_name,
-            'sendname' => $customerDetails->first_name,
-            'sendemail' => $customerDetails->email,
+            'user_name' => $customerFirstName,
+            'sendname' => $customerFirstName,
+            'sendemail' => $sendEmail,
             'id' => $templateId,
             'order' => $order,
             'order_status' => "Place Order",
@@ -743,11 +905,13 @@ class CheckoutController extends Controller
         $vat = ($taxes[3]->tax_value / 100) * ($subTotal);
 
         try {
-            // Send email to customer
-            Mail::send('emails.orderstatuschanged', $data, function ($message) use ($data, $emailDetail) {
-                $message->to($data['sendemail'], 'Liquor')->subject($emailDetail->subject);
-                $message->from($data['from_email'], $emailDetail->title);
-            });
+            // Send email to customer if valid email present
+            if (!empty($data['sendemail'])) {
+                Mail::send('emails.orderstatuschanged', $data, function ($message) use ($data, $emailDetail) {
+                    $message->to($data['sendemail'], 'Liquor')->subject($emailDetail->subject);
+                    $message->from($data['from_email'], $emailDetail->title);
+                });
+            }
 
             // Send email to admin
             $adminEmail = 'info@liquorjunctionghana.com';
@@ -815,9 +979,9 @@ class CheckoutController extends Controller
                     <div class='content'>
                         <div class='header'><b>A new order has been received.</b></div>
                         <div class='item'><span class='label'><b>Customer Details:</b></span></div>
-                        <div class='item'><span class='label'>Name:</span>  <span class='value'>{$customerDetails->first_name} {$customerDetails->last_name}</span></div>
-                        <div class='item'><span class='label'>Email:</span>  <span class='value'>{$customerDetails->email}</span></div>
-                        <div class='item'><span class='label'>Phone:</span>  <span class='value'>+{$customerDetails->phone_code}{$customerDetails->phone}</span></div>";
+                        <div class='item'><span class='label'>Name:</span>  <span class='value'>{$customerName}</span></div>
+                        <div class='item'><span class='label'>Email:</span>  <span class='value'>{$sendEmail}</span></div>
+                        <div class='item'><span class='label'>Phone:</span>  <span class='value'>{$customerPhone}</span></div>";
 
             // Conditionally display the delivery address
             if (!empty($storePickupAddress) && $storePickupAddress !== 'Not provided') {
@@ -1017,9 +1181,11 @@ class CheckoutController extends Controller
 
     public function SelectedAddress(Request $request)
     {
-        // echo "<pre>";print_r($request->toArray());exit();
         $user_id = $this->user_id;
         $address_id = $request->address_id;
+        if ($address_id === 'guest' || session()->get('is_guest_checkout') || empty($user_id)) {
+            return response()->json(['success' => true]);
+        }
         // dd($address_id);
         $updatepsw = UserAddress::where('user_id', $user_id)->update(array(
             'is_selected_address_id' => 0,
@@ -1052,14 +1218,25 @@ class CheckoutController extends Controller
         $user_id = $this->user_id;
         $user_address_id = $request->user_address_id;
         $coupon_code_id = $request->coupon_code_id;
+        $isGuest = session()->get('is_guest_checkout') || empty($user_id);
 
         //For buy-now
         $is_buy_now = $request->is_buy_now;
         if ($is_buy_now == 1) {
             $variantIds = array($request->pvariant_Ids);
         } else {
-            $cartData = Cart::select(DB::raw('group_concat(product_variant_id) as variantIds'))->where('user_id', $user_id)->groupBy('user_id')->where('status', 1)->first();
-            $variantIds = explode(',', $cartData->variantIds);
+            if (!empty($user_id)) {
+                $cartData = Cart::select(DB::raw('group_concat(product_variant_id) as variantIds'))->where('user_id', $user_id)->groupBy('user_id')->where('status', 1)->first();
+                $variantIds = $cartData ? explode(',', $cartData->variantIds) : [];
+            } else {
+                $sessionCart = session()->get('cart_info', []);
+                $variantIds = [];
+                foreach ($sessionCart as $pid => $variants) {
+                    foreach ($variants as $vid => $item) {
+                        $variantIds[] = $vid;
+                    }
+                }
+            }
         }
 
         $productData = ProductVariants::getProductDetalsBasedOnVariant()->with('cart')->whereIn('id', $variantIds)->get();
@@ -1117,20 +1294,40 @@ class CheckoutController extends Controller
         }
 
         if (!empty($user_address_id)) {
-            $user_address_data = UserAddress::with(['country', 'region', 'area'])->where([['user_id', $user_id], ['status', 1], ['id', $user_address_id]])->first();
-            $area_tax_rate = @Helper::numberFormat($user_address_data->area->rate);
-            $deliveryAmount = @Helper::numberFormat($user_address_data->area->delivery_amount);
-            $deliveryFee = @Helper::numberFormat($user_address_data->area->delivery_fee);
-            $min_purchase_amount = $deliveryAmount;
+            if ($user_address_id === 'guest' || ($isGuest && empty($user_id))) {
+                $gAddr = session()->get('guest_shipping_address');
+                $area = $gAddr ? Area::find($gAddr['area_id']) : null;
+                if ($area) {
+                    $area_tax_rate = @Helper::numberFormat($area->rate);
+                    $deliveryAmount = @Helper::numberFormat($area->delivery_amount);
+                    $deliveryFee = @Helper::numberFormat($area->delivery_fee);
+                    $min_purchase_amount = $deliveryAmount;
 
-            // if($tempTotal > $deliveryAmount)
-            if ($grand_total_amount > $deliveryAmount) {
-                $area_tax_rate = 0;
+                    if ($grand_total_amount > $deliveryAmount) {
+                        $area_tax_rate = 0;
+                    } else {
+                        $area_tax_rate = $deliveryFee;
+                    }
+
+                    $grand_total_amount = @Helper::numberFormat($grand_total_amount + $area_tax_rate);
+                }
             } else {
-                $area_tax_rate = $deliveryFee;
-            }
+                $user_address_data = UserAddress::with(['country', 'region', 'area'])->where([['user_id', $user_id], ['status', 1], ['id', $user_address_id]])->first();
+                if ($user_address_data && $user_address_data->area) {
+                    $area_tax_rate = @Helper::numberFormat($user_address_data->area->rate);
+                    $deliveryAmount = @Helper::numberFormat($user_address_data->area->delivery_amount);
+                    $deliveryFee = @Helper::numberFormat($user_address_data->area->delivery_fee);
+                    $min_purchase_amount = $deliveryAmount;
 
-            $grand_total_amount = @Helper::numberFormat($grand_total_amount + $area_tax_rate);
+                    if ($grand_total_amount > $deliveryAmount) {
+                        $area_tax_rate = 0;
+                    } else {
+                        $area_tax_rate = $deliveryFee;
+                    }
+
+                    $grand_total_amount = @Helper::numberFormat($grand_total_amount + $area_tax_rate);
+                }
+            }
         }
 
         return response()->json(['message' => '', 'coupon_code_price' => @Helper::numberFormat($coupon_code_price), 'delivery_fee' => @Helper::numberFormat($area_tax_rate), 'grand_total_amount' => @Helper::numberFormat($grand_total_amount), 'min_purchase_amount' => @Helper::numberFormat($min_purchase_amount),]);
@@ -1420,9 +1617,9 @@ class CheckoutController extends Controller
         $cartDiscountFlag = $request->discountFlag;
         $cartDiscountAmount = $request->discountAmount;
         $currentTotal = $request->currentTotal;
-        // $shippingDetail = $request->shippingDetail;
-        // $isSameAddress = $request->isSameAddress;
         $isSameAddress = filter_var($request->input('isSameAddress'), FILTER_VALIDATE_BOOLEAN);
+
+        $isGuest = session()->get('is_guest_checkout') || empty($user_id) || $user_address_id === 'guest';
 
         //If User apply promo code
         if (!empty($coupon_code_id)) {
@@ -1452,43 +1649,31 @@ class CheckoutController extends Controller
         $billing_address = '';
         $user_address_data = null;
         $user_bill_address_data = null;
+        $guestAddrData = null;
+        $guestBillData = null;
 
         if ($purchase_type == 1) {
-            // 1. Strict Server-Side Validation of Shipping Address
-            if (empty($user_address_id)) {
-                return response()->json([
-                    'error' => true,
-                    'message' => 'Please select a delivery address.',
-                    'type' => 'address'
-                ]);
-            }
+            if ($isGuest) {
+                $guestAddrData = session()->get('guest_shipping_address');
+                if (empty($guestAddrData)) {
+                    return response()->json([
+                        'error' => true,
+                        'message' => 'Please add a delivery address to complete your order.',
+                        'type' => 'address'
+                    ]);
+                }
 
-            $user_address_data = UserAddress::with(['country', 'region', 'area'])
-                ->where([['user_id', $user_id], ['status', 1], ['id', $user_address_id]])
-                ->first();
+                $area = \App\Models\Area::find($guestAddrData['area_id']);
+                if (!$area || $area->status != 1) {
+                    return response()->json([
+                        'error' => true,
+                        'message' => @Helper::language('Something_went_wrong_in_the_delivery_address'),
+                        'type' => 'address'
+                    ]);
+                }
 
-            if (!$user_address_data) {
-                return response()->json([
-                    'error' => true,
-                    'message' => 'Selected delivery address is invalid or not found.',
-                    'type' => 'address'
-                ]);
-            }
-
-            // Verify coordinates, active status & allowed service area boundaries
-            $shippingGeoCheck = AddressValidationService::verifyAddressModel($user_address_data, 'Delivery address');
-            if (!$shippingGeoCheck['valid']) {
-                return response()->json([
-                    'error' => true,
-                    'message' => $shippingGeoCheck['message'],
-                    'type' => 'address'
-                ]);
-            }
-
-            $status = $user_address_data->area ? $user_address_data->area->status : 0;
-            if ($status == 1) {
-                $deliveryAmount = @Helper::numberFormat($user_address_data->area->delivery_amount);
-                $deliveryFee = @Helper::numberFormat($user_address_data->area->delivery_fee);
+                $deliveryAmount = @Helper::numberFormat($area->delivery_amount);
+                $deliveryFee = @Helper::numberFormat($area->delivery_fee);
 
                 $currentTotal = floatval($currentTotal);
                 $givenRate = floatval($delivery_charge);
@@ -1502,79 +1687,174 @@ class CheckoutController extends Controller
                         'type' => 'address'
                     ]);
                 }
+
+                $delivery_address = "";
+                ($guestAddrData['name']) ? $delivery_address .= $guestAddrData['name'] : '';
+                ($guestAddrData['address']) ? $delivery_address .= ',| ' . $guestAddrData['address'] : '';
+                (!empty($guestAddrData['country_name'])) ? $delivery_address .= ',| ' . $guestAddrData['country_name'] : '';
+                (!empty($guestAddrData['region_title'])) ? $delivery_address .= ',| ' . $guestAddrData['region_title'] : '';
+                (!empty($guestAddrData['area_title'])) ? $delivery_address .= ',| ' . $guestAddrData['area_title'] : '';
+                ($guestAddrData['phone']) ? $delivery_address .= ',| +' . @$guestAddrData['phonecode'] . ' ' . @$guestAddrData['phone'] : '';
+                ($guestAddrData['city']) ? $delivery_address .= ',| ' . @$guestAddrData['city'] : '';
+                ($guestAddrData['zip_code']) ? $delivery_address .= ',| ' . @$guestAddrData['zip_code'] : '';
+                if (!empty($guestAddrData['latitude'])) {
+                    $delivery_address .= ',| ' . $guestAddrData['latitude'];
+                }
+                if (!empty($guestAddrData['longitude'])) {
+                    $delivery_address .= ',| ' . $guestAddrData['longitude'];
+                }
+
+                if (!$isSameAddress) {
+                    $guestBillData = session()->get('guest_billing_address');
+                    if (empty($guestBillData)) {
+                        return response()->json([
+                            'error' => true,
+                            'message' => 'Please add a billing address or check "Same as shipping address" to continue.',
+                            'type' => 'billing_address'
+                        ]);
+                    }
+
+                    $billing_address = "";
+                    ($guestBillData['name']) ? $billing_address .= $guestBillData['name'] : '';
+                    ($guestBillData['address']) ? $billing_address .= ',| ' . $guestBillData['address'] : '';
+                    (!empty($guestBillData['country_name'])) ? $billing_address .= ',| ' . $guestBillData['country_name'] : '';
+                    (!empty($guestBillData['region_title'])) ? $billing_address .= ',| ' . $guestBillData['region_title'] : '';
+                    (!empty($guestBillData['area_title'])) ? $billing_address .= ',| ' . $guestBillData['area_title'] : '';
+                    ($guestBillData['phone']) ? $billing_address .= ',| +' . @$guestBillData['phonecode'] . ' ' . @$guestBillData['phone'] : '';
+                    ($guestBillData['city']) ? $billing_address .= ',| ' . @$guestBillData['city'] : '';
+                    ($guestBillData['zip_code']) ? $billing_address .= ',| ' . @$guestBillData['zip_code'] : '';
+                    if (!empty($guestBillData['latitude'])) {
+                        $billing_address .= ',| ' . $guestBillData['latitude'];
+                    }
+                    if (!empty($guestBillData['longitude'])) {
+                        $billing_address .= ',| ' . $guestBillData['longitude'];
+                    }
+                } else {
+                    $billing_address = $delivery_address;
+                }
             } else {
-                return response()->json([
-                    'error' => true,
-                    'message' => @Helper::language('Something_went_wrong_in_the_delivery_address'),
-                    'type' => 'address'
-                ]);
-            }
-
-            $delivery_address = "";
-            ($user_address_data->name) ? $delivery_address .= $user_address_data->name : '';
-            ($user_address_data->address) ? $delivery_address .= ',| ' . $user_address_data->address : '';
-            ($user_address_data->country ? $user_address_data->country->name : '') ? $delivery_address .= ',| ' . $user_address_data->country->name : '';
-            ($user_address_data->region ? $user_address_data->region->title : '') ? $delivery_address .= ',| ' . $user_address_data->region->title : '';
-            ($user_address_data->area ? $user_address_data->area->title : '') ? $delivery_address .= ',| ' . $user_address_data->area->title : '';
-            ($user_address_data->phone) ? $delivery_address .= ',| +' . @$user_address_data->phonecode . ' ' . @$user_address_data->phone : '';
-            ($user_address_data->city) ? $delivery_address .= ',| ' . @$user_address_data->city : '';
-            ($user_address_data->zip_code) ? $delivery_address .= ',| ' . @$user_address_data->zip_code : '';
-            if (!empty($user_address_data->latitude)) {
-                $delivery_address .= ',| ' . $user_address_data->latitude;
-            }
-            if (!empty($user_address_data->longitude)) {
-                $delivery_address .= ',| ' . $user_address_data->longitude;
-            }
-
-            // 2. Strict Server-Side Validation of Billing Address
-            if (!$isSameAddress) {
-                if (empty($user_bill_address_id)) {
+                // 1. Strict Server-Side Validation of Shipping Address
+                if (empty($user_address_id)) {
                     return response()->json([
                         'error' => true,
-                        'message' => UserBillAddress::where([['user_id', $user_id], ['status', 1]])->exists() ? 'Please select your billing address or check "Same as shipping address".' : 'Please add a billing address or check "Same as shipping address" to continue.',
-                        'type' => 'billing_address'
+                        'message' => 'Please select a delivery address.',
+                        'type' => 'address'
                     ]);
                 }
 
-                $user_bill_address_data = UserBillAddress::with(['country', 'region', 'area'])
-                    ->where([['user_id', $user_id], ['status', 1], ['id', $user_bill_address_id]])
+                $user_address_data = UserAddress::with(['country', 'region', 'area'])
+                    ->where([['user_id', $user_id], ['status', 1], ['id', $user_address_id]])
                     ->first();
 
-                if (!$user_bill_address_data) {
+                if (!$user_address_data) {
                     return response()->json([
                         'error' => true,
-                        'message' => 'Selected billing address is invalid or not found.',
-                        'type' => 'billing_address'
+                        'message' => 'Selected delivery address is invalid or not found.',
+                        'type' => 'address'
                     ]);
                 }
 
-                // Verify coordinates, active status & allowed service area boundaries for Billing
-                $billingGeoCheck = AddressValidationService::verifyAddressModel($user_bill_address_data, 'Billing address');
-                if (!$billingGeoCheck['valid']) {
+                // Verify coordinates, active status & allowed service area boundaries
+                $shippingGeoCheck = AddressValidationService::verifyAddressModel($user_address_data, 'Delivery address');
+                if (!$shippingGeoCheck['valid']) {
                     return response()->json([
                         'error' => true,
-                        'message' => $billingGeoCheck['message'],
-                        'type' => 'billing_address'
+                        'message' => $shippingGeoCheck['message'],
+                        'type' => 'address'
                     ]);
                 }
 
-                $billing_address = "";
-                ($user_bill_address_data->name) ? $billing_address .= $user_bill_address_data->name : '';
-                ($user_bill_address_data->address) ? $billing_address .= ',| ' . $user_bill_address_data->address : '';
-                ($user_bill_address_data->country ? $user_bill_address_data->country->name : '') ? $billing_address .= ',| ' . $user_bill_address_data->country->name : '';
-                ($user_bill_address_data->region ? $user_bill_address_data->region->title : '') ? $billing_address .= ',| ' . $user_bill_address_data->region->title : '';
-                ($user_bill_address_data->area ? $user_bill_address_data->area->title : '') ? $billing_address .= ',| ' . $user_bill_address_data->area->title : '';
-                ($user_bill_address_data->phone) ? $billing_address .= ',| +' . @$user_bill_address_data->phonecode . ' ' . @$user_bill_address_data->phone : '';
-                ($user_bill_address_data->city) ? $billing_address .= ',| ' . @$user_bill_address_data->city : '';
-                ($user_bill_address_data->zip_code) ? $billing_address .= ',| ' . @$user_bill_address_data->zip_code : '';
-                if (!empty($user_bill_address_data->latitude)) {
-                    $billing_address .= ',| ' . $user_bill_address_data->latitude;
+                $status = $user_address_data->area ? $user_address_data->area->status : 0;
+                if ($status == 1) {
+                    $deliveryAmount = @Helper::numberFormat($user_address_data->area->delivery_amount);
+                    $deliveryFee = @Helper::numberFormat($user_address_data->area->delivery_fee);
+
+                    $currentTotal = floatval($currentTotal);
+                    $givenRate = floatval($delivery_charge);
+
+                    if ($currentTotal > $deliveryAmount && $givenRate == 0) {
+                        // Allow zero delivery charge
+                    } elseif ($givenRate != $deliveryFee) {
+                        return response()->json([
+                            'error' => true,
+                            'message' => @Helper::language('something_went_wrong_in_delivery_fee'),
+                            'type' => 'address'
+                        ]);
+                    }
+                } else {
+                    return response()->json([
+                        'error' => true,
+                        'message' => @Helper::language('Something_went_wrong_in_the_delivery_address'),
+                        'type' => 'address'
+                    ]);
                 }
-                if (!empty($user_bill_address_data->longitude)) {
-                    $billing_address .= ',| ' . $user_bill_address_data->longitude;
+
+                $delivery_address = "";
+                ($user_address_data->name) ? $delivery_address .= $user_address_data->name : '';
+                ($user_address_data->address) ? $delivery_address .= ',| ' . $user_address_data->address : '';
+                ($user_address_data->country ? $user_address_data->country->name : '') ? $delivery_address .= ',| ' . $user_address_data->country->name : '';
+                ($user_address_data->region ? $user_address_data->region->title : '') ? $delivery_address .= ',| ' . $user_address_data->region->title : '';
+                ($user_address_data->area ? $user_address_data->area->title : '') ? $delivery_address .= ',| ' . $user_address_data->area->title : '';
+                ($user_address_data->phone) ? $delivery_address .= ',| +' . @$user_address_data->phonecode . ' ' . @$user_address_data->phone : '';
+                ($user_address_data->city) ? $delivery_address .= ',| ' . @$user_address_data->city : '';
+                ($user_address_data->zip_code) ? $delivery_address .= ',| ' . @$user_address_data->zip_code : '';
+                if (!empty($user_address_data->latitude)) {
+                    $delivery_address .= ',| ' . $user_address_data->latitude;
                 }
-            } else {
-                $billing_address = $delivery_address;
+                if (!empty($user_address_data->longitude)) {
+                    $delivery_address .= ',| ' . $user_address_data->longitude;
+                }
+
+                // 2. Strict Server-Side Validation of Billing Address
+                if (!$isSameAddress) {
+                    if (empty($user_bill_address_id)) {
+                        return response()->json([
+                            'error' => true,
+                            'message' => UserBillAddress::where([['user_id', $user_id], ['status', 1]])->exists() ? 'Please select your billing address or check "Same as shipping address".' : 'Please add a billing address or check "Same as shipping address" to continue.',
+                            'type' => 'billing_address'
+                        ]);
+                    }
+
+                    $user_bill_address_data = UserBillAddress::with(['country', 'region', 'area'])
+                        ->where([['user_id', $user_id], ['status', 1], ['id', $user_bill_address_id]])
+                        ->first();
+
+                    if (!$user_bill_address_data) {
+                        return response()->json([
+                            'error' => true,
+                            'message' => 'Selected billing address is invalid or not found.',
+                            'type' => 'billing_address'
+                        ]);
+                    }
+
+                    // Verify coordinates, active status & allowed service area boundaries for Billing
+                    $billingGeoCheck = AddressValidationService::verifyAddressModel($user_bill_address_data, 'Billing address');
+                    if (!$billingGeoCheck['valid']) {
+                        return response()->json([
+                            'error' => true,
+                            'message' => $billingGeoCheck['message'],
+                            'type' => 'billing_address'
+                        ]);
+                    }
+
+                    $billing_address = "";
+                    ($user_bill_address_data->name) ? $billing_address .= $user_bill_address_data->name : '';
+                    ($user_bill_address_data->address) ? $billing_address .= ',| ' . $user_bill_address_data->address : '';
+                    ($user_bill_address_data->country ? $user_bill_address_data->country->name : '') ? $billing_address .= ',| ' . $user_bill_address_data->country->name : '';
+                    ($user_bill_address_data->region ? $user_bill_address_data->region->title : '') ? $billing_address .= ',| ' . $user_bill_address_data->region->title : '';
+                    ($user_bill_address_data->area ? $user_bill_address_data->area->title : '') ? $billing_address .= ',| ' . $user_bill_address_data->area->title : '';
+                    ($user_bill_address_data->phone) ? $billing_address .= ',| +' . @$user_bill_address_data->phonecode . ' ' . @$user_bill_address_data->phone : '';
+                    ($user_bill_address_data->city) ? $billing_address .= ',| ' . @$user_bill_address_data->city : '';
+                    ($user_bill_address_data->zip_code) ? $billing_address .= ',| ' . @$user_bill_address_data->zip_code : '';
+                    if (!empty($user_bill_address_data->latitude)) {
+                        $billing_address .= ',| ' . $user_bill_address_data->latitude;
+                    }
+                    if (!empty($user_bill_address_data->longitude)) {
+                        $billing_address .= ',| ' . $user_bill_address_data->longitude;
+                    }
+                } else {
+                    $billing_address = $delivery_address;
+                }
             }
         }
 
@@ -1606,22 +1886,67 @@ class CheckoutController extends Controller
 
         //For buy-now
         $is_buy_now = $request->is_buy_now;
+        $cartSession = [];
         if ($is_buy_now == 1) {
             $variantIds = array($request->pvariant_Ids);
         } else {
-            $cartData = Cart::select(DB::raw('group_concat(product_variant_id) as variantIds'))->where('user_id', $user_id)->groupBy('user_id')->where('status', 1)->first();
-            if (empty($cartData)) {
-                return response()->json(['error' => true, 'message' => @Helper::language('something_went_wrong'), 'type' => 'cart']);
+            if ($isGuest) {
+                $rawSessionCart = session()->get('cart_info', []);
+                if (empty($rawSessionCart)) {
+                    return response()->json(['error' => true, 'message' => @Helper::language('something_went_wrong'), 'type' => 'cart']);
+                }
+
+                $variantIds = [];
+                $cartSession = [];
+                foreach ($rawSessionCart as $pid => $variants) {
+                    if (is_array($variants)) {
+                        foreach ($variants as $vid => $item) {
+                            $variantIds[] = $vid;
+                            $cartSession[$vid] = is_array($item) ? $item : ['quantity' => $item];
+                        }
+                    } else {
+                        $variantIds[] = $pid;
+                        $cartSession[$pid] = is_array($variants) ? $variants : ['quantity' => $variants];
+                    }
+                }
+                $variantIds = array_values(array_unique($variantIds));
+                if (empty($variantIds)) {
+                    return response()->json(['error' => true, 'message' => @Helper::language('something_went_wrong'), 'type' => 'cart']);
+                }
+            } else {
+                $cartData = Cart::select(DB::raw('group_concat(product_variant_id) as variantIds'))->where('user_id', $user_id)->groupBy('user_id')->where('status', 1)->first();
+                if (empty($cartData)) {
+                    return response()->json(['error' => true, 'message' => @Helper::language('something_went_wrong'), 'type' => 'cart']);
+                }
+                $variantIds = explode(',', $cartData->variantIds);
             }
-            $variantIds = explode(',', $cartData->variantIds);
         }
 
         $productData = ProductVariants::getProductDetalsBasedOnVariant()->with('cart')->whereIn('id', $variantIds)->get();
 
-        /// dd($productData);
+        if ($isGuest && $is_buy_now != 1) {
+            foreach ($productData as $prodVariant) {
+                $cItem = $cartSession[$prodVariant->id] ?? null;
+                $pseudoCart = (object)[
+                    'id'                 => 0,
+                    'user_id'            => null,
+                    'product_variant_id' => $prodVariant->id,
+                    'quantity'           => (int)($cItem['quantity'] ?? $cItem['qty'] ?? 1),
+                    'is_bogo'            => $cItem['is_bogo'] ?? 0,
+                    'product_price'      => $cItem['product_price'] ?? $prodVariant->variant_price,
+                    'offer_price'        => $cItem['offer_price'] ?? $prodVariant->variant_discounted_price,
+                    'is_offer'           => $cItem['is_offer'] ?? 0,
+                    'offer_type'         => $cItem['offer_type'] ?? null,
+                    'discount_amount'    => $cItem['discount_amount'] ?? 0,
+                    'status'             => 1,
+                    'order_type'         => 1,
+                ];
+                $prodVariant->setRelation('cart', collect([$pseudoCart]));
+            }
+        }
+
         $pcount = count($productData);
         $vcount = count($variantIds);
-        // dd($pcount,$vcount);
         if ($vcount != $pcount) {
             return response()->json(['error' => true, 'message' => @Helper::language('something_went_wrong'), 'type' => 'product']);
         }
@@ -1630,7 +1955,9 @@ class CheckoutController extends Controller
         $check_stock = array();
         $is_product_price_change = array();
         foreach ($productData as $variant) {
-            $cartEntry = $variant->cart->where('user_id', $user_id)->sortByDesc('id')->first();
+            $cartEntry = $isGuest 
+                ? ($variant->cart ? $variant->cart->first() : null)
+                : $variant->cart->where('user_id', $user_id)->sortByDesc('id')->first();
             $bogoStatus = $cartEntry ? $cartEntry->is_bogo : false;
 
             if ($variant->get_product_details->status == 1 && $variant->get_product_details->get_category->status == 1 && $variant->get_product_details->get_subcategory->status == 1 && $variant->get_product_details->get_brand_details->status == 1) {
@@ -1654,9 +1981,18 @@ class CheckoutController extends Controller
                     $cart_qty *= 2;
                 }
 
-                $cart_info = Cart::where(['product_variant_id' => $variant->id, 'user_id' => $user_id, 'status' => 1, 'order_type' => 1])->first();
-                if ($variant->variant_price != $cart_info->product_price || $cart_info->offer_price != $variant->variant_discounted_price) {
-                    $is_product_price_change[] = true;
+                if ($isGuest) {
+                    $cItem = $cartSession[$variant->id] ?? [];
+                    $pPrice = $cItem['product_price'] ?? $variant->variant_price;
+                    $oPrice = $cItem['offer_price'] ?? $variant->variant_discounted_price;
+                    if ($variant->variant_price != $pPrice || $oPrice != $variant->variant_discounted_price) {
+                        $is_product_price_change[] = true;
+                    }
+                } else {
+                    $cart_info = Cart::where(['product_variant_id' => $variant->id, 'user_id' => $user_id, 'status' => 1, 'order_type' => 1])->first();
+                    if ($variant->variant_price != $cart_info->product_price || $cart_info->offer_price != $variant->variant_discounted_price) {
+                        $is_product_price_change[] = true;
+                    }
                 }
             }
 
@@ -1678,12 +2014,35 @@ class CheckoutController extends Controller
             return response()->json(['error' => true, 'message' => @Helper::language('something_went_wrong'), 'type' => 'product_s']);
         }
 
-        $userData = \DB::table('main_users')->where('id', $user_id)->where('status', 1)->first();
-        ///dd($userData);
+        $userData = (!$isGuest && $user_id) ? \DB::table('main_users')->where('id', $user_id)->where('status', 1)->first() : null;
         $order_uid = uniqid();
         $order = new Order();
         $order->uniqid = $order_uid;
-        $order->user_id = $user_id;
+        $order->user_id = $isGuest ? null : $user_id;
+        $order->client_type = $isGuest ? 'guest' : 'registered';
+
+        if ($isGuest) {
+            $guestId = session()->get('guest_id');
+            if (!$guestId) {
+                try {
+                    $guestUserService = app(\App\Services\GuestUserService::class);
+                    $guest = $guestUserService->createOrUpdateGuest([
+                        'email' => session()->get('guest_email'),
+                        'name'  => session()->get('guest_name') ?: ($guestAddrData['name'] ?? 'Guest User'),
+                        'phone' => session()->get('guest_phone'),
+                    ]);
+                    $guestId = $guest->id;
+                    session()->put('guest_id', $guestId);
+                } catch (\Throwable $e) {
+                    \Log::error('Error recording guest user in CheckoutController: ' . $e->getMessage());
+                    $guestId = null;
+                }
+            }
+            $order->guest_user_id = $guestId;
+        } else {
+            $order->guest_user_id = null;
+        }
+
         $order->supplier_id = $store_id;
         $order->order_id = $this->geneateOrderId();
         $order->delivery_address = $delivery_address;
@@ -1710,12 +2069,12 @@ class CheckoutController extends Controller
         // Gift message
         $order->recipientName = $giftRecipient;
         $order->giftMessage = $giftMessage;
-        // $order->shipping_method=$shippingDetail;
 
         // Delivery instruction
-        // $order->delivery_instructions = $user_address_data->delivery_instructions;
-        // $order->delivery_options = $user_address_data->delivery_options;
-        if ($user_address_data) {
+        if ($isGuest) {
+            $order->delivery_instructions = $guestAddrData['delivery_instructions'] ?? null;
+            $order->delivery_options = $guestAddrData['delivery_options'] ?? null;
+        } elseif ($user_address_data) {
             $order->delivery_instructions = $user_address_data->delivery_instructions;
             $order->delivery_options = $user_address_data->delivery_options;
         }
@@ -1723,12 +2082,11 @@ class CheckoutController extends Controller
         $order->save();
 
         //updating the delivery instruction in user_address 
-        if ($user_address_data) {
+        if (!$isGuest && $user_address_data) {
             $user_address_data->delivery_instructions = null;
             $user_address_data->delivery_options = null;
             $user_address_data->save();
         }
-
 
         $tracking_id = uniqid();
         $order_tracking = new OrderTracking();
@@ -1737,24 +2095,42 @@ class CheckoutController extends Controller
         $order_tracking->order_status = 1;
         $order_tracking->status = 1;
         $order_tracking->save();
-        // if($userData->email){
-            $order_info = new OrderInfo();
-            $order_info->order_id = $order->id;
-            if ($purchase_type == 1) {
+
+        $order_info = new OrderInfo();
+        $order_info->order_id = $order->id;
+        if ($purchase_type == 1) {
+            if ($isGuest) {
+                $order_info->country_id = $guestAddrData['country_id'] ?? null;
+                $order_info->region_id = $guestAddrData['region_id'] ?? null;
+                $order_info->area_id = $guestAddrData['area_id'] ?? null;
+            } else {
                 $order_info->country_id = $user_address_data->country_id;
                 $order_info->region_id = $user_address_data->region_id;
                 $order_info->area_id = $user_address_data->area_id;
             }
+        }
+
+        if ($isGuest) {
+            $guestName = !empty($guestAddrData['name']) ? $guestAddrData['name'] : session()->get('guest_name', 'Guest User');
+            $guestPhone = session()->get('guest_phone');
+            $guestPhoneCode = session()->get('guest_phone_code') ?: ($guestAddrData['phonecode'] ?? '233');
+            $guestEmail = session()->get('guest_email');
+
+            $order_info->customer_name = $guestName;
+            $order_info->customer_mobile = '+' . $guestPhoneCode . ' ' . $guestPhone;
+            $order_info->customer_email = $guestEmail;
+            $order_info->customer_country = $guestPhoneCode;
+        } else {
             $order_info->customer_name = $userData->first_name . ' ' . $userData->last_name;
             $order_info->customer_mobile = $userData->phone_code . ' ' . $userData->phone;
             $order_info->customer_email = $userData->email ?? null;
             $order_info->customer_country = ($userData->country_code) ?: '';
-            $order_info->order_from = '1';
-            if ($purchase_type == 2) {
-                $order_info->store_pickup_address = $store_address;
-            }
-            $order_info->save();
-        // }
+        }
+        $order_info->order_from = '1';
+        if ($purchase_type == 2) {
+            $order_info->store_pickup_address = $store_address;
+        }
+        $order_info->save();
 
         $original_price = 0;
         $total_discount_price = 0;
@@ -1763,7 +2139,9 @@ class CheckoutController extends Controller
         $offer_type_store = '';
         $discount_amount_store = 0;
         foreach ($productData as $result) {
-            $cartEntry = $result->cart->where('user_id', $user_id)->sortByDesc('id')->first();
+            $cartEntry = $isGuest 
+                ? ($result->cart ? $result->cart->first() : null)
+                : $result->cart->where('user_id', $user_id)->sortByDesc('id')->first();
             $bogoStatus = $cartEntry ? $cartEntry->is_bogo : false;
 
             if ($is_buy_now == 1) {
@@ -1780,7 +2158,6 @@ class CheckoutController extends Controller
                 }
 
                 $variant_orginal_price = $buy_org_price;
-                //using for variant new price
 
                 if ($is_offer) {
                     if ($offer_type == 'flat') {
@@ -1798,30 +2175,52 @@ class CheckoutController extends Controller
                     $cart_qty *= 2;
                 }
 
-                //using for variant new price
-                $cart_info = Cart::where(['product_variant_id' => $result->id, 'user_id' => $user_id, 'status' => 1, 'order_type' => 1])->first();
-                $variant_orginal_price = $cart_info->product_price;
-                $offer_type_store = $cart_info->offer_type;
-                $discount_amount_store = $cart_info->discount_amount;
+                if ($isGuest) {
+                    $cItem = $cartSession[$result->id] ?? [];
+                    $variant_orginal_price = $cItem['product_price'] ?? $result->variant_price;
+                    $offer_type_store = $cItem['offer_type'] ?? '';
+                    $discount_amount_store = $cItem['discount_amount'] ?? 0;
 
-                if ($cart_info->is_offer) {
-                    if ($cart_info->offer_type == 'flat') {
-                        $variant_offer_price = max(0, $variant_orginal_price - ($cart_info->discount_amount));
-                    } elseif ($cart_info->offer_type == 'percentage') {
-                        $variant_offer_price = max(0, $variant_orginal_price - ($variant_orginal_price * $cart_info->discount_amount / 100));
+                    if (!empty($cItem['is_offer'])) {
+                        $offerType = $cItem['offer_type'] ?? '';
+                        $disAmt = $cItem['discount_amount'] ?? 0;
+                        if ($offerType == 'flat') {
+                            $variant_offer_price = max(0, $variant_orginal_price - $disAmt);
+                        } elseif ($offerType == 'percentage') {
+                            $variant_offer_price = max(0, $variant_orginal_price - ($variant_orginal_price * $disAmt / 100));
+                        } else {
+                            $variant_offer_price = $cItem['offer_price'] ?? '0';
+                        }
+                    } elseif (!empty($result->variant_discounted_price) && $result->variant_discounted_price != 0.00) {
+                        $variant_offer_price = $result->variant_discounted_price;
+                    } else {
+                        $variant_offer_price = '0';
                     }
                 } else {
-                    $variant_offer_price = '0';
+                    $cart_info = Cart::where(['product_variant_id' => $result->id, 'user_id' => $user_id, 'status' => 1, 'order_type' => 1])->first();
+                    $variant_orginal_price = $cart_info->product_price;
+                    $offer_type_store = $cart_info->offer_type;
+                    $discount_amount_store = $cart_info->discount_amount;
+
+                    if ($cart_info->is_offer) {
+                        if ($cart_info->offer_type == 'flat') {
+                            $variant_offer_price = max(0, $variant_orginal_price - ($cart_info->discount_amount));
+                        } elseif ($cart_info->offer_type == 'percentage') {
+                            $variant_offer_price = max(0, $variant_orginal_price - ($variant_orginal_price * $cart_info->discount_amount / 100));
+                        }
+                    } elseif (!empty($result->variant_discounted_price) && $result->variant_discounted_price != 0.00) {
+                        $variant_offer_price = $result->variant_discounted_price;
+                    } else {
+                        $variant_offer_price = '0';
+                    }
                 }
             }
 
-            $product_unit = Helper::getUnitById($result->variant_uof);
-            //$product_total_price = ($cart_qty * $result->variant_discounted_price);
             $order_detail = new OrderDetails();
             $order_detail->order_id = @$order->id;
             $order_detail->product_id = $result->get_product_details->id;
             $order_detail->variant_id = @$result->id;
-            $order_detail->customer_id = $user_id;
+            $order_detail->customer_id = $isGuest ? 0 : $user_id;
             $order_detail->product_original_amount = $variant_orginal_price;
             $order_detail->product_total_amount = $variant_offer_price;
             $order_detail->quantity = $cart_qty;
@@ -1830,14 +2229,6 @@ class CheckoutController extends Controller
             $order_detail->status = 1;
             $order_detail->is_bogo = (int) $bogoStatus;
             $order_detail->save();
-
-            // $org_price = @$result->variant_price ? ($result->variant_price * $cart_qty) : 0;
-            // $original_price += $org_price;      
-            // $product_discount_price = @$result->variant_discounted_price ? ($result->variant_discounted_price * $cart_qty) : 0;
-            // if($result->variant_discounted_price !='' && $result->variant_discounted_price != 0.00){ 
-            //     $total_discount_price += ($org_price - $product_discount_price);
-            //     $is_product_discount[] = true;
-            // }
 
             $cart_qty_for_price = $cart_qty;
             if ($bogoStatus) {
@@ -1894,19 +2285,21 @@ class CheckoutController extends Controller
 
 
             // insert Data in coupon_user table
-            \DB::table('coupon_user')->insert([
-                'user_id' => $user_id,
-                'coupon_id' => $coupon_code_id,
-                'order_id' => $order->id,
-                'usage_count' => 1,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
+            if (!$isGuest && !empty($user_id)) {
+                \DB::table('coupon_user')->insert([
+                    'user_id' => $user_id,
+                    'coupon_id' => $coupon_code_id,
+                    'order_id' => $order->id,
+                    'usage_count' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
         }
 
         // Reward Points Used
         $reward_price = 0;
-        if (!empty($loyaltyInfo)) {
+        if (!$isGuest && !empty($loyaltyInfo) && !empty($user_id)) {
             $reward_price = $conversion_rate * $reward_points;
             $sub_total_amount = ($grand_total_amount - $reward_price);
 
@@ -1928,7 +2321,7 @@ class CheckoutController extends Controller
                 'updated_at' => now()
             ]);
 
-            Order::where('user_id', $user_id)->where('id', $order->id)->update([
+            Order::where('id', $order->id)->update([
                 'loyalty_debit_point_id' => $loyalty_id
             ]);
         }
@@ -1947,10 +2340,15 @@ class CheckoutController extends Controller
             $grand_total_amount = @Helper::numberFormat($grand_total_amount + $tax_amount);
         }
 
-        if (!empty($user_address_id) && $purchase_type == 1) {
-            $area_tax_rate = @Helper::numberFormat($user_address_data->area->rate);
-            $deliveryAmount = @Helper::numberFormat($user_address_data->area->delivery_amount);
-            $deliveryFee = @Helper::numberFormat($user_address_data->area->delivery_fee);
+        if ($purchase_type == 1) {
+            if ($isGuest) {
+                $area = \App\Models\Area::find($guestAddrData['area_id']);
+                $deliveryAmount = $area ? @Helper::numberFormat($area->delivery_amount) : 0;
+                $deliveryFee = $area ? @Helper::numberFormat($area->delivery_fee) : 0;
+            } else {
+                $deliveryAmount = @Helper::numberFormat($user_address_data->area->delivery_amount);
+                $deliveryFee = @Helper::numberFormat($user_address_data->area->delivery_fee);
+            }
 
             if ($grand_total_amount > $deliveryAmount) {
                 $area_tax_rate = 0;
@@ -1964,7 +2362,7 @@ class CheckoutController extends Controller
 
         $transactions = new Transactions();
         $transactions->trans_no = $this->geneateTranscationId();
-        $transactions->user_id = $user_id;
+        $transactions->user_id = $isGuest ? 0 : $user_id;
         $transactions->order_id = @$order->id;
         $transactions->payment_type = $payment_method;
         $transactions->payment_status = $payment_method == 1 ? "" : '1';
@@ -1977,14 +2375,7 @@ class CheckoutController extends Controller
         }
         $transactions->save();
 
-
-        //  $response = (new \Helper)->send_notification_FCM($remember_token, $title, $message, $device_type);
-        // $response = (new \Helper)->sendNotification($device_token, $title, $message, $device_type);
-        //300+30 = 330
-
-        //dd($product_sub_total_amount);
-
-        $updatepsw = Order::where('user_id', $user_id)->where('id', $order->id)
+        Order::where('id', $order->id)
             ->update(array(
                 'total_amount' => $product_sub_total_amount,
                 'payable_amount' => $grand_total_amount,
@@ -1995,20 +2386,22 @@ class CheckoutController extends Controller
 
 
         // Store offer used details
-        if (!empty($offer_type_store) && $discount_amount_store != 0) {
+        if (!$isGuest && !empty($user_id) && !empty($offer_type_store) && $discount_amount_store != 0) {
             $offerData = Offers::where('offer_type', $offer_type_store)
                 ->where('dis_amount', $discount_amount_store)
                 ->where('status', 1)
                 ->first();
 
-            \DB::table('offer_user')->insert([
-                'user_id' => $user_id,
-                'offer_id' => $offerData->id,
-                'order_id' => $order->id,
-                'usage_count' => 1,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
+            if ($offerData) {
+                \DB::table('offer_user')->insert([
+                    'user_id' => $user_id,
+                    'offer_id' => $offerData->id,
+                    'order_id' => $order->id,
+                    'usage_count' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
         }
 
         // reward Points
@@ -2018,12 +2411,11 @@ class CheckoutController extends Controller
             ->first();
 
         $earnedpoints = 0;
-        if ($loyaltySetting && $grand_total_amount >= $loyaltySetting->minimum_purchase_amount) {
+        if (!$isGuest && !empty($user_id) && $loyaltySetting && $grand_total_amount >= $loyaltySetting->minimum_purchase_amount) {
             $percentage = $loyaltySetting->loyalty_percentage;
 
             // Calculate points
             $awardedPoints = round(($grand_total_amount * $percentage) / 100, 2);
-            // $earnedpoints = min($awardedPoints, $loyaltySetting->maximum_points);
             $earnedpoints = $awardedPoints;
             // Save points
             $loyalty_id = DB::table('loyalty_points')->insertGetId([
@@ -2037,13 +2429,13 @@ class CheckoutController extends Controller
                 'updated_at' => now()
             ]);
 
-            Order::where('user_id', $user_id)->where('id', $order->id)->update([
+            Order::where('id', $order->id)->update([
                 'loyalty_credit_point_id' => $loyalty_id
             ]);
         }
 
         if ($payment_method == 1) {
-            if ($userData && $userData->is_guest_user == 1) {
+            if ($isGuest && Auth::guard('user')->check()) {
                 Auth::guard('user')->logout();
             }
 
@@ -2068,15 +2460,17 @@ class CheckoutController extends Controller
             return response()->json(['success' => true, 'redirect_url' => $session['url']]);
         }
 
-        $userData = DB::table('main_users')->where('id', $user_id)->first();
+        $customerDisplayName = $isGuest 
+            ? ($order_info->customer_name ?: 'Guest User')
+            : trim(($userData?->first_name ?? '') . ' ' . ($userData?->last_name ?? ''));
+
         $data = [
             'message' => 'New Order Received',
             'order_number' => $order->order_id,
             'id' => $order->id,
             'total_amount' => $product_sub_total_amount,
-            //'user_name'    => $order->user->first_name . ' ' . $order->user->last_name,
-            'user_name' => trim(($order->user?->first_name ?? '') . ' ' . ($order->user?->last_name ?? '')),
-            'order_type'   => match($order->order_type) {
+            'user_name' => $customerDisplayName,
+            'order_type'   => match((string)$order->order_type) {
                 '1' => 'Online',
                 '2' => 'Cash On Delivery',
                 '3' => 'Purchase Order',
@@ -2088,13 +2482,13 @@ class CheckoutController extends Controller
         $title = "Online Order Confirm";
         $message = "Online Order Confirm";
         $remember_token = "fYPZqDsO90pgmZAzTKD0ow:APA91bEF6Pv3waTLBb8lRSUCrjz_M3Vxf14zF3IDHBckRoI79Ojw66aRbuDNhuHWT21qsPYwhOvXxGhILv-nJ0ZCNWzEEuo2tWQ1pDULgeBkPPoAbPaV6ulPJ0W1H8zhA2IcPn8zHl8P";
-        $device_token = $userData->device_token;
+        $device_token = $userData ? $userData->device_token : null;
         $device_type = 1;
 
         $notification = new Notification();
         $notification->order_id = @$order->id;
-        $notification->sender_id = @$user_id;
-        $notification->receiver_id = @$user_id;
+        $notification->sender_id = $isGuest ? 0 : @$user_id;
+        $notification->receiver_id = $isGuest ? 0 : @$user_id;
         $notification->notification_type = 1;
         $notification->title = @$title;
         $notification->message = @$message;
@@ -2103,8 +2497,8 @@ class CheckoutController extends Controller
 
         $admin_notification = new AdminNotifications();
         $admin_notification->order_id = @$order->id;
-        $admin_notification->sender_id = @$user_id;
-        $admin_notification->receiver_id = @$user_id;
+        $admin_notification->sender_id = $isGuest ? 0 : @$user_id;
+        $admin_notification->receiver_id = 1;
         $admin_notification->notification_type = 1;
         $admin_notification->title = @$title;
         $admin_notification->message = @$message;
@@ -2115,7 +2509,9 @@ class CheckoutController extends Controller
         $this->sendOrderConfirmationEmail($user_id, $order);
 
         if ($is_buy_now != 1) {
-            $updatepsw = Cart::where('user_id', $user_id)->update(array('status' => 2));
+            if (!$isGuest && $user_id) {
+                $updatepsw = Cart::where('user_id', $user_id)->update(array('status' => 2));
+            }
             Session::forget('cart_info');
         }
 
@@ -2128,8 +2524,17 @@ class CheckoutController extends Controller
             'counter'
         ]);
 
-        if ($userData && $userData->is_guest_user == 1) {
+        if ($isGuest) {
             Session::forget([
+                'is_guest_checkout',
+                'guest_shipping_address',
+                'guest_billing_address',
+                'guest_id',
+                'guest_email',
+                'guest_phone',
+                'guest_phone_code',
+                'guest_name',
+                'guest_token',
                 'id',
                 'first_name',
                 'email',
@@ -2139,7 +2544,9 @@ class CheckoutController extends Controller
                 'current_lat',
                 'current_long'
             ]);
-            Auth::guard('user')->logout();
+            if (Auth::guard('user')->check()) {
+                Auth::guard('user')->logout();
+            }
         }
 
         return response()->json(['success' => true, 'order_id' => Helper::encodeUrl($order->id), 'earnedpoints' => $earnedpoints]);

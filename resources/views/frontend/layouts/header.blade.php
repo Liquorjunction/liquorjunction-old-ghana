@@ -621,7 +621,7 @@ if ($user_id) {
                                 @endif
 
                             </li>
-                            @if (!empty($user_id) && auth()->guard('user')->user()->is_guest_user)
+                            @if ((!empty($user_id) && auth()->guard('user')->check() && auth()->guard('user')->user()->is_guest_user) || session()->get('is_guest_checkout'))
                             <li>
                                 <a href="javascript:void(0)" 
                                 class="sidebar-link" 
@@ -670,40 +670,39 @@ if ($user_id) {
                                         </g>
                                     </svg> --}}
                                 </a>
-                                    <span class="cart-item-total-count">
                                     @php
-                                        if (Auth::guard('user')->user() == '' && Session::get('cart_info')) {
-                                            echo count(Session::get('cart_info'));
-                                        } else {
-                                            echo '0';
-                                        }
+                                        $cartItems = Helper::getUserCartItems();
                                     @endphp
-                                    {{-- @if ({{ elseif (Auth::guard('user')->user() != '') 
-                                            echo Helper::getUserCartCount();
-                                         }}())){{Helper::getUserCartCount() }} @else 0 @endif --}}
-                                    </span>
+                                    <span class="cart-item-total-count">{{ count($cartItems) }}</span>
                                     <!-- Small Cart Dropdown -->
                                     <div id="small-cart-dropdown" class="small-cart-dropdown" style="display:none; position:absolute; right:0; top:40px; width:340px; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.15); border-radius:8px; z-index:9999;">
                                         <div style="max-height:300px; overflow-y:auto; padding:15px 15px 0 15px;">
-                                            @php
-                                                $cartItems = [];
-                                                if (Auth::guard('user')->user() == '' && Session::get('cart_info')) {
-                                                    $cartItems = Session::get('cart_info');
-                                                } elseif (Auth::guard('user')->user() != '') {
-                                                    $cartItems = Helper::getUserCartItems(); // You may need to implement this helper if not present
-                                                }
-                                            @endphp
                                             @if(!empty($cartItems) && count($cartItems) > 0)
                                                 @foreach($cartItems as $item)
-                                                    <div class="cart-item d-flex align-items-center mb-2" style="border-bottom:1px solid #eee; padding-bottom:8px;">
+                                                    <div class="cart-item d-flex align-items-center mb-2" style="border-bottom:1px solid #eee; padding-bottom:8px; position:relative;">
                                                         <div style="width:50px; height:50px; flex-shrink:0;">
                                                             <img src="{{ $item['image'] ?? asset('assets/frontend/images/no-image.png') }}" alt="{{ $item['name'] ?? '' }}" style="width:100%; height:100%; object-fit:cover; border-radius:4px;">
                                                         </div>
                                                         <div class="ms-2" style="flex:1;">
                                                             <div style="font-weight:600; font-size:15px;">{{ $item['name'] ?? '' }}</div>
-                                                            <div style="font-size:13px; color:#888;">Qty: {{ $item['qty'] ?? 1 }}</div>
-                                                            <div style="font-size:14px; color:#242424;">{{ @$settings->currency_symbol }}{{ $item['price'] ?? '0.00' }}</div>
+                                                            <div class="cart-item-qty-display mini-cart-qty-{{ $item['variant_id'] }}" style="font-size:13px; color:#888;">Qty: {{ $item['qty'] ?? 1 }}</div>
+                                                            <div style="font-size:14px; color:#242424; font-weight:600;">
+                                                                {{ $item['price'] ?? '0.00' }} {{ Helper::Settings('currency_symbol') }}
+                                                                @if(!empty($item['original_price']) && (float)$item['original_price'] > (float)$item['price'])
+                                                                    <del class="cart-original-price" style="font-weight:400; color:#858584; text-decoration:line-through; margin-left:8px; font-size:13px;">{{ $item['original_price'] }} {{ Helper::Settings('currency_symbol') }}</del>
+                                                                @endif
+                                                            </div>
                                                         </div>
+                                                        <button class="delete-cart-item-btn" data-id="{{ $item['id'] }}" data-product-id="{{ $item['product_id'] ?? '' }}" data-encoded-product-id="{{ $item['encoded_product_id'] ?? '' }}" data-variant-id="{{ $item['variant_id'] ?? '' }}" title="Remove"
+                                                            style="background:none; border:none; cursor:pointer; padding:5px;">
+                                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                                                <path d="M3 6H21" stroke="#ff4d4f" stroke-width="1.5" stroke-linecap="round"/>
+                                                                <path d="M8 6V4H16V6" stroke="#ff4d4f" stroke-width="1.5" stroke-linecap="round"/>
+                                                                <path d="M19 6L18 20H6L5 6" stroke="#ff4d4f" stroke-width="1.5"/>
+                                                                <path d="M10 11V17" stroke="#ff4d4f" stroke-width="1.5" stroke-linecap="round"/>
+                                                                <path d="M14 11V17" stroke="#ff4d4f" stroke-width="1.5" stroke-linecap="round"/>
+                                                            </svg>
+                                                        </button>
                                                     </div>
                                                 @endforeach
                                             @else
@@ -720,6 +719,27 @@ if ($user_id) {
                             .cart-dropdown-wrapper {
                                 position: relative;
                                 display: inline-block;
+                            }
+                            .small-cart-dropdown,
+                            .small-cart-dropdown * {
+                                box-sizing: border-box;
+                            }
+                            .small-cart-dropdown span,
+                            .small-cart-dropdown del,
+                            .small-cart-dropdown .cart-original-price {
+                                position: static !important;
+                                display: inline !important;
+                                width: auto !important;
+                                height: auto !important;
+                                letter-spacing: normal !important;
+                            }
+                            .small-cart-dropdown del,
+                            .small-cart-dropdown .cart-original-price {
+                                font-weight: 400 !important;
+                                color: #858584 !important;
+                                text-decoration: line-through !important;
+                                margin-left: 8px !important;
+                                font-size: 13px !important;
                             }
                             .small-cart-dropdown::before {
                                 content: '';
@@ -747,14 +767,19 @@ if ($user_id) {
                                 var html = '';
                                 if (items && items.length > 0) {
                                     items.forEach(function(item) {
-                                        html += `<div class="cart-item d-flex align-items-center mb-2" style="border-bottom:1px solid #eee; padding-bottom:8px; position:relative;">
+                                        var priceHtml = `${item.price} {{ Helper::Settings('currency_symbol') }}`;
+                                        if (item.original_price && Number(item.original_price) > Number(item.price)) {
+                                            priceHtml += ` <del class="cart-original-price">${item.original_price} {{ Helper::Settings('currency_symbol') }}</del>`;
+                                        }
+
+                                        html += `<div class="cart-item d-flex align-items-center mb-2" data-variant-id="${item.variant_id}" style="border-bottom:1px solid #eee; padding-bottom:8px; position:relative;">
                                             <div style="width:50px; height:50px; flex-shrink:0;">
                                                 <img src="${item.image}" alt="${item.name}" style="width:100%; height:100%; object-fit:cover; border-radius:4px;">
                                             </div>
                                             <div class="ms-2" style="flex:1;">
                                                 <div style="font-weight:600; font-size:15px;">${item.name}</div>
-                                                <div style="font-size:13px; color:#888;">Qty: ${item.qty}</div>
-                                                <div style="font-size:14px; color:#242424;">${item.price} {{ Helper::Settings('currency_symbol') }} </div>
+                                                <div class="cart-item-qty-display mini-cart-qty-${item.variant_id}" style="font-size:13px; color:#888;">Qty: ${item.qty}</div>
+                                                <div style="font-size:14px; color:#242424; font-weight:600;">${priceHtml}</div>
                                             </div>
                                             <button class="delete-cart-item-btn" data-id="${item.id}" data-product-id="${item.product_id || ''}" data-encoded-product-id="${item.encoded_product_id || ''}" data-variant-id="${item.variant_id || ''}" title="Remove"
         style="background:none; border:none; cursor:pointer; padding:5px;">
@@ -895,6 +920,15 @@ if ($user_id) {
                                         console.error('Error fetching cart data:', err);
                                     });
                             }
+                            window.updateCartUI = updateCartUI;
+
+                            window.updateMiniCartQty = function(variantId, qty) {
+                                if (!variantId) return;
+                                var qtyEls = document.querySelectorAll('.mini-cart-qty-' + variantId);
+                                qtyEls.forEach(function(el) {
+                                    el.textContent = 'Qty: ' + qty;
+                                });
+                            };
 
                             document.addEventListener('DOMContentLoaded', function() {
                                 var wrapper = document.querySelector('.cart-dropdown-wrapper');
@@ -953,7 +987,7 @@ if ($user_id) {
                                                 var vId = data.variant_id || varId;
                                                 showProductCartButton(pId, epId, vId);
 
-                                                if (window.location.pathname.endsWith('/cart') || window.location.pathname.endsWith('/cart/')) {
+                                                if (window.location.pathname.includes('/cart') || window.location.pathname.includes('/checkout')) {
                                                     window.location.reload();
                                                     return;
                                                 }
