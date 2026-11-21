@@ -901,10 +901,14 @@
                                     }
 
                                     // Billing "Add New" button visibility
-                                    if (data.has_billing) {
-                                        $('.add_new_bill_address_div').addClass('d-none');
+                                    if (typeof window.toggleBillingAddress === 'function') {
+                                        window.toggleBillingAddress();
                                     } else {
-                                        $('.add_new_bill_address_div').removeClass('d-none');
+                                        if (data.has_billing) {
+                                            $('.add_new_bill_address_div').addClass('invisible');
+                                        } else {
+                                            $('.add_new_bill_address_div').removeClass('invisible').removeClass('d-none');
+                                        }
                                     }
 
                                     // Guest Shipping "Add New" button visibility (hide once 1 address is added)
@@ -1060,9 +1064,9 @@
                     @endphp
 
                     @if($user && $user->is_guest_user != 1)
-                    <div class="d-flex align-items-center justify-content-between mb-2 mt-5 flex-wrap gap-2">
-                        <h5 class="mb-0">Billing Address</h5>
-                        <a href="javascript:void(0)" class="add_new_bill_address_div open-address-modal btn btn-sm btn-outline-dark d-inline-flex align-items-center gap-2 py-1 px-3 {{ $UserBillAddressData->isNotEmpty() ? 'd-none' : '' }}" data-type="billing" data-action="add" data-is-checkout="1" style="font-size: 12.5px; font-weight: 600; border-radius: 20px;">
+                    <div class="d-flex align-items-center justify-content-between mb-2 mt-5 gap-2" style="min-height: 32px; flex-wrap: nowrap;">
+                        <h5 class="mb-0 text-nowrap">Billing Address</h5>
+                        <a href="javascript:void(0)" class="add_new_bill_address_div open-address-modal btn btn-sm btn-outline-dark d-inline-flex align-items-center gap-2 py-1 px-3 {{ $UserBillAddressData->isNotEmpty() ? 'invisible' : '' }}" data-type="billing" data-action="add" data-is-checkout="1" style="font-size: 12.5px; font-weight: 600; border-radius: 20px; white-space: nowrap; transition: opacity 0.15s ease, visibility 0.15s ease;">
                             <i class="fa fa-plus-circle text-warning" style="font-size: 14px;"></i>
                             <span>Add New</span>
                         </a>
@@ -1075,9 +1079,9 @@
                                 type="checkbox" 
                                 name="same_address"
                                 value="1"
-                                id="sameAddress" style="transform: scale(1.3); margin-right: 10px; border: 1px solid #858584;"
+                                id="sameAddress" style="transform: scale(1.3); margin-right: 10px; border: 1px solid #858584; cursor: pointer;"
                             >
-                            <label class="form-check-label">
+                            <label class="form-check-label" for="sameAddress" style="cursor: pointer;">
                                 <span style="color: #858584; font-size:20px;">
                                     Same as shipping address.
                                 </span>
@@ -2901,30 +2905,55 @@
 
 {{-- sames address --}}
 <script>
-     document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function () {
         const sameAddressCheckbox = document.getElementById('sameAddress');
         const billingContainer = document.getElementById('billingAddressContainer');
         const addBillBtn = document.querySelector('.add_new_bill_address_div');
 
-        if (sameAddressCheckbox) {
+        function toggleBillingAddress() {
+            if (!sameAddressCheckbox) return;
             const isSame = sameAddressCheckbox.type === 'checkbox' ? sameAddressCheckbox.checked : (sameAddressCheckbox.value == '1');
+            const hasBilling = billingContainer && (billingContainer.querySelector('input[name="user_bill_address_id"]') !== null || billingContainer.querySelector('.address-group') !== null);
+
             if (isSame) {
                 if (billingContainer) billingContainer.style.display = 'none';
-                if (addBillBtn) addBillBtn.style.display = 'none';
-            }
-
-            sameAddressCheckbox.addEventListener('change', function () {
-                if (this.checked) {
-                    if (billingContainer) billingContainer.style.display = 'none';
-                    if (addBillBtn) addBillBtn.style.display = 'none';
-                    $('#billAddressEditForm').addClass('d-none');
-                    $('#billing_address_error').empty();
-                } else {
-                    if (billingContainer) billingContainer.style.display = 'block';
-                    if (addBillBtn) addBillBtn.style.display = 'inline-flex';
+                if (addBillBtn) {
+                    addBillBtn.classList.add('invisible');
+                    addBillBtn.style.setProperty('pointer-events', 'none', 'important');
+                    addBillBtn.style.setProperty('opacity', '0', 'important');
+                    addBillBtn.setAttribute('aria-hidden', 'true');
+                    addBillBtn.setAttribute('tabindex', '-1');
                 }
-            });
+                $('#billAddressEditForm').addClass('d-none');
+                $('#billing_address_error').empty();
+            } else {
+                if (billingContainer) billingContainer.style.display = 'block';
+                if (addBillBtn) {
+                    if (hasBilling) {
+                        addBillBtn.classList.add('invisible');
+                        addBillBtn.style.setProperty('pointer-events', 'none', 'important');
+                        addBillBtn.style.setProperty('opacity', '0', 'important');
+                        addBillBtn.setAttribute('aria-hidden', 'true');
+                        addBillBtn.setAttribute('tabindex', '-1');
+                    } else {
+                        addBillBtn.classList.remove('invisible');
+                        addBillBtn.classList.remove('d-none');
+                        addBillBtn.style.removeProperty('pointer-events');
+                        addBillBtn.style.removeProperty('opacity');
+                        addBillBtn.style.removeProperty('display');
+                        addBillBtn.removeAttribute('aria-hidden');
+                        addBillBtn.removeAttribute('tabindex');
+                    }
+                }
+            }
         }
+
+        if (sameAddressCheckbox) {
+            toggleBillingAddress();
+            sameAddressCheckbox.addEventListener('change', toggleBillingAddress);
+        }
+
+        window.toggleBillingAddress = toggleBillingAddress;
     });
 </script>
 

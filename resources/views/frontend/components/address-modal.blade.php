@@ -334,6 +334,7 @@ body.modal-open {
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-y !important;
     }
 }
 
@@ -445,6 +446,7 @@ body.modal-open {
         max-height: none !important;
         overflow: visible !important;
         padding: 0 0 16px 0 !important;
+        touch-action: pan-y !important;
     }
 
     /* Map Controls on Mobile */
@@ -5903,11 +5905,26 @@ body.modal-open {
             setTimeout(refreshMap, 150);
         });
 
-        // Point 6: Prevent background body from scrolling when mouse wheel / touch occurs inside or over modal
+        // Point 6: Prevent background body from scrolling when mouse wheel occurs over modal boundaries
         var addressModalEl = document.getElementById('addressModal');
         if (addressModalEl) {
+            function getScrollableModalContainer(target) {
+                var el = target;
+                while (el && el !== addressModalEl && el !== document.body) {
+                    if (el.scrollHeight > el.clientHeight + 2) {
+                        var style = window.getComputedStyle(el);
+                        var overflowY = style.overflowY;
+                        if (overflowY === 'auto' || overflowY === 'scroll') {
+                            return el;
+                        }
+                    }
+                    el = el.parentElement;
+                }
+                return null;
+            }
+
             addressModalEl.addEventListener('wheel', function(e) {
-                var scrollContainer = e.target.closest('.modal-form-col, .modal-body');
+                var scrollContainer = getScrollableModalContainer(e.target);
                 if (!scrollContainer) {
                     e.preventDefault();
                     return false;
@@ -5918,31 +5935,6 @@ body.modal-open {
                 if (atTop || atBottom) {
                     e.preventDefault();
                     return false;
-                }
-            }, { passive: false });
-
-            var touchStartY = 0;
-            addressModalEl.addEventListener('touchstart', function(e) {
-                if (e.touches && e.touches.length) {
-                    touchStartY = e.touches[0].clientY;
-                }
-            }, { passive: true });
-
-            addressModalEl.addEventListener('touchmove', function(e) {
-                var scrollContainer = e.target.closest('.modal-form-col, .modal-body');
-                if (!scrollContainer) {
-                    e.preventDefault();
-                    return false;
-                }
-                if (e.touches && e.touches.length) {
-                    var currentY = e.touches[0].clientY;
-                    var delta = touchStartY - currentY;
-                    var atTop = delta < 0 && scrollContainer.scrollTop <= 0;
-                    var atBottom = delta > 0 && (scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 1);
-                    if (atTop || atBottom) {
-                        e.preventDefault();
-                        return false;
-                    }
                 }
             }, { passive: false });
         }
