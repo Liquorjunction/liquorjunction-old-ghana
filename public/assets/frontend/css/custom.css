@@ -97,7 +97,7 @@ textarea,
 .loyalty-points-form-group input,
 .phone-number input,
 .input-group.phone-number input {
-    border-radius: 20px !important;
+    border-radius: 11px !important;
 }
 
 /* Give standard inputs comfortable horizontal padding for 20px curve */
@@ -184,8 +184,62 @@ textarea {
 .coupon-success-box,
 .reward-success-box,
 .address-box,
-.order-summary-block {
+.common-card,
+.account-address,
+.add-address,
+.address-listing .common-card,
+.account-sidebar,
+.order-summary-block,
+.order-summary-body,
+.checkout-form .address-group,
+.address-group {
     border-radius: 20px !important;
+}
+
+.order-summary-body {
+    border-radius: 20px !important;
+    overflow: hidden !important;
+}
+
+.checkout-form .address-group,
+.address-group {
+    border-radius: 20px !important;
+    overflow: hidden;
+}
+
+.card-payment-group {
+    border-radius: 20px !important;
+    overflow: hidden !important;
+}
+
+.card-payment-group .payment-group-block:first-child {
+    border-top-left-radius: 20px !important;
+    border-top-right-radius: 20px !important;
+}
+
+.card-payment-group .payment-group-block:last-of-type,
+.card-payment-group .payment-group-block:last-child {
+    border-bottom-left-radius: 20px !important;
+    border-bottom-right-radius: 20px !important;
+}
+
+.account-sidebar {
+    border-radius: 20px !important;
+    overflow: hidden;
+}
+
+.account-sidebar .sidebar-item .sidebar-link {
+    border-radius: 12px !important;
+}
+
+.small-cart-dropdown {
+    border-radius: 20px !important;
+    overflow: hidden !important;
+}
+
+.small-cart-dropdown > div:last-child {
+    border-bottom-left-radius: 20px !important;
+    border-bottom-right-radius: 20px !important;
 }
 
 /* 5. Cart & Order List Product Images */
@@ -245,6 +299,38 @@ textarea {
 .single-product .product-detail ul li {
     border-top: none !important;
 }
+
+/* ========================================================
+   9. Global Custom Scrollbar (Modern Sleek Slate Grey)
+   Applies consistent slim modern scrollbars across all pages,
+   dropdowns, modals, and containers.
+   ======================================================== */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+    transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Firefox standard scrollbar support */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
 
 
 

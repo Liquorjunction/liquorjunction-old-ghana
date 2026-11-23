@@ -17,6 +17,7 @@ class Setting extends Model
         'fax',
         'delivery_fee',
         'delivery_amount',
+        'guest_daily_order_limit',
         'currency_symbol',
         'timezone',
         'android_version',

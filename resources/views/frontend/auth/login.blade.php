@@ -60,12 +60,15 @@
                             <div class="col-12">
                                 <button type="submit"
                                     class="solid-button w-100">{{ @Helper::language('login_label') }}</button>
-                                                                    @php
-                                    $isCart = url()->previous() && str_contains(url()->previous(), 'cart') || str_contains(url()->previous(), 'product-details')
-;
+                                @php
+                                    $hasCartItems = !empty(session('cart_info')) 
+                                        || session()->has('buy_now_info') 
+                                        || session('checkout_value') == 1 
+                                        || request()->has('checkout')
+                                        || (url()->previous() && (str_contains(url()->previous(), 'cart') || str_contains(url()->previous(), 'checkout') || str_contains(url()->previous(), 'product')));
                                 @endphp
-                                @if ($isCart)
-                                <a style="margin-top: 15px;" href="{{ route('guest.login') }}" class="solid-button w-100">{{ $isCart ? 'Checkout as Guest' : 'Continue as Guest' }}</a>
+                                @if ($hasCartItems)
+                                    <a style="margin-top: 15px;" href="{{ route('checkout', ['mode' => 'guest']) }}" class="solid-button w-100">Checkout as Guest</a>
                                 @endif
                                 <div class="registration-social">
                                     <p class="text-sm grey-text">{{ @Helper::language('login_or_continue_with') }}</p>

@@ -193,8 +193,15 @@ class MojoPayController extends Controller
             'pack_size',
             'counter',
             'cart_info',
-            'guest_otp_user_id',
-            'otp_phone'
+            'is_guest_checkout',
+            'guest_shipping_address',
+            'guest_billing_address',
+            'guest_id',
+            'guest_email',
+            'guest_phone',
+            'guest_phone_code',
+            'guest_name',
+            'guest_token',
         ]);
     }
 

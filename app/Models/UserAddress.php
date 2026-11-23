@@ -9,6 +9,7 @@ class UserAddress extends Model
 {
     use HasFactory;
     protected $table = 'user_address';
+    protected $keyType = 'string';
 
     protected $fillable = [
         'user_id',

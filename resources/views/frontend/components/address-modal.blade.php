@@ -214,55 +214,27 @@ body.modal-open {
 
 
 #addressModal .modal-dialog {
-
     max-width: 1040px;
-
     width: 95%;
-
-    margin: 1rem auto;
-
+    margin: 10px auto;
 }
-
-
 
 #addressModal .modal-content {
-
     border-radius: 12px;
-
     overflow: hidden;
-
     box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
-
     border: 1px solid rgba(255, 255, 255, 0.15);
-
-    max-height: calc(100vh - 2rem);
-
-    display: flex;
-
-    flex-direction: column;
-
     background: #ffffff;
-
 }
-
-
 
 #addressModal .modal-header {
-
     padding: 7px 14px !important;
-
     border-top-left-radius: 12px;
-
     border-top-right-radius: 12px;
-
     flex-shrink: 0;
-
 }
 
-
-
-/* Point 2: Scrollbar elimination on standard screens */
-
+/* Scrollbar elimination on standard screens */
 #addressModal,
 #addressModal .modal-dialog,
 #addressModal .modal-content,
@@ -274,52 +246,18 @@ body.modal-open {
 }
 
 #addressModal .modal-body {
-
     flex: 1 1 auto;
-
-    overflow-y: auto;
-
-    overflow-x: hidden;
-
     background: #f8fafc;
-
     padding: 6px 12px !important;
-
-    scrollbar-width: thin;
-
 }
-
-
-
-#addressModal .modal-body::-webkit-scrollbar {
-
-    width: 5px;
-
-}
-
-#addressModal .modal-body::-webkit-scrollbar-track {
-
-    background: transparent;
-
-}
-
-#addressModal .modal-body::-webkit-scrollbar-thumb {
-
-    background: #cbd5e1;
-
-    border-radius: 4px;
-
-}
-
-
 
 @media (max-width: 991.98px) {
     #addressModal .modal-dialog {
         max-width: 95%;
-        margin: 0.5rem auto;
+        margin: 6px auto;
     }
     #addressModal .modal-content {
-        max-height: calc(100vh - 1rem);
+        max-height: calc(100vh - 12px);
         border-radius: 12px;
         display: flex;
         flex-direction: column;
@@ -356,10 +294,7 @@ body.modal-open {
     }
 }
 
-
-
 /* Rapido / Uber Style Fixed Center Pin Marker & Compact Map Container */
-
 .rapido-map-container {
     position: relative;
     width: 100%;
@@ -371,36 +306,109 @@ body.modal-open {
     background: #e5e7eb;
 }
 
-/* Fixed Map Column & Scrollable Form Column on Desktop */
+/* Responsive Dynamic Height Map Column & Scrollable Form Column on Desktop */
 @media (min-width: 992px) {
+    #addressModal .modal-dialog {
+        max-width: 1040px;
+        width: 95%;
+        margin: 10px auto !important;
+        height: min(720px, calc(100vh - 20px)) !important;
+        max-height: min(720px, calc(100vh - 20px)) !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    #addressModal .modal-content {
+        height: 100% !important;
+        max-height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        border-radius: 12px;
+        overflow: hidden !important;
+        background: #ffffff;
+    }
+    #addressModal .modal-header {
+        flex: 0 0 auto !important;
+        padding: 7px 14px !important;
+    }
+    #addressModal .modal-body {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        overflow-y: hidden !important;
+        overflow-x: hidden !important;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        padding: 6px 12px 10px 12px !important;
+    }
+    #addressModal .modal-body::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+    }
+    #addressModal .modal-body > .container-fluid {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+    }
+    .modal-type-pills-row {
+        flex: 0 0 auto !important;
+        margin-bottom: 6px !important;
+    }
+    .modal-content-row {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        height: 100% !important;
+        display: flex !important;
+        align-items: stretch !important;
+    }
     .modal-map-col {
         height: 100% !important;
-        min-height: 480px !important;
-        max-height: 520px !important;
-        position: sticky !important;
-        top: 0 !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
+        position: relative !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: flex-start !important;
     }
     .modal-map-col .rapido-map-container {
         flex: 1 1 auto !important;
-        height: 420px !important;
-        min-height: 400px !important;
-        max-height: 440px !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
         width: 100% !important;
+        position: relative !important;
+    }
+    .modal-map-col #modal_address_map {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
     }
     .modal-map-status-bar {
         flex: 0 0 auto !important;
-        min-height: 38px !important;
-        margin-top: 8px !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        max-height: 36px !important;
+        margin-top: 6px !important;
         width: 100% !important;
     }
     .modal-form-col {
-        max-height: 520px !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
         overflow-y: auto !important;
         overflow-x: hidden !important;
         scrollbar-width: thin;
+        padding-bottom: 24px !important;
     }
     .modal-form-col::-webkit-scrollbar {
         width: 5px;
@@ -547,6 +555,13 @@ body.modal-open {
     outline: none !important;
 }
 
+/* Google Maps Gesture handling overlay suppression */
+#modal_address_map .gm-style-pbc {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
 /* Location Status Bar Below Map */
 .modal-map-status-bar {
     background: #f8fafc;
@@ -598,25 +613,125 @@ body.modal-open {
 
 
 
-/* Point 3: 100% Full Width Floating location search dropdown on map */
+/* Modern Floating Location Search Bar over Map (Uber / Google Maps style) */
+.map-floating-search-wrapper {
+    position: absolute;
+    top: 4px;
+    left: 8px;
+    right: 8px;
+    z-index: 1050;
+    pointer-events: auto;
+}
 
+.map-floating-search-card {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    height: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    padding: 0 8px 0 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.map-floating-search-card:focus-within {
+    border-color: #f59e0b;
+    box-shadow: 0 2px 10px rgba(245, 158, 11, 0.22), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.map-search-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    flex-shrink: 0;
+    margin-right: 6px;
+}
+
+.map-search-icon-wrap svg {
+    width: 13px !important;
+    height: 13px !important;
+}
+
+.map-floating-search-input {
+    flex: 1 1 auto;
+    border: none !important;
+    outline: none !important;
+    background: transparent !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: #1e293b !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-width: 0 !important;
+    height: 28px !important;
+    line-height: 28px !important;
+    box-shadow: none !important;
+}
+
+.map-floating-search-input::placeholder {
+    color: #94a3b8 !important;
+    font-size: 11.5px !important;
+    font-weight: 400 !important;
+}
+
+.map-search-spinner-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+
+.map-search-clear-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #64748b;
+    border: none !important;
+    outline: none !important;
+    padding: 0;
+    margin-left: 4px;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.map-search-clear-btn svg {
+    width: 10px !important;
+    height: 10px !important;
+}
+
+.map-search-clear-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+/* 100% Full Width Floating location search dropdown on map */
 .map-search-dropdown {
     position: absolute;
-    top: 100%;
+    top: calc(100% + 3px);
     left: 0;
     right: 0;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
     background: #ffffff;
-    border-radius: 0 0 8px 8px;
-    max-height: 220px;
+    border-radius: 6px;
+    max-height: 200px;
     overflow-y: auto;
     overflow-x: hidden !important;
     z-index: 1060;
-    margin-top: 2px;
-    border: 1px solid #cbd5e1;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    margin-top: 0;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
 }
 
 .map-search-dropdown::-webkit-scrollbar {
@@ -1277,10 +1392,10 @@ body.modal-open {
 
 
                     <!-- Address Type Switcher -->
-
-
-
-                    <div class="row mb-1 modal-type-pills-row">
+                    @php
+                        $isModalGuest = !empty($isGuest) || (request('mode') === 'guest');
+                    @endphp
+                    <div class="row mb-1 modal-type-pills-row {{ $isModalGuest ? 'd-none' : '' }}">
 
 
 
@@ -1352,44 +1467,30 @@ body.modal-open {
 
 
 
-                                <!-- Point 3: Full Width Floating Location Search Bar over Map (Spanning 100% full width of map) -->
-
-                                <div class="map-floating-search-wrapper" style="position: absolute; top: 10px; left: 10px; right: 10px; z-index: 1050;">
-
-                                    <div class="input-group shadow-sm" style="border-radius: 8px; overflow: hidden; background: #ffffff; width: 100%;">
-
-                                        <span class="input-group-text bg-white border-end-0 py-1 px-2 text-muted" style="border-color: #cbd5e1;">
-
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-
+                                <!-- Modern Floating Location Search Bar over Map (Uber / Google Maps style) -->
+                                <div class="map-floating-search-wrapper">
+                                    <div class="map-floating-search-card">
+                                        <span class="map-search-icon-wrap">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="11" cy="11" r="8"></circle>
-
                                                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-
                                             </svg>
-
                                         </span>
-
-                                        <input type="text" id="map_location_search_input" class="form-control border-start-0 py-1 px-2" 
-
+                                        <input type="text" id="map_location_search_input" class="map-floating-search-input" 
                                                placeholder="Search location, street, or landmark on map..." 
-
-                                               autocomplete="off" 
-
-                                               style="font-size: 12px; border-color: #cbd5e1; box-shadow: none;">
-
-                                        <span class="input-group-text bg-white border-start-0 py-1 px-2 d-none" id="map_search_spinner" style="border-color: #cbd5e1;">
-
-                                            <span class="spinner-border spinner-border-sm text-warning" style="width: 13px; height: 13px;"></span>
-
+                                               autocomplete="off">
+                                        <span class="map-search-spinner-wrap d-none" id="map_search_spinner">
+                                            <span class="spinner-border spinner-border-sm text-warning" style="width: 14px; height: 14px; border-width: 2px;"></span>
                                         </span>
-
+                                        <button type="button" id="map_search_clear_btn" class="map-search-clear-btn d-none" title="Clear search" aria-label="Clear search">
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg>
+                                        </button>
                                     </div>
-
                                     <!-- Search Suggestions Dropdown for Map (100% full width of search bar and map) -->
-
-                                    <div id="map_search_suggestions" class="map-search-dropdown d-none shadow-lg"></div>
-
+                                    <div id="map_search_suggestions" class="map-search-dropdown d-none"></div>
                                 </div>
 
 
@@ -1954,7 +2055,7 @@ body.modal-open {
 
 
 
-                                        <div class="d-flex justify-content-end gap-2 pt-2 mt-auto border-top">
+                                        <div class="d-flex justify-content-end gap-2 pt-2 pb-3 mb-2 mt-auto border-top">
 
 
 
@@ -2408,6 +2509,13 @@ body.modal-open {
 
         }
 
+        if (regId) {
+            $('#modal_region_id').val(regId);
+        }
+        if (areaId) {
+            $('#modal_area_id').val(areaId);
+        }
+
     }
 
     // State Variables
@@ -2562,11 +2670,21 @@ body.modal-open {
 
         $('#addressModal .form-control, #addressModal .form-select').removeClass('is-invalid');
 
-        $('#modal_address_id').val(d.id || '');
-
+        var isGuestMode = (typeof window.isGuestClient !== 'undefined' && window.isGuestClient) || (window.location.search.indexOf('mode=guest') !== -1);
+        var targetId = d.id;
+        if (isGuestMode && (!targetId || targetId === '0' || targetId === 0)) {
+            targetId = (type === 'shipping') ? 'guest' : 'guest_bill';
+        }
+        $('#modal_address_id').val(targetId || '');
         $('#modal_action_type').val('edit');
 
-        $('#addressModalLabel').text(type === 'shipping' ? 'Edit Shipping Address' : 'Edit Billing Address');
+        var action = $('#modal_action_type').val() || 'edit';
+        if (isGuestMode) {
+            $('.modal-type-pills-row').addClass('d-none');
+            $('#addressModalLabel').text(action === 'edit' ? 'Edit Shipping / Billing Address' : 'Add Shipping / Billing Address');
+        } else {
+            $('#addressModalLabel').text(type === 'shipping' ? 'Edit Shipping Address' : 'Edit Billing Address');
+        }
 
 
 
@@ -2659,6 +2777,13 @@ body.modal-open {
 
             $('#modal_area_id').html(areaHtml);
 
+        }
+
+        if (regId) {
+            $('#modal_region_id').val(regId);
+        }
+        if (areaId) {
+            $('#modal_area_id').val(areaId);
         }
 
 
@@ -2826,18 +2951,15 @@ body.modal-open {
 
 
 
-        if (!id) {
-
-            if (type === 'shipping') {
-
+        var isGuestMode = (typeof isGuestClient !== 'undefined' && isGuestClient) || (window.location.search.indexOf('mode=guest') !== -1);
+        if (!id || id === '0' || id === 0) {
+            if (isGuestMode) {
+                id = (type === 'shipping') ? 'guest' : 'guest_bill';
+            } else if (type === 'shipping') {
                 id = modalActiveIds.shipping || $('input[name="address_radio"]:checked').val() || $('.open-address-modal[data-type="shipping"][data-action="edit"]').first().data('id') || '';
-
             } else {
-
                 id = modalActiveIds.billing || $('#user_bill_address_id').val() || $('.open-address-modal[data-type="billing"][data-action="edit"]').first().data('id') || '';
-
             }
-
         }
 
 
@@ -2850,11 +2972,25 @@ body.modal-open {
 
             $('#modal_address_id').val('');
 
-            $('#addressModalLabel').text(type === 'shipping' ? '{{ @Helper::language("add_address") }}' : 'Add Billing Address');
+            var action = $('#modal_action_type').val() || 'add';
+            var isGuestMode = (typeof window.isGuestClient !== 'undefined' && window.isGuestClient) || (window.location.search.indexOf('mode=guest') !== -1);
+            if (isGuestMode) {
+                $('.modal-type-pills-row').addClass('d-none');
+                $('#addressModalLabel').text(action === 'edit' ? 'Edit Shipping / Billing Address' : 'Add Shipping / Billing Address');
+            } else {
+                $('#addressModalLabel').text(type === 'shipping' ? '{{ @Helper::language("add_address") }}' : 'Add Billing Address');
+            }
 
-            $('#modal_name').val('');
+            var defaultGuestName = ($('#userName').length && $('#userName').val() !== 'Guest User' ? $('#userName').val().trim() : '');
+            var defaultGuestPhone = ($('#guest_phone').length ? ($('#guest_phone').val() || '').trim() : '');
+            var defaultGuestPhoneCode = ($('#guest_phone_code').length ? ($('#guest_phone_code').val() || '233') : '233');
 
-            $('#modal_phone').val('');
+            $('#modal_name').val(defaultGuestName);
+
+            $('#modal_phone').val(defaultGuestPhone);
+            if (defaultGuestPhoneCode) {
+                $('#modal_phone_code').val(defaultGuestPhoneCode);
+            }
 
             $('#modal_city').val('');
 
@@ -2910,9 +3046,12 @@ body.modal-open {
 
 
 
+        var isGuestMode = (typeof isGuestClient !== 'undefined' && isGuestClient) || (window.location.search.indexOf('mode=guest') !== -1);
+        var fetchUrl = urlGetAddressDetailsBase + '/' + type + '/' + id + (isGuestMode ? '?mode=guest' : '');
+
         $.ajax({
 
-            url: urlGetAddressDetailsBase + '/' + type + '/' + id,
+            url: fetchUrl,
 
             type: 'GET',
 
@@ -2924,9 +3063,10 @@ body.modal-open {
 
                 $('#btn_save_spinner').addClass('d-none');
 
-                if (res && res.success && res.data) {
+                var addressData = res ? (res.data || res.address) : null;
+                if (res && res.success && addressData) {
 
-                    var d = res.data;
+                    var d = addressData;
 
                     d._regions = res.regions;
 
@@ -3055,7 +3195,13 @@ body.modal-open {
 
             }
 
-            $('#addressModalLabel').text(action === 'edit' ? 'Edit Shipping Address' : '{{ @Helper::language("add_address") }}');
+            var isGuestMode = (typeof window.isGuestClient !== 'undefined' && window.isGuestClient) || (window.location.search.indexOf('mode=guest') !== -1);
+            if (isGuestMode) {
+                $('.modal-type-pills-row').addClass('d-none');
+                $('#addressModalLabel').text(action === 'edit' ? 'Edit Shipping / Billing Address' : 'Add Shipping / Billing Address');
+            } else {
+                $('#addressModalLabel').text(action === 'edit' ? 'Edit Shipping Address' : '{{ @Helper::language("add_address") }}');
+            }
 
         } else {
 
@@ -3132,6 +3278,7 @@ body.modal-open {
 
                 if (d.map_search_input) {
                     $('#map_location_search_input').val(d.map_search_input);
+                    updateMapSearchClearBtn();
                 }
 
             } else {
@@ -3719,6 +3866,7 @@ body.modal-open {
 
 
                 addressMap = new google.maps.Map(mapDiv, {
+                    gestureHandling: 'greedy',
 
 
 
@@ -3938,9 +4086,13 @@ body.modal-open {
 
         if (usingLeaflet && leafletMap) {
 
+            try { leafletMap.invalidateSize(); } catch(e){}
+
             leafletMap.setView([lat, lng], leafletMap.getZoom() || 15, { animate: false });
 
         } else if (addressMap) {
+
+            try { google.maps.event.trigger(addressMap, 'resize'); } catch(e){}
 
             addressMap.setCenter({ lat: lat, lng: lng });
 
@@ -4059,11 +4211,22 @@ body.modal-open {
         return uniqueParts.join(', ');
     }
 
+    function updateMapSearchClearBtn() {
+        var val = ($('#map_location_search_input').val() || '').trim();
+        if (val.length > 0) {
+            $('#map_search_clear_btn').removeClass('d-none');
+        } else {
+            $('#map_search_clear_btn').addClass('d-none');
+        }
+    }
+    window.updateMapSearchClearBtn = updateMapSearchClearBtn;
+
     function updateMapSearchInputAddress(addressText) {
         if (!addressText) return;
         // If user already explicitly picked an address from search suggestions and has not moved the map, retain it!
         if (userChosenAddress) {
             $('#map_location_search_input').val(userChosenAddress);
+            updateMapSearchClearBtn();
             $('#map_search_spinner').addClass('d-none');
             return;
         }
@@ -4071,6 +4234,7 @@ body.modal-open {
         if (!formatted) return;
         if (!$('#map_location_search_input').is(':focus')) {
             $('#map_location_search_input').val(formatted);
+            updateMapSearchClearBtn();
         }
         $('#map_search_spinner').addClass('d-none');
     }
@@ -4554,11 +4718,23 @@ body.modal-open {
 
 
         // Task 2: Map location search bar events (over the map)
+        $('#map_location_search_input').on('input change keyup', function() {
+            updateMapSearchClearBtn();
+        });
+
+        $(document).on('click', '#map_search_clear_btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $('#map_location_search_input').val('').focus();
+            updateMapSearchClearBtn();
+            $('#map_search_suggestions').addClass('d-none').empty();
+            $('#map_search_spinner').addClass('d-none');
+            userChosenAddress = null;
+        });
 
         $('#map_location_search_input').on('input', function() {
-
             userChosenAddress = null;
-
+            updateMapSearchClearBtn();
             var query = $(this).val().trim();
 
             if (query.length < 3) {
@@ -4900,6 +5076,7 @@ body.modal-open {
                 userChosenAddress = formatUserFriendlyAddress(selectedOptionText);
 
                 $('#map_location_search_input').val(userChosenAddress);
+                updateMapSearchClearBtn();
 
                 hasLocationBeenSet = true;
 
@@ -4931,6 +5108,7 @@ body.modal-open {
                             processGoogleGeocodeResult(res[0], lat, lng, true);
 
                             $('#map_location_search_input').val(userChosenAddress);
+                updateMapSearchClearBtn();
 
                         } else {
 
@@ -5071,6 +5249,7 @@ body.modal-open {
                             userChosenAddress = formatUserFriendlyAddress(selectedOptionText);
 
                             $('#map_location_search_input').val(userChosenAddress);
+                updateMapSearchClearBtn();
 
                             hasLocationBeenSet = true;
 
@@ -5087,6 +5266,7 @@ body.modal-open {
                             processReverseGeocodeResult(item, lat, lon, true);
 
                             $('#map_location_search_input').val(userChosenAddress);
+                updateMapSearchClearBtn();
 
                         });
 
@@ -5667,6 +5847,11 @@ body.modal-open {
         action = action || 'add';
         id = id || '';
 
+        var isGuestMode = (typeof isGuestClient !== 'undefined' && isGuestClient) || (window.location.search.indexOf('mode=guest') !== -1);
+        if (isGuestMode && action === 'edit' && (!id || id === '0' || id === 0)) {
+            id = (type === 'shipping') ? 'guest' : 'guest_bill';
+        }
+
         // If initial lat/lng was passed directly from button data attributes, apply immediately!
         if (initialLat && initialLng) {
             var pLat = parseFloat(initialLat);
@@ -5729,6 +5914,10 @@ body.modal-open {
 
 
 
+        // Reset form first so form.reset() does not wipe out our hidden parameters
+        $('#unified_address_form')[0].reset();
+        $('#unified_address_form').removeClass('was-validated');
+
         $('#modal_address_id').val(id);
 
         $('#modal_address_type').val(type);
@@ -5736,6 +5925,12 @@ body.modal-open {
         $('#modal_action_type').val(action);
 
         $('#modal_checkout_page').val(isCheckout);
+
+        var isGuestMode = (typeof window.isGuestClient !== 'undefined' && window.isGuestClient) || (window.location.search.indexOf('mode=guest') !== -1);
+        if (isGuestMode) {
+            $('.modal-type-pills-row').addClass('d-none');
+            $('#addressModalLabel').text(action === 'edit' ? 'Edit Shipping / Billing Address' : 'Add Shipping / Billing Address');
+        }
 
         $('#modal_latitude').val('');
 
@@ -5774,12 +5969,9 @@ body.modal-open {
         $('#map_search_suggestions').addClass('d-none').empty();
 
         $('#map_location_search_input').val('');
+        updateMapSearchClearBtn();
 
 
-
-        // Reset form
-        $('#unified_address_form')[0].reset();
-        $('#unified_address_form').removeClass('was-validated');
 
         window.modalAddressCache = { shipping: null, billing: null };
 
@@ -5903,6 +6095,21 @@ body.modal-open {
             };
             refreshMap();
             setTimeout(refreshMap, 150);
+            setTimeout(refreshMap, 350);
+        });
+
+        var modalResizeTimer;
+        $(window).on('resize', function() {
+            if (isAddressModalOpen) {
+                clearTimeout(modalResizeTimer);
+                modalResizeTimer = setTimeout(function() {
+                    if (usingLeaflet && leafletMap) {
+                        try { leafletMap.invalidateSize(); } catch(e){}
+                    } else if (addressMap) {
+                        try { google.maps.event.trigger(addressMap, 'resize'); } catch(e){}
+                    }
+                }, 120);
+            }
         });
 
         // Point 6: Prevent background body from scrolling when mouse wheel occurs over modal boundaries
@@ -6202,13 +6409,11 @@ body.modal-open {
 
 
 
+            var isGuestMode = (typeof window.isGuestClient !== 'undefined' && window.isGuestClient) || (window.location.search.indexOf('mode=guest') !== -1);
             var payload = {
 
-
-
-                _token: csrfToken
-
-
+                _token: csrfToken,
+                mode: isGuestMode ? 'guest' : ''
 
             };
 
@@ -6426,9 +6631,20 @@ body.modal-open {
 
                     if (res && (res.success === true || res.success === 'true')) {
 
+                        window.modalAddressCache = { shipping: null, billing: null };
                         $('#addressModal').modal('hide');
 
-                        if (isCheckout === 1 && typeof refreshCheckoutAddresses === 'function') {
+                        // Sync contact details if guest hasn't typed them yet
+                        var rawModalName = ($('#modal_name').val() || '').trim();
+                        if (rawModalName) {
+                            $('#userName').val(rawModalName);
+                        }
+                        if ($('#guest_phone').length && !$('#guest_phone').val().trim()) {
+                            $('#guest_phone').val($('#modal_phone').val() || '');
+                        }
+
+                        var onCheckoutPage = (isCheckout === 1) || (window.location.pathname.indexOf('checkout') !== -1) || ($('#billingAddressContainer').length > 0) || (typeof refreshCheckoutAddresses === 'function');
+                        if (onCheckoutPage && typeof refreshCheckoutAddresses === 'function') {
                             refreshCheckoutAddresses(res.id, type, action);
                         } else {
                             window.location.reload();
@@ -6549,7 +6765,13 @@ body.modal-open {
 
 
 
-            var id = $(this).data('id') || '';
+            var id = $(this).data('id') || $(this).attr('data-id') || '';
+            if (id === 0 || id === '0') {
+                var isGuestMode = (typeof window.isGuestClient !== 'undefined' && window.isGuestClient) || (window.location.search.indexOf('mode=guest') !== -1);
+                if (isGuestMode) {
+                    id = (type === 'shipping') ? 'guest' : 'guest_bill';
+                }
+            }
 
 
 

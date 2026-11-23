@@ -414,7 +414,8 @@ class CatalogController extends Controller
             $request->get('categories',
             $request->get('category_id',
             $request->get('category',
-            $request->get('id')))))
+            $request->get('cid',
+            $request->get('id'))))))
         );
 
         $rawSubcats = $this->normalizeArray(
@@ -790,7 +791,9 @@ class CatalogController extends Controller
             }
 
             $cards[] = [
+                'id' => (string)$row->id,
                 'product_id' => (string)$row->id,
+                'product_name' => (string)($row->product_name ?? ''),
                 'product_title' => (string)($row->product_name ?? ''),
                 'product_image' => $imagePath,
                 'category_id' => (string)$row->category_id,

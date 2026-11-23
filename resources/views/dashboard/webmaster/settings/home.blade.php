@@ -515,6 +515,11 @@
         }
 
         function minMaxDyration(){
+            var guestDailyLimit = $("[name='guest_daily_order_limit']").val();
+            if(guestDailyLimit !== '' && guestDailyLimit !== null && (parseInt(guestDailyLimit) < 0 || isNaN(guestDailyLimit))){
+                alert("Guest Daily Order Limit must be 0 or greater.");
+                return false;
+            }
             var min = $("[name='min_duration']").val();
             var max = $("[name='max_duration']").val();
             if(min != '' && min != null && max != '' && max != null){

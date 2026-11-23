@@ -9,6 +9,7 @@ class UserBillAddress extends Model
 {
     use HasFactory;
     protected $table = 'user_bill_address';
+    protected $keyType = 'string';
 
     protected $fillable = [
         'user_id',

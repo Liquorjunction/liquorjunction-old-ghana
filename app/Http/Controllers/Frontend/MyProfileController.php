@@ -455,7 +455,7 @@ class MyProfileController extends Controller
     {
         $user_id = $this->user_id;
         $checkout_page = @$request->checkout_page;
-        $isGuest = session()->get('is_guest_checkout') || empty($user_id);
+        $isGuest = empty($user_id) || $request->input('mode') === 'guest';
 
         $check = $this->validateAndAuthorizeAddressData($request, false);
         if (!$check['valid']) {
@@ -538,7 +538,7 @@ class MyProfileController extends Controller
     public function storeBillAddress(Request $request)
     {
         $user_id = $this->user_id;
-        $isGuest = session()->get('is_guest_checkout') || empty($user_id);
+        $isGuest = empty($user_id) || $request->input('mode') === 'guest';
 
         $check = $this->validateAndAuthorizeAddressData($request, true);
         if (!$check['valid']) {
@@ -620,7 +620,7 @@ class MyProfileController extends Controller
     public function updateAddress(Request $request)
     {   
         $user_id = $this->user_id;
-        $isGuest = session()->get('is_guest_checkout') || empty($user_id) || $request->input('edit_address_id') === 'guest';
+        $isGuest = empty($user_id) || $request->input('mode') === 'guest' || $request->input('edit_address_id') === 'guest' || $request->input('edit_address_id') === '0' || $request->input('edit_address_id') === 0;
 
         $check = $this->validateAndAuthorizeAddressData($request, false);
         if (!$check['valid']) {
@@ -660,6 +660,9 @@ class MyProfileController extends Controller
             ];
 
             session()->put('guest_shipping_address', $guestAddress);
+            session()->put('guest_name', $d['name']);
+            session()->put('guest_phone', $d['phone']);
+            session()->put('guest_phone_code', $d['phonecode']);
             \RealRashid\SweetAlert\Facades\Alert::success(\Helper::language('success'), __('backend.user_address_update_successfully'));
             return response()->json(['success' => 'true', 'id' => 'guest', 'type' => 'shipping', 'action' => 'edit', 'is_guest' => true]);
         }
@@ -703,12 +706,44 @@ class MyProfileController extends Controller
     public function updateBillAddress(Request $request)
     {   
         $user_id = $this->user_id;
+        $isGuest = empty($user_id) || $request->input('mode') === 'guest' || $request->input('edit_bill_address_id') === 'guest_bill' || $request->input('edit_bill_address_id') === '0' || $request->input('edit_bill_address_id') === 0;
 
         $check = $this->validateAndAuthorizeAddressData($request, true);
         if (!$check['valid']) {
             return response()->json(['success' => false, 'message' => $check['message']], 422);
         }
         $d = $check['data'];
+
+        if ($isGuest) {
+            $area = \App\Models\Area::with(['region.country'])->find($d['bill_area_id'] ?? $d['area_id']);
+            $region = $area ? $area->region : \App\Models\Region::find($d['bill_region_id'] ?? $d['region_id']);
+            $country = $region ? $region->country : \App\Models\Country::find($d['bill_country_id'] ?? $d['country_id']);
+
+            $guestBill = [
+                'id'              => 'guest_bill',
+                'user_id'         => null,
+                'bill_name'       => $d['bill_name'],
+                'bill_phonecode'  => $d['bill_phonecode'],
+                'bill_phone'      => $d['bill_phone'],
+                'bill_zip_code'   => $d['bill_zip_code'],
+                'bill_city'       => $d['bill_city'],
+                'bill_address'    => $d['bill_address'],
+                'bill_country_id' => $d['bill_country_id'],
+                'bill_region_id'  => $d['bill_region_id'],
+                'bill_area_id'    => $d['bill_area_id'],
+                'bill_latitude'   => $d['bill_latitude'],
+                'bill_longitude'  => $d['bill_longitude'],
+                'default'         => 1,
+                'status'          => 1,
+                'country_name'    => $country ? $country->name : '',
+                'region_title'    => $region ? $region->title : '',
+                'area_title'      => $area ? $area->title : '',
+            ];
+
+            session()->put('guest_billing_address', $guestBill);
+            \RealRashid\SweetAlert\Facades\Alert::success(\Helper::language('success'), __('backend.user_address_update_successfully'));
+            return response()->json(['success' => 'true', 'id' => 'guest_bill', 'type' => 'billing', 'action' => 'edit', 'is_guest' => true]);
+        }
 
         // Strict ownership check (prevent IDOR tampering)
         $edit_address = UserBillAddress::where('user_id', $user_id)->where('id', $request->edit_bill_address_id)->first();
@@ -757,11 +792,14 @@ class MyProfileController extends Controller
     public function getAddressDetails($type, $id)
     {
         $user_id = $this->user_id;
-        $isGuest = session()->get('is_guest_checkout') || $id === 'guest' || $id === 'guest_bill' || empty($user_id);
+        $isGuest = empty($user_id) || $id === 'guest' || $id === 'guest_bill' || $id === '0' || $id === 0 || request('mode') === 'guest';
 
         if ($isGuest) {
             $sessionKey = ($type == 'bill' || $type == 'billing' || $id === 'guest_bill') ? 'guest_billing_address' : 'guest_shipping_address';
             $addrData = session()->get($sessionKey);
+            if (!$addrData && $sessionKey === 'guest_billing_address') {
+                $addrData = session()->get('guest_shipping_address');
+            }
             if (!$addrData) {
                 return response()->json(['success' => false, 'message' => 'Address not found'], 404);
             }
@@ -777,6 +815,7 @@ class MyProfileController extends Controller
 
             return response()->json([
                 'success'            => true,
+                'data'               => $address,
                 'address'            => $address,
                 'regions'            => $regions,
                 'areas'              => $areas,
@@ -939,17 +978,6 @@ class MyProfileController extends Controller
             'current_lat',
             'current_long',
             'user_id',
-            // 🛑 GUEST USER SESSIONS FORGET:
-            'is_guest_checkout',
-            'guest_id',
-            'guest_email',
-            'guest_phone',
-            'guest_phone_code',
-            'guest_name',
-            'guest_token',
-            'guest_shipping_address',
-            'guest_billing_address',
-            'guest_delivery_address',
             'cart_info',
         ]);
 

@@ -13,13 +13,14 @@
     $countryName = $data->country ? $data->country->name : ($data->country_name ?? '');
     $regionTitle = $data->region ? $data->region->title : ($data->region_title ?? ($data->state ?? ''));
     $areaTitle = $data->area ? $data->area->title : ($data->area_title ?? ($data->city ?? ''));
+    $addressId = (!empty($data->id) && $data->id !== '0') ? $data->id : 'guest';
 @endphp
-<div class="address-group radio-group {{ $key >= 3 ? 'extra-shipping-address d-none' : '' }}" id="addressGroupItem_{{$data->id}}">
+<div class="address-group radio-group {{ $key >= 3 ? 'extra-shipping-address d-none' : '' }}" id="addressGroupItem_{{$addressId}}">
     <div class="radio-btn w-100" style="min-width: 0;">
-        <input id="radioAddress{{$data->id}}" 
+        <input id="radioAddress{{$addressId}}" 
             {{ $isSelected ? 'checked' : "" }} 
             type="radio" 
-            value="{{$data->id}}" 
+            value="{{$addressId}}" 
             name="address_radio" 
             class="addressRadioCurrent" 
             data-has-location="{{ $hasMapLocation ? '1' : '0' }}"
@@ -36,7 +37,7 @@
             data-lat="{{ $data->latitude ?? '' }}"
             data-lng="{{ $data->longitude ?? '' }}"
         />
-        <label onclick="checkDeliveryAddressByArea('{{$data->id}}')" for="radioAddress{{$data->id}}"></label>
+        <label onclick="checkDeliveryAddressByArea('{{$addressId}}')" for="radioAddress{{$addressId}}"></label>
         <div class="detail w-100" style="min-width: 0;">
             <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
                 <span class="fw-bold text-dark text-truncate" style="max-width: 240px; font-weight: 700;" title="{{ $data->name }}">{{ $data->name }}</span>
@@ -56,7 +57,7 @@
                         <i class="fa fa-exclamation-triangle text-danger me-1"></i>
                         <strong>Location not set on map!</strong>
                     </span>
-                    <a href="javascript:void(0)" class="btn btn-xs py-0 px-2 fw-bold text-dark open-address-modal" data-type="shipping" data-action="edit" data-id="{{@$data->id}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" style="background: #fbb516; font-size: 10.5px; border-radius: 4px; white-space: nowrap;">
+                    <a href="javascript:void(0)" class="btn btn-xs py-0 px-2 fw-bold text-dark open-address-modal" data-type="shipping" data-action="edit" data-id="{{$addressId}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" style="background: #fbb516; font-size: 10.5px; border-radius: 4px; white-space: nowrap;">
                         <i class="fa fa-map-marker-alt me-1"></i>Set on Map
                     </a>
                 </div>
@@ -65,13 +66,13 @@
             <div class="mt-1">
                 <input type="hidden" name="checkout_page" id="checkout_page" value="1">
                 <input type="hidden" name="checkout_address" id="checkout_address" value="1">
-                <input type="hidden" name="address_id" id="address_id" value="{{@$data->id}}">
-                <input type="hidden" class="user_address_id" name="user_address_id" value="{{@$data->id}}">
+                <input type="hidden" name="address_id" id="address_id" value="{{$addressId}}">
+                <input type="hidden" class="user_address_id" name="user_address_id" value="{{$addressId}}">
             </div>
         </div>
     </div>
     
-    <a href="javascript:void(0)" class="btn-card-action btn-card-edit open-address-modal EditAddress" data-type="shipping" data-action="edit" data-id="{{@$data->id}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" title="Edit Address">
+    <a href="javascript:void(0)" class="btn-card-action btn-card-edit open-address-modal EditAddress" data-type="shipping" data-action="edit" data-id="{{$addressId}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" title="Edit Address">
         <i class="fa fa-pen" style="font-size: 11px;"></i>
     </a>
 </div>

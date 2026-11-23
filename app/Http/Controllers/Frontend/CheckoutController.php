@@ -69,7 +69,10 @@ class CheckoutController extends Controller
 
     public function Checkout(Request $request)
     {
-        $isGuest = session()->get('is_guest_checkout', false);
+        if ($request->get('mode') !== 'guest') {
+            Session::forget('is_guest_checkout');
+        }
+        $isGuest = $request->get('mode') === 'guest';
         $user_id = Auth::guard('user')->id() ?: $this->user_id;
 
         $is_buy_now = 0;
@@ -662,7 +665,7 @@ class CheckoutController extends Controller
     public function getCheckoutAddresses(Request $request)
     {
         $user_id = $this->user_id;
-        $isGuest = session()->get('is_guest_checkout') || empty($user_id);
+        $isGuest = $request->get('mode') === 'guest' || empty($user_id) || $request->input('selected_shipping_id') === 'guest' || session()->get('is_guest_checkout');
 
         if ($isGuest) {
             $guestAddrData = session()->get('guest_shipping_address');
@@ -706,9 +709,16 @@ class CheckoutController extends Controller
                 $UserBillAddressData = collect([$guestBill]);
             }
 
+            $userObj = (object)[
+                'first_name'    => session('guest_name', 'Guest'),
+                'last_name'     => 'User',
+                'email'         => session('guest_email', ''),
+                'is_guest_user' => 1
+            ];
+
             $billingHtml = view('frontend.checkout.partials.billing-address-list', [
                 'UserBillAddressData' => $UserBillAddressData,
-                'user' => (object)['first_name' => session('guest_name', 'Guest'), 'last_name' => 'User', 'email' => session('guest_email', '')]
+                'user'                => $userObj
             ])->render();
 
             return response()->json([
@@ -1167,7 +1177,7 @@ class CheckoutController extends Controller
     {
         $user_id = $this->user_id;
         $address_id = $request->address_id;
-        if ($address_id === 'guest' || session()->get('is_guest_checkout') || empty($user_id)) {
+        if ($address_id === 'guest' || empty($user_id) || $request->get('mode') === 'guest') {
             return response()->json(['success' => true]);
         }
         // dd($address_id);
@@ -1202,7 +1212,7 @@ class CheckoutController extends Controller
         $user_id = $this->user_id;
         $user_address_id = $request->user_address_id;
         $coupon_code_id = $request->coupon_code_id;
-        $isGuest = session()->get('is_guest_checkout') || empty($user_id);
+        $isGuest = $request->get('mode') === 'guest' || empty($user_id);
 
         //For buy-now
         $is_buy_now = $request->is_buy_now;
@@ -1645,7 +1655,72 @@ class CheckoutController extends Controller
         $currentTotal = $request->currentTotal;
         $isSameAddress = filter_var($request->input('isSameAddress'), FILTER_VALIDATE_BOOLEAN);
 
-        $isGuest = session()->get('is_guest_checkout') || empty($user_id) || $user_address_id === 'guest';
+        $isGuest = $request->input('mode') === 'guest' || empty($user_id) || $user_address_id === 'guest';
+
+        // Check Guest Daily Order Limit
+        if ($isGuest) {
+            $guestId = session()->get('guest_id');
+            $guestEmail = strtolower(trim((string)$request->input('guest_email', $request->input('email', session()->get('guest_email')))));
+            $guestPhone = trim((string)$request->input('guest_phone', $request->input('phone', session()->get('guest_phone'))));
+            $guestName  = trim((string)$request->input('guest_name', $request->input('name', session()->get('guest_name', 'Guest User'))));
+            $guestPhoneCode = $request->input('guest_phone_code', $request->input('phone_code', session()->get('guest_phone_code', '233')));
+            $guestShippingAddr = session()->get('guest_shipping_address');
+
+            if (empty($guestEmail) && !empty($guestShippingAddr['email'])) {
+                $guestEmail = $guestShippingAddr['email'];
+            }
+            if (empty($guestPhone) && !empty($guestShippingAddr['phone'])) {
+                $guestPhone = $guestShippingAddr['phone'];
+            }
+            if ((empty($guestName) || $guestName === 'Guest User') && !empty($guestShippingAddr['name'])) {
+                $guestName = $guestShippingAddr['name'];
+            }
+
+            if (empty($guestEmail)) {
+                return response()->json([
+                    'error'   => true,
+                    'message' => @Helper::language('email_field_required') ?: 'Email field is required',
+                    'type'    => 'guest_email',
+                ]);
+            }
+            if (!filter_var($guestEmail, FILTER_VALIDATE_EMAIL)) {
+                return response()->json([
+                    'error'   => true,
+                    'message' => @Helper::language('enter_valid_email_validation') ?: 'Please enter a valid email',
+                    'type'    => 'guest_email',
+                ]);
+            }
+            if (empty($guestPhone)) {
+                return response()->json([
+                    'error'   => true,
+                    'message' => @Helper::language('phone_number_field_is_required') ?: 'Phone number field is required',
+                    'type'    => 'guest_phone',
+                ]);
+            }
+            if (strlen($guestPhone) < 8) {
+                return response()->json([
+                    'error'   => true,
+                    'message' => @Helper::language('phone_number_min_max') ?: 'Phone number field should appear 8 to 15 digits',
+                    'type'    => 'guest_phone',
+                ]);
+            }
+
+            if (!empty($guestEmail)) session()->put('guest_email', $guestEmail);
+            if (!empty($guestPhone)) session()->put('guest_phone', $guestPhone);
+            if (!empty($guestName)) session()->put('guest_name', $guestName);
+            if (!empty($guestPhoneCode)) session()->put('guest_phone_code', $guestPhoneCode);
+
+            $limitCheck = app(\App\Services\GuestUserService::class)->checkDailyOrderLimit($guestId, $guestEmail, $guestPhone);
+            if (!$limitCheck['allowed']) {
+                return response()->json([
+                    'error'   => true,
+                    'message' => $limitCheck['message'],
+                    'type'    => 'daily_limit',
+                    'limit'   => $limitCheck['limit'],
+                    'count'   => $limitCheck['count'],
+                ]);
+            }
+        }
 
         //If User apply promo code
         if (!empty($coupon_code_id)) {
@@ -2058,16 +2133,19 @@ class CheckoutController extends Controller
 
         if ($isGuest) {
             $guestId = session()->get('guest_id');
-            if (!$guestId) {
+            if (!$guestId || empty(session()->get('guest_email')) || $guestEmail !== session()->get('guest_email')) {
                 try {
                     $guestUserService = app(\App\Services\GuestUserService::class);
                     $guest = $guestUserService->createOrUpdateGuest([
-                        'email' => session()->get('guest_email'),
-                        'name'  => session()->get('guest_name') ?: ($guestAddrData['name'] ?? 'Guest User'),
-                        'phone' => session()->get('guest_phone'),
+                        'email' => $guestEmail ?: null,
+                        'name'  => $guestName ?: ($guestAddrData['name'] ?? 'Guest User'),
+                        'phone' => $guestPhone ?: ($guestAddrData['phone'] ?? null),
                     ]);
                     $guestId = $guest->id;
                     session()->put('guest_id', $guestId);
+                    if (!empty($guest->token)) {
+                        \Cookie::queue(\Cookie::make('guest_user_token', $guest->token, 60 * 24 * 60));
+                    }
                 } catch (\Throwable $e) {
                     \Log::error('Error recording guest user in CheckoutController: ' . $e->getMessage());
                     $guestId = null;
@@ -2146,14 +2224,13 @@ class CheckoutController extends Controller
         }
 
         if ($isGuest) {
-            $guestName = !empty($guestAddrData['name']) ? $guestAddrData['name'] : session()->get('guest_name', 'Guest User');
-            $guestPhone = session()->get('guest_phone');
-            $guestPhoneCode = session()->get('guest_phone_code') ?: ($guestAddrData['phonecode'] ?? '233');
-            $guestEmail = session()->get('guest_email');
+            $guestDisplayName = $guestName ?: (!empty($guestAddrData['name']) ? $guestAddrData['name'] : 'Guest User');
+            $guestMobileNumber = !empty($guestPhone) ? ('+' . $guestPhoneCode . ' ' . $guestPhone) : (!empty($guestAddrData['phone']) ? ('+' . ($guestAddrData['phonecode'] ?? '233') . ' ' . $guestAddrData['phone']) : '');
+            $guestEmailAddress = $guestEmail ?: ($guestAddrData['email'] ?? null);
 
-            $order_info->customer_name = $guestName;
-            $order_info->customer_mobile = '+' . $guestPhoneCode . ' ' . $guestPhone;
-            $order_info->customer_email = $guestEmail;
+            $order_info->customer_name = $guestDisplayName;
+            $order_info->customer_mobile = $guestMobileNumber;
+            $order_info->customer_email = $guestEmailAddress;
             $order_info->customer_country = $guestPhoneCode;
         } else {
             $order_info->customer_name = $userData->first_name . ' ' . $userData->last_name;
@@ -2470,10 +2547,6 @@ class CheckoutController extends Controller
         }
 
         if ($payment_method == 1) {
-            if ($isGuest && Auth::guard('user')->check()) {
-                Auth::guard('user')->logout();
-            }
-
             try {
                 $mojoPay = app(MojoPay::class);
                 $session = $mojoPay->createCheckoutSession(
@@ -2570,18 +2643,7 @@ class CheckoutController extends Controller
                 'guest_phone_code',
                 'guest_name',
                 'guest_token',
-                'id',
-                'first_name',
-                'email',
-                'phone_code',
-                'otp_phone',
-                'guest_otp_user_id',
-                'current_lat',
-                'current_long'
             ]);
-            if (Auth::guard('user')->check()) {
-                Auth::guard('user')->logout();
-            }
         }
 
         return response()->json(['success' => true, 'order_id' => Helper::encodeUrl($order->id), 'earnedpoints' => $earnedpoints]);

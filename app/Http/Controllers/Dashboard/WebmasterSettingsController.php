@@ -53,6 +53,7 @@ class WebmasterSettingsController extends Controller
             $Setting->delivery_days = isset($request->delivery_days) ? $request->delivery_days : 0;
             $Setting->delivery_amount = isset($request->delivery_amount) ? $request->delivery_amount : 0;
             $Setting->delivery_fee = isset($request->delivery_fee) ? $request->delivery_fee : 0;
+            $Setting->guest_daily_order_limit = isset($request->guest_daily_order_limit) ? max(0, (int) $request->guest_daily_order_limit) : 0;
             $Setting->tax = isset($request->tax) ? $request->tax : 0;
             $Setting->android_version_update = isset($request->android_version_update) ? $request->android_version_update : 0;
             $Setting->ios_version_update = isset($request->ios_version_update) ? $request->ios_version_update : 0;
@@ -92,6 +93,7 @@ class WebmasterSettingsController extends Controller
             $WebmasterSetting->ios_version_update = isset($request->ios_version_update) ? $request->ios_version_update : 0;
             $WebmasterSetting->tax = isset($request->tax) ? $request->tax : 0;
             $WebmasterSetting->delivery_fee = isset($request->delivery_fee) ? $request->delivery_fee : 0;
+            $WebmasterSetting->guest_daily_order_limit = isset($request->guest_daily_order_limit) ? max(0, (int) $request->guest_daily_order_limit) : 0;
             $WebmasterSetting->delivery_amount = isset($request->delivery_amount) ? $request->delivery_amount : 0;
            // $this->storeVideo($WebmasterSetting);
             $WebmasterSetting->save();
@@ -305,6 +307,10 @@ class WebmasterSettingsController extends Controller
         request()->validate([
             'support_email' => 'nullable|regex:/(.+)@(.+)\.(.+)/i',
             'mail_no_replay' => 'nullable|regex:/(.+)@(.+)\.(.+)/i',
+            'guest_daily_order_limit' => 'nullable|integer|min:0',
+        ], [
+            'guest_daily_order_limit.min' => 'Guest Daily Order Limit must be 0 or greater.',
+            'guest_daily_order_limit.integer' => 'Guest Daily Order Limit must be a valid number.',
         ]);
     }
 

@@ -1741,6 +1741,21 @@ class CheckoutController extends Controller
                     'phone' => $request->phone,
                 ]);
             }
+
+            // Check Guest Daily Order Limit
+            $guestLimitCheck = app(GuestUserService::class)->checkDailyOrderLimit(
+                $guestUser ? $guestUser->id : ($guestId ?? null),
+                $guestUser ? $guestUser->email : $request->email,
+                $guestUser ? $guestUser->phone : $request->phone
+            );
+            if (!$guestLimitCheck['allowed']) {
+                return response()->json([
+                    'code' => strval(0),
+                    'error' => $guestLimitCheck['message'],
+                    'data' => null
+                ], 200);
+            }
+
             $userData = null;
         } else {
             $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();

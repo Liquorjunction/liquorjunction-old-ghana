@@ -68,66 +68,19 @@ class WebsiteLoginController extends Controller
     }
 
     /**
-     * Show the guest user login page.
+     * Show the guest user login page (Bypassed: redirects directly to checkout in guest mode).
      */
     public function showGuestLoginForm()
     {
-        $redirectTo = url()->previous();
-        $phonecode = DB::table('countries')->orderby('phonecode', 'ASC')->where('status', 1)->get();
-        $countryData = DB::table('countries')->orderby('name')->where('status', 1)->get();
-        return view('frontend.auth.guest_login', compact('redirectTo', 'phonecode', 'countryData'));
+        return redirect()->route('checkout', ['mode' => 'guest']);
     }
 
     /**
-     * Handle guest user login and store in MainUser table.
+     * Handle guest user login - redirects directly to checkout in guest mode (No OTP / no MainUser creation).
      */
     public function guestLogin(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'age' => 'required|integer|min:18',
-            'email' => 'required|email|max:255|unique:main_users,email',
-            'phone' => 'required|string|max:20|unique:main_users,phone',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-
-        $uniqid = uniqid();
-        $otp = mt_rand(1000, 9999);
-        $otp_expire_time = now()->addMinutes(5);
-
-        $user = MainUser::create([
-            'uniqid' => $uniqid,
-            'name' => $request->name,
-            'age' => $request->age,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'is_guest_user' => true,
-            'status' => 2, // Pending verification
-            'is_verify_user' => 0,
-            'otp' => $otp,
-            'otp_expire_time' => $otp_expire_time,
-        ]);
-
-        // Send OTP via email (reuse logic from websiteRegister)
-        $logo = \Config::get('app.url') . 'public/assets/dashboard/images/liquor.png';
-        $url_link = \URL::to("/");
-        $url = $url_link . '/';
-        $email = $user->email;
-        $name = $user->name;
-        try {
-            $this->attachment_otp_email($email, $otp, $name, $url, $logo);
-        } catch (\Exception $e) {
-            // Log error if needed
-        }
-
-        // Store guest user id in session for OTP verification
-        session(['guest_otp_user_id' => $user->id]);
-
-        // Redirect to guest OTP verification page (create this route/view)
-        return redirect()->route('websitesendotp');
+        return redirect()->route('checkout', ['mode' => 'guest']);
     }
     public function handleGoogleCallback()
     {

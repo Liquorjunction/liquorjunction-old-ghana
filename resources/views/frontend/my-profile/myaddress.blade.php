@@ -12,6 +12,20 @@
     </div>
 
     <style>
+        .address-listing .common-card,
+        .common-card.account-address,
+        .common-card.add-address,
+        .account-address {
+            border-radius: 20px !important;
+            overflow: hidden;
+        }
+        .account-sidebar {
+            border-radius: 20px !important;
+            overflow: hidden;
+        }
+        .account-sidebar .sidebar-item .sidebar-link {
+            border-radius: 12px !important;
+        }
         .account-address address {
             max-width: 100% !important;
         }
@@ -89,7 +103,7 @@
                                                 Mark Default
                                             </label>
                                         </div>
-                                        <span class="badge bg-warning text-dark py-1 px-2 fw-bold active-default-badge {{ ($data->is_selected_address_id == 1) ? '' : 'd-none' }}" id="badge_default_{{ $data->id }}" style="font-size: 11px; border-radius: 6px;">
+                                        <span class="badge bg-warning text-dark py-1 px-2 fw-bold active-default-badge {{ ($data->is_selected_address_id == 1) ? '' : 'd-none' }}" id="badge_default_{{ $data->id }}" style="font-size: 11px; border-radius: 20px;">
                                             <i class="fa fa-check-circle me-1"></i>Active Default
                                         </span>
                                     </div>
@@ -128,11 +142,11 @@
                                 @endphp
 
                                 @if(!$hasMapLocation)
-                                    <div class="alert alert-warning py-1 px-2 mt-auto mb-0 d-flex align-items-center justify-content-between" style="font-size: 11px; border-radius: 6px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
+                                    <div class="alert alert-warning py-1 px-2 mt-auto mb-0 d-flex align-items-center justify-content-between" style="font-size: 11px; border-radius: 12px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
                                         <span>
                                             <i class="fa fa-exclamation-triangle text-danger me-1"></i> Location not set
                                         </span>
-                                        <a href="javascript:void(0)" class="btn btn-xs py-0 px-2 fw-bold text-dark open-address-modal" data-type="shipping" data-action="edit" data-id="{{ $data->id }}" data-lat="{{ $data->latitude ?? '' }}" data-lng="{{ $data->longitude ?? '' }}" data-is-checkout="0" style="background: #fbb516; font-size: 10.5px; border-radius: 4px; white-space: nowrap;">
+                                        <a href="javascript:void(0)" class="btn btn-xs py-0 px-2 fw-bold text-dark open-address-modal" data-type="shipping" data-action="edit" data-id="{{ $data->id }}" data-lat="{{ $data->latitude ?? '' }}" data-lng="{{ $data->longitude ?? '' }}" data-is-checkout="0" style="background: #fbb516; font-size: 10.5px; border-radius: 20px; white-space: nowrap;">
                                             <i class="fa fa-map-marker-alt me-1"></i>Set on Map
                                         </a>
                                     </div>
@@ -171,7 +185,7 @@
                         <div class="col-lg-4 col-sm-6 address-column mb-4">
                             <div class="common-card account-address">
                                 <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <span class="badge bg-warning text-dark py-1 px-2 fw-bold" style="font-size: 11px; border-radius: 6px;">
+                                    <span class="badge bg-warning text-dark py-1 px-2 fw-bold" style="font-size: 11px; border-radius: 20px;">
                                         <i class="fa fa-shield-alt me-1"></i>Default Billing
                                     </span>
                                     <div class="d-flex align-items-center gap-2">
@@ -209,11 +223,11 @@
                                 @endphp
 
                                 @if(!$hasBillMapLocation)
-                                    <div class="alert alert-warning py-1 px-2 mt-auto mb-0 d-flex align-items-center justify-content-between" style="font-size: 11px; border-radius: 6px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
+                                    <div class="alert alert-warning py-1 px-2 mt-auto mb-0 d-flex align-items-center justify-content-between" style="font-size: 11px; border-radius: 12px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
                                         <span>
                                             <i class="fa fa-exclamation-triangle text-danger me-1"></i> Location not set
                                         </span>
-                                        <a href="javascript:void(0)" class="btn btn-xs py-0 px-2 fw-bold text-dark open-address-modal" data-type="billing" data-action="edit" data-id="{{ $data->id }}" data-lat="{{ $data->latitude ?? '' }}" data-lng="{{ $data->longitude ?? '' }}" data-is-checkout="0" style="background: #fbb516; font-size: 10.5px; border-radius: 4px; white-space: nowrap;">
+                                        <a href="javascript:void(0)" class="btn btn-xs py-0 px-2 fw-bold text-dark open-address-modal" data-type="billing" data-action="edit" data-id="{{ $data->id }}" data-lat="{{ $data->latitude ?? '' }}" data-lng="{{ $data->longitude ?? '' }}" data-is-checkout="0" style="background: #fbb516; font-size: 10.5px; border-radius: 20px; white-space: nowrap;">
                                             <i class="fa fa-map-marker-alt me-1"></i>Set on Map
                                         </a>
                                     </div>

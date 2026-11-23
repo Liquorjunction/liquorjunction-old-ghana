@@ -1,4 +1,4 @@
-@if ($user && $user->is_guest_user != 1)
+@if ($user && empty($user->is_guest_user))
     @if($UserBillAddressData->isEmpty())
         <div class="py-3 px-3 text-center border rounded bg-light mb-3" style="border-radius: 8px;">
             <p class="text-muted small mb-2"><i class="fa fa-info-circle text-warning me-1"></i> No separate billing address saved yet.</p>
@@ -9,9 +9,10 @@
             $fullBillAddress = Helper::formatUserAddress($data, false);
             $phoneBillNumber = '(+' . $data->phonecode . ') ' . $data->phone;
             $hasBillMapLocation = (!empty($data->latitude) && !empty($data->longitude));
+            $billAddressId = (!empty($data->id) && $data->id !== '0') ? $data->id : 'guest_bill';
         @endphp
         <form class="checkout-form">
-            <div class="address-group" id="billAddressGroupItem_{{$data->id}}">
+            <div class="address-group" id="billAddressGroupItem_{{$billAddressId}}">
                 <div class="detail w-100" style="min-width: 0;">
                     <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
                         <span class="fw-bold text-dark text-truncate" style="max-width: 240px; font-weight: 700;" title="{{ $data->name }}">{{ $data->name }}</span>
@@ -29,16 +30,16 @@
                                 <i class="fa fa-exclamation-triangle text-danger me-1"></i>
                                 <strong>Billing location not set on map!</strong>
                             </span>
-                            <a href="javascript:void(0)" class="btn btn-xs py-0 px-2 fw-bold text-dark open-address-modal" data-type="billing" data-action="edit" data-id="{{@$data->id}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" style="background: #fbb516; font-size: 10.5px; border-radius: 4px; white-space: nowrap;">
+                            <a href="javascript:void(0)" class="btn btn-xs py-0 px-2 fw-bold text-dark open-address-modal" data-type="billing" data-action="edit" data-id="{{$billAddressId}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" style="background: #fbb516; font-size: 10.5px; border-radius: 4px; white-space: nowrap;">
                                 <i class="fa fa-map-marker-alt me-1"></i>Set on Map
                             </a>
                         </div>
                     @endif
                 </div>
         
-                <input type="hidden" name="bill_address_id" id="bill_address_id" value="{{@$data->id}}">
-                <input type="hidden" class="user_bill_address_id" name="user_bill_address_id" id="user_bill_address_id" value="{{@$data->id}}" data-has-location="{{ $hasBillMapLocation ? '1' : '0' }}"> 
-                <a href="javascript:void(0)" class="btn-card-action btn-card-edit open-address-modal EditBillAddress" data-type="billing" data-action="edit" data-id="{{@$data->id}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" title="Edit Address">
+                <input type="hidden" name="bill_address_id" id="bill_address_id" value="{{$billAddressId}}">
+                <input type="hidden" class="user_bill_address_id" name="user_bill_address_id" id="user_bill_address_id" value="{{$billAddressId}}" data-has-location="{{ $hasBillMapLocation ? '1' : '0' }}"> 
+                <a href="javascript:void(0)" class="btn-card-action btn-card-edit open-address-modal EditBillAddress" data-type="billing" data-action="edit" data-id="{{$billAddressId}}" data-lat="{{@$data->latitude}}" data-lng="{{@$data->longitude}}" data-is-checkout="1" title="Edit Address">
                     <i class="fa fa-pen" style="font-size: 11px;"></i>
                 </a>
             </div>

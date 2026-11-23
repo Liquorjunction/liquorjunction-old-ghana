@@ -114,9 +114,24 @@
 }
 .navside .nav .nav-sub {
     background: rgba(0, 0, 0, 0.35) !important;
+    margin: 0 0 0 18px !important;
+    padding: 0 !important;
+    max-height: 0 !important;
+    border: none !important;
+    border-left: 2px solid transparent !important;
+    overflow: hidden !important;
+    visibility: hidden;
+    opacity: 0;
+    -webkit-transition: max-height 0.35s ease, padding 0.35s ease, opacity 0.25s ease, border-color 0.35s ease, visibility 0.35s ease;
+    transition: max-height 0.35s ease, padding 0.35s ease, opacity 0.25s ease, border-color 0.35s ease, visibility 0.35s ease;
+}
+.navside .nav li.active > .nav-sub,
+.navside .nav .active > .nav-sub {
+    max-height: 50rem !important;
     padding: 6px 0 !important;
-    border-left: 2px solid rgba(251, 181, 22, 0.25);
-    margin-left: 18px !important;
+    border-left: 2px solid rgba(251, 181, 22, 0.25) !important;
+    visibility: visible;
+    opacity: 1;
 }
 .navside .nav .nav-sub li {
     background-color: transparent !important;

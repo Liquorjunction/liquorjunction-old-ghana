@@ -21,8 +21,18 @@ class userAuth
         // Check if user is authenticated under 'user' guard
         // dd(isset(auth()->guard('user')->user()->id));
         if (!Auth::guard('user')->check()) {
-            // Allow active guest checkout session to access checkout and related endpoints
-            if (session()->get('is_guest_checkout')) {
+            $isGuestMode = $request->get('mode') === 'guest'
+                || $request->input('mode') === 'guest'
+                || session()->get('is_guest_checkout')
+                || str_contains($request->header('referer') ?? '', 'mode=guest')
+                || $request->route('id') === 'guest'
+                || $request->route('id') === 'guest_bill'
+                || $request->route('id') === '0'
+                || $request->route('id') === 0;
+
+            if ($isGuestMode) {
+                session()->put('is_guest_checkout', true);
+
                 $guestAllowedRoutes = [
                     'checkout',
                     'checkout/*',

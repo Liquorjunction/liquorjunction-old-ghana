@@ -621,7 +621,7 @@ if ($user_id) {
                                 @endif
 
                             </li>
-                            @if ((!empty($user_id) && auth()->guard('user')->check() && auth()->guard('user')->user()->is_guest_user) || session()->get('is_guest_checkout'))
+                            @if (!empty($user_id) && auth()->guard('user')->check() && auth()->guard('user')->user()->is_guest_user)
                             <li>
                                 <a href="javascript:void(0)" 
                                 class="sidebar-link" 
@@ -675,7 +675,7 @@ if ($user_id) {
                                     @endphp
                                     <span class="cart-item-total-count">{{ count($cartItems) }}</span>
                                     <!-- Small Cart Dropdown -->
-                                    <div id="small-cart-dropdown" class="small-cart-dropdown" style="display:none; position:absolute; right:0; top:40px; width:340px; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.15); border-radius:8px; z-index:9999;">
+                                    <div id="small-cart-dropdown" class="small-cart-dropdown" style="display:none; position:absolute; right:0; top:40px; width:340px; background:#fff; box-shadow:0 4px 16px rgba(0,0,0,0.15); border-radius:20px; overflow:hidden; z-index:9999;">
                                         <div style="max-height:300px; overflow-y:auto; padding:15px 15px 0 15px;">
                                             @if(!empty($cartItems) && count($cartItems) > 0)
                                                 @foreach($cartItems as $item)
@@ -709,7 +709,7 @@ if ($user_id) {
                                                 <div class="text-center py-4" style="color:#888;">Your cart is empty.</div>
                                             @endif
                                         </div>
-                                        <div style="padding:15px; border-top:1px solid #eee; background:#fafafa;">
+                                        <div style="padding:15px; border-top:1px solid #eee; background:#fafafa; border-bottom-left-radius:20px; border-bottom-right-radius:20px;">
                                             <a href="{{ route('cart') }}" class="solid-button w-100">Go To Cart</a>
                                         </div>
                                     </div>
@@ -719,6 +719,10 @@ if ($user_id) {
                             .cart-dropdown-wrapper {
                                 position: relative;
                                 display: inline-block;
+                            }
+                            .small-cart-dropdown {
+                                border-radius: 20px !important;
+                                overflow: hidden !important;
                             }
                             .small-cart-dropdown,
                             .small-cart-dropdown * {
@@ -750,13 +754,28 @@ if ($user_id) {
                                 height: 20px;
                                 background: transparent;
                             }
-                            .small-cart-dropdown::-webkit-scrollbar {
-                                width: 6px;
-                                background: #f1f1f1;
+                            .small-cart-dropdown > div {
+                                scrollbar-width: thin;
+                                scrollbar-color: #cbd5e1 #f1f5f9;
                             }
-                            .small-cart-dropdown::-webkit-scrollbar-thumb {
-                                background: #ccc;
-                                border-radius: 3px;
+                            .small-cart-dropdown::-webkit-scrollbar,
+                            .small-cart-dropdown *::-webkit-scrollbar {
+                                width: 6px;
+                                height: 6px;
+                            }
+                            .small-cart-dropdown::-webkit-scrollbar-track,
+                            .small-cart-dropdown *::-webkit-scrollbar-track {
+                                background: #f1f5f9;
+                                border-radius: 10px;
+                            }
+                            .small-cart-dropdown::-webkit-scrollbar-thumb,
+                            .small-cart-dropdown *::-webkit-scrollbar-thumb {
+                                background: #cbd5e1;
+                                border-radius: 10px;
+                            }
+                            .small-cart-dropdown::-webkit-scrollbar-thumb:hover,
+                            .small-cart-dropdown *::-webkit-scrollbar-thumb:hover {
+                                background: #94a3b8;
                             }
                             </style>
                             <script>

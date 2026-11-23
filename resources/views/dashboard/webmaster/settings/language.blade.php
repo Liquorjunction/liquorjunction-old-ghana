@@ -53,6 +53,11 @@
                     <span style="color: red;" class='validate'>{{ $errors->first('delivery_fee') }}</span>
                 </span> @endif
             </div>
+            <div class="col-sm-4" id="">
+                <label>Guest Daily Order Limit :</label> {!! Form::text('guest_daily_order_limit', $WebmasterSetting->guest_daily_order_limit, [ 'id' => 'guest_daily_order_limit', 'class' => 'form-control', 'dir' => 'ltr', 'maxlength' => '4', 'onkeypress' => "return isNumberBlock(event)"]) !!} @if ($errors->has('guest_daily_order_limit')) <span class="help-block">
+                    <span style="color: red;" class='validate'>{{ $errors->first('guest_daily_order_limit') }}</span>
+                </span> @endif
+            </div>
             <div class="col-sm-4" id="facebook_link">
                 <label>Facebook Link :</label> {!! Form::text('facebook_link', $WebmasterSetting->facebook_link, [ 'id' => 'facebook_link', 'class' => 'form-control', 'dir' => 'ltr', ]) !!} @if ($errors->has('facebook_link')) <span class="help-block">
                     <span style="color: red;" class='validate'>{{ $errors->first('facebook_link') }}</span>
@@ -126,6 +131,9 @@
         $('#map_distance').on("input", function() {
             this.value = this.value.replace(/[^0-9\.]/g, '');
             $(this).val($(this).val().replace(/^\s+/g, ''));
+        });
+        $('#guest_daily_order_limit').on("input", function() {
+            this.value = this.value.replace(/[^0-9]/g, '');
         });
         function isNumberBlock(evt) {
             var charCode = (evt.which) ? evt.which : event.keyCode

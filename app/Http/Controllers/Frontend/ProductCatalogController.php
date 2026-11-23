@@ -204,7 +204,8 @@ class ProductCatalogController extends Controller
             $request->get('categories', 
             $request->get('category_id', 
             $request->get('category', 
-            $request->get('id')))))
+            $request->get('cid',
+            $request->get('id'))))))
         );
         if (empty($rawCats) && $request->route('id')) {
             $rawCats = [$request->route('id')];

@@ -840,6 +840,149 @@
     @media (max-width: 476px) {
         .bs-box .bs-content input[type="checkbox"].favs-icon { top: -266px !important; }
     }
+
+    /* =========================================================
+       CUSTOM SORT DROPDOWN UI (THEME & FILTER MATCHING)
+       ========================================================= */
+    .native-sort-select,
+    #sort-by.native-sort-select,
+    .short-by-block form select.native-sort-select {
+        display: none !important;
+    }
+
+    .custom-sort-dropdown {
+        position: relative;
+        display: inline-block;
+        user-select: none;
+    }
+
+    /* Trigger Button matching top-bar */
+    .sort-dropdown-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: transparent;
+        border: none;
+        padding: 0;
+        font-size: 16px;
+        font-weight: 400;
+        line-height: 24px;
+        color: var(--lj-black, #242424);
+        cursor: pointer;
+        outline: none;
+        transition: color 0.2s ease;
+    }
+    .sort-dropdown-toggle:hover {
+        color: #000000;
+    }
+    .sort-dropdown-toggle:focus-visible {
+        outline: none;
+    }
+    .sort-current-label {
+        white-space: nowrap;
+        font-size: 16px;
+        font-weight: 400;
+        line-height: 24px;
+        color: var(--lj-black, #242424);
+    }
+    .sort-chevron-icon {
+        font-size: 12px;
+        color: var(--lj-black, #242424);
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .custom-sort-dropdown.open .sort-chevron-icon {
+        transform: rotate(180deg);
+        color: var(--lj-black, #242424);
+    }
+
+    /* Options Dropdown Menu Card */
+    .sort-dropdown-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        min-width: 195px;
+        background: #ffffff;
+        border: 1px solid var(--lj-border, #e9ecef);
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+        padding: 6px;
+        margin: 0;
+        list-style: none;
+        z-index: 1050;
+        display: none;
+        opacity: 0;
+        transform: translateY(-6px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .custom-sort-dropdown.open .sort-dropdown-menu {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    /* Individual Option Item */
+    .sort-dropdown-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 12px;
+        margin: 2px 0;
+        border-radius: 6px;
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--lj-black, #242424);
+        cursor: pointer;
+        border: 1px solid transparent;
+        transition: all 0.18s ease;
+        line-height: 1.3;
+    }
+
+    /* Hover effect: according to the side filter (.chip-filter-btn:hover / quick chips) */
+    .sort-dropdown-option:hover:not(.is-selected) {
+        background: #fffdf5;
+        border-color: var(--lj-gold, #fbb516);
+        color: var(--lj-black, #242424);
+        box-shadow: 0 1px 4px rgba(251, 181, 22, 0.18);
+    }
+
+    /* Selected effect: according to the side filter (.chip-filter-btn.active & checkbox:checked) */
+    .sort-dropdown-option.is-selected {
+        background: var(--lj-gold, #fbb516);
+        border-color: var(--lj-gold, #fbb516);
+        color: #242424;
+        font-weight: 600;
+        box-shadow: 0 2px 5px rgba(251, 181, 22, 0.28);
+    }
+    .sort-dropdown-option.is-selected:hover {
+        background: #f5aa0b;
+        border-color: #f5aa0b;
+        color: #242424;
+    }
+
+    /* Checkmark Icon inside Selected Option (matching side filter checked mark) */
+    .option-check-icon {
+        font-size: 11px;
+        font-weight: 900;
+        color: #242424;
+        opacity: 0;
+        visibility: hidden;
+        transform: scale(0.6);
+        transition: all 0.18s ease;
+        flex-shrink: 0;
+    }
+    .sort-dropdown-option.is-selected .option-check-icon {
+        opacity: 1;
+        visibility: visible;
+        transform: scale(1);
+    }
+
+    @media (max-width: 576px) {
+        .sort-dropdown-menu {
+            left: 0;
+            right: auto;
+        }
+    }
 </style>
 
 <div class="loader" id="loader"></div>
@@ -875,14 +1018,48 @@
                         ( <span id="total_page_count">{{ $total_product_count ?: '0' }}</span> Items )
                     </p>
                     <div class="short-by-block">
-                        <form action="javascript:void(0);">
-                            <select name="sort_by" id="sort-by" onchange="fetchFacetedProducts(false);">
+                        <form action="javascript:void(0);" class="m-0 p-0">
+                            {{-- Native select kept hidden for backward compatibility & form serialization --}}
+                            <select name="sort_by" id="sort-by" class="native-sort-select" style="display: none !important;" aria-hidden="true" tabindex="-1">
                                 <option value="newest" {{ ($filters['sort_by'] ?? '') == 'newest' ? 'selected' : '' }}>Newest</option>
                                 <option value="high_to_low" {{ ($filters['sort_by'] ?? '') == 'high_to_low' ? 'selected' : '' }}>{{ Helper::language('high_to_low') ?: 'Price: High to Low' }}</option>
                                 <option value="low_to_high" {{ ($filters['sort_by'] ?? '') == 'low_to_high' ? 'selected' : '' }}>{{ Helper::language('low_to_high') ?: 'Price: Low to High' }}</option>
                                 <option value="popular" {{ ($filters['sort_by'] ?? '') == 'popular' ? 'selected' : '' }}>Popular</option>
                                 <option value="rating" {{ ($filters['sort_by'] ?? '') == 'rating' ? 'selected' : '' }}>Highest Rating</option>
                             </select>
+
+                            @php
+                                $selectedSort = $filters['sort_by'] ?? 'newest';
+                                $sortMap = [
+                                    'newest' => 'Newest',
+                                    'high_to_low' => Helper::language('high_to_low') ?: 'Price: High to Low',
+                                    'low_to_high' => Helper::language('low_to_high') ?: 'Price: Low to High',
+                                    'popular' => 'Popular',
+                                    'rating' => 'Highest Rating',
+                                ];
+                                $selectedSortLabel = $sortMap[$selectedSort] ?? 'Newest';
+                            @endphp
+
+                            {{-- Custom Theme-Compliant Sort Dropdown (Options styled matching side filter) --}}
+                            <div class="custom-sort-dropdown" id="custom-sort-dropdown">
+                                <button type="button" class="sort-dropdown-toggle" id="sortDropdownToggle" aria-haspopup="listbox" aria-expanded="false">
+                                    <span class="sort-current-label" id="sortCurrentLabel">{{ $selectedSortLabel }}</span>
+                                    <i class="fa-solid fa-chevron-down sort-chevron-icon"></i>
+                                </button>
+
+                                <ul class="sort-dropdown-menu" id="sortDropdownMenu" role="listbox" aria-labelledby="sortDropdownToggle">
+                                    @foreach($sortMap as $val => $label)
+                                        @php $isSelected = ($selectedSort == $val); @endphp
+                                        <li class="sort-dropdown-option {{ $isSelected ? 'is-selected' : '' }}"
+                                            data-value="{{ $val }}"
+                                            role="option"
+                                            aria-selected="{{ $isSelected ? 'true' : 'false' }}">
+                                            <span class="option-label">{{ $label }}</span>
+                                            <i class="fa-solid fa-check option-check-icon"></i>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
                         </form>
 
                         {{-- Mobile Filter Drawer Toggle Button --}}
@@ -2303,6 +2480,77 @@
                     window.initOrUpdatePillsSlider();
                 }, 100);
             }
+
+            // Custom Sort Dropdown Handler
+            $(document).on('click', '#sortDropdownToggle', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var $dropdown = $('#custom-sort-dropdown');
+                var isOpen = $dropdown.hasClass('open');
+                if (isOpen) {
+                    $dropdown.removeClass('open');
+                    $(this).attr('aria-expanded', 'false');
+                } else {
+                    $dropdown.addClass('open');
+                    $(this).attr('aria-expanded', 'true');
+                }
+            });
+
+            $(document).on('click', '.sort-dropdown-option', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var $this = $(this);
+                var val = $this.data('value');
+                var label = $this.find('.option-label').text();
+
+                // Update UI state
+                $('.sort-dropdown-option').removeClass('is-selected').attr('aria-selected', 'false');
+                $this.addClass('is-selected').attr('aria-selected', 'true');
+                $('#sortCurrentLabel').text(label);
+
+                // Close dropdown
+                $('#custom-sort-dropdown').removeClass('open');
+                $('#sortDropdownToggle').attr('aria-expanded', 'false');
+
+                // Update native select and trigger product fetch
+                var $select = $('#sort-by');
+                var oldVal = $select.val();
+                $select.val(val);
+
+                if (oldVal !== val) {
+                    if (typeof window.fetchFacetedProducts === 'function') {
+                        window.fetchFacetedProducts(false);
+                    }
+                }
+            });
+
+            // Close custom sort dropdown when clicking outside
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#custom-sort-dropdown').length) {
+                    $('#custom-sort-dropdown').removeClass('open');
+                    $('#sortDropdownToggle').attr('aria-expanded', 'false');
+                }
+            });
+
+            // Keyboard Accessibility for Sort Dropdown
+            $(document).on('keydown', function(e) {
+                if (e.key === 'Escape' || e.keyCode === 27) {
+                    $('#custom-sort-dropdown').removeClass('open');
+                    $('#sortDropdownToggle').attr('aria-expanded', 'false');
+                }
+            });
+
+            // Synchronize custom sort dropdown if #sort-by is changed programmatically
+            window.syncSortDropdownUI = function() {
+                var val = $('#sort-by').val() || 'newest';
+                var $opt = $('.sort-dropdown-option[data-value="' + val + '"]');
+                if ($opt.length) {
+                    $('.sort-dropdown-option').removeClass('is-selected').attr('aria-selected', 'false');
+                    $opt.addClass('is-selected').attr('aria-selected', 'true');
+                    $('#sortCurrentLabel').text($opt.find('.option-label').text());
+                }
+            };
+            $('#sort-by').on('change', window.syncSortDropdownUI);
         });
     }
 

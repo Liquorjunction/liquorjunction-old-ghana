@@ -578,7 +578,7 @@
     }
 
     .shipping-address-scroll-container.shipping-address-scrollable::-webkit-scrollbar-thumb:hover {
-        background: #fbb516;
+        background: #94a3b8;
     }
 
     /* Smooth animated entrance for extra addresses */
@@ -640,6 +640,88 @@
         color: #ffffff;
     }
 
+    /* Unified Phone Input Group (Matches other clean phone fields) */
+    .checkout-form .phone-number,
+    #guestContactForm .phone-number {
+        display: flex !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        position: relative !important;
+        border: 1px solid rgba(180, 182, 184, 0.4) !important;
+        border-radius: 11px !important;
+        background: #ffffff !important;
+        overflow: hidden !important;
+        height: 50px !important;
+        box-sizing: border-box !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    }
+
+    .checkout-form .phone-number:focus-within,
+    #guestContactForm .phone-number:focus-within {
+        border-color: #fbb516 !important;
+        box-shadow: 0 0 0 0.15rem rgba(251, 181, 22, 0.25) !important;
+    }
+
+    .checkout-form .phone-number select.numbers,
+    #guestContactForm .phone-number select.numbers,
+    #guestContactForm #guest_phone_code {
+        position: static !important;
+        top: auto !important;
+        left: auto !important;
+        flex: 0 0 80px !important;
+        width: 80px !important;
+        max-width: 80px !important;
+        min-width: 80px !important;
+        height: 100% !important;
+        line-height: 48px !important;
+        border: none !important;
+        border-right: 1px solid rgba(180, 182, 184, 0.4) !important;
+        border-radius: 0 !important;
+        background-color: #f8fafc !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 8px center !important;
+        background-size: 10px 8px !important;
+        padding: 0 20px 0 14px !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        color: #1e293b !important;
+        cursor: pointer !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    .checkout-form .phone-number input,
+    #guestContactForm .phone-number input#guest_phone {
+        flex: 1 1 auto !important;
+        width: auto !important;
+        height: 100% !important;
+        line-height: 48px !important;
+        border: none !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        padding: 0 18px !important;
+        font-size: 14px !important;
+        color: #302929 !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    .checkout-form .phone-number input:focus,
+    #guestContactForm .phone-number input#guest_phone:focus {
+        outline: none !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    #guest_email_error, #guest_phone_error {
+        display: block !important;
+        margin-top: 5px !important;
+        font-size: 13.5px !important;
+    }
+
 </style>
 <div class="loader" id="loader"></div>
 <div class="bread-crumb-block">
@@ -680,24 +762,80 @@
             <div class="row">
                 <div class="col-xl-4 col-md-6 checkout-col contact-information">
                     <h5 class="checkout-head">1. Shipping Address / Billing Address</h5>
-                    <!-- Before Login Form -->
-                    <div class="checkout-heading-flex-group">
+                    @php
+                        $isGuestUser = !empty($isGuest);
+                    @endphp
+
+                    @if($isGuestUser)
+                        <!-- Guest Checkout Banner (Liquor Junction Theme) -->
+                        <div class="guest-checkout-banner mb-4 p-3 d-flex align-items-center justify-content-between flex-wrap gap-2" 
+                             style="background: #f8f8f8; border: 1px solid #e9ecef; border-left: 4px solid #fbb516; border-radius: 4px;">
+                            <div class="d-flex align-items-center gap-3">
+                                <div style="width: 36px; height: 36px; border-radius: 50%; background: #fbb516; color: #242424; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">
+                                    <i class="fa fa-user"></i>
+                                </div>
+                                <div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span style="font-weight: 600; font-size: 14px; color: #242424;">Guest Checkout</span>
+                                        <span class="text-muted" style="font-size: 12px;">• No password required</span>
+                                    </div>
+                                    <p class="mb-0 text-muted" style="font-size: 12px;">Proceeding as guest without an account</p>
+                                </div>
+                            </div>
+                            <span class="badge" style="background: #242424; color: #fbb516; font-size: 11px; font-weight: 500; border-radius: 4px; padding: 5px 10px;">Guest Mode</span>
+                        </div>
+                    @endif
+
+                    <!-- Contact Information Group -->
+                    <div class="checkout-heading-flex-group mb-3">
                         <h5 class="mb-0">{{@Helper::language('contact_details_web')}}</h5>
-                        <?php
-                        // dd();
-                        ?>
-                        <p class="after-login">{{($userData->first_name).' '.($userData->last_name)}} | <a href="mailto:{{@$userData->email}}" class="border-button">{{@$userData->email}}</a></p>
-
-
-                        <input type="hidden" name="userName" id="userName" value="{{ $userData->first_name }}">
-                        <input type="hidden" name="userPhone" id="userPhone" value="{{ $userData->phone }}">
-
                     </div>
 
-                    <!-- End Before Login Form -->
-                    @php
-                        $isGuestUser = !empty($isGuest) || empty($user_id) || (isset($userData->is_guest_user) && $userData->is_guest_user == 1);
-                    @endphp
+                    @if($isGuestUser)
+                        <!-- Inline Account Found Notification -->
+                        <div id="email-exists-alert" class="alert d-none mb-3 p-2 px-3 rounded" style="background: #fff8e6; border: 1px solid #fde08b; color: #78350f;">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fa fa-info-circle text-warning" style="font-size: 15px;"></i>
+                                    <span style="font-size: 12.5px; font-weight: 600;">Account found! Log in for faster checkout.</span>
+                                </div>
+                                <button type="button" class="btn btn-sm" id="inline-login-btn" style="background: #242424; color: #fbb516; font-weight: 600; font-size: 11px; padding: 4px 12px; border-radius: 4px; border: none;">Log In</button>
+                            </div>
+                        </div>
+
+                        <!-- Guest Contact Fields (Native Theme Form Controls) -->
+                        <form class="checkout-form mb-4" id="guestContactForm">
+                            <div class="form-group mb-3">
+                                <label for="guest_email">{{ @Helper::language('email_label') }} <span class="text-red star">*</span></label>
+                                <input type="email" name="guest_email" id="guest_email" placeholder="{{ @Helper::language('enter_email_place') }}" value="{{ session('guest_email', '') }}" required>
+                                <span class="error red-text" id="guest_email_error"></span>
+                            </div>
+
+                            <div class="form-group has-validation mb-0">
+                                <label for="guest_phone">{{ @Helper::language('phone_number') }} <span class="text-red star">*</span></label>
+                                <div class="input-group phone-number">
+                                    <select class="numbers" name="guest_phone_code" id="guest_phone_code">
+                                        @if(isset($countryData) && count($countryData) > 0)
+                                            @foreach($countryData as $c)
+                                                <option value="{{ $c->phonecode }}" {{ $c->phonecode == (session('guest_phone_code') ?: '233') ? 'selected' : '' }}>+{{ $c->phonecode }}</option>
+                                            @endforeach
+                                        @else
+                                            <option value="233" selected>+233</option>
+                                        @endif
+                                    </select>
+                                    <input type="tel" name="guest_phone" id="guest_phone" placeholder="{{ @Helper::language('enter_phone_number_place') }}" value="{{ session('guest_phone', '') }}" required>
+                                </div>
+                                <span class="error red-text" id="guest_phone_error"></span>
+                            </div>
+                        </form>
+                        <input type="hidden" name="userName" id="userName" value="{{ session('guest_name', 'Guest User') }}">
+                        <input type="hidden" name="userPhone" id="userPhone" value="{{ session('guest_phone', '') }}">
+                    @else
+                        <p class="after-login">{{($userData->first_name).' '.($userData->last_name)}} | <a href="mailto:{{@$userData->email}}" class="border-button">{{@$userData->email}}</a></p>
+                        <input type="hidden" name="userName" id="userName" value="{{ $userData->first_name }}">
+                        <input type="hidden" name="userPhone" id="userPhone" value="{{ $userData->phone }}">
+                    @endif
+
                     <!-- After Login Form -->
                     <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                         <h5 class="mb-0">Shipping Address</h5>
@@ -731,6 +869,7 @@
                     @endif
 
                     <script>
+                        window.isGuestClient = {{ $isGuestUser ? 'true' : 'false' }};
                         function showMoreShippingAddresses(animate = true) {
                             var wrapperEl = document.getElementById('shippingMoreAddressesWrapper');
                             if (wrapperEl) {
@@ -849,6 +988,11 @@
                         function refreshCheckoutAddresses(savedId, type, action) {
                             var currentSelectedShippingId = $('input[name="address_radio"]:checked').val();
                             var targetShippingId = (type === 'shipping' && savedId) ? savedId : currentSelectedShippingId;
+                            var isGuestMode = (typeof window.isGuestClient !== 'undefined' && window.isGuestClient) 
+                                || (window.location.search.indexOf('mode=guest') !== -1)
+                                || (savedId === 'guest')
+                                || (savedId === 'guest_bill')
+                                || (targetShippingId === 'guest');
 
                             if (window.Swal) {
                                 var successMsg = action === 'edit' 
@@ -872,7 +1016,8 @@
                                 url: "{{ route('checkout.get-addresses') }}",
                                 type: "GET",
                                 data: {
-                                    selected_shipping_id: targetShippingId
+                                    selected_shipping_id: targetShippingId,
+                                    mode: isGuestMode ? 'guest' : ''
                                 },
                                 dataType: "json",
                                 success: function(data) {
@@ -912,8 +1057,8 @@
                                     }
 
                                     // Guest Shipping "Add New" button visibility (hide once 1 address is added)
-                                    var isGuestClient = {{ $isGuestUser ? 'true' : 'false' }};
-                                    if (data.is_guest !== undefined ? data.is_guest : isGuestClient) {
+                                    var isGuestClientFlag = (data.is_guest !== undefined) ? data.is_guest : (typeof window.isGuestClient !== 'undefined' && window.isGuestClient);
+                                    if (isGuestClientFlag) {
                                         if (data.shipping_count > 0) {
                                             $('.add_new_address_div').addClass('d-none');
                                         } else {
@@ -943,8 +1088,8 @@
                                         }
                                     }
                                 },
-                                error: function() {
-                                    window.location.reload();
+                                error: function(xhr) {
+                                    console.warn("Failed to refresh checkout addresses asynchronously:", xhr);
                                 }
                             });
                         }
@@ -1107,10 +1252,11 @@
                     <h5 class="checkout-head">1. {{@Helper::language('store_label_web')}}</h5>
                     <div class="checkout-heading-flex-group">
                         <h5 class="mb-0">{{@Helper::language('contact_details_web')}}</h5>
-                        <?php
-                        ?>
-                        <p class="after-login">{{($userData->first_name).' '.($userData->last_name)}} | <a href="mailto:{{$userData->email}}" class="border-button">{{$userData->email}}</a></p>
-
+                        @if($isGuestUser)
+                            <p class="small text-muted mb-0" style="font-size: 12px;"><i class="fa fa-info-circle text-warning me-1"></i>Contact details from above section will be used for this order.</p>
+                        @else
+                            <p class="after-login">{{($userData->first_name).' '.($userData->last_name)}} | <a href="mailto:{{$userData->email}}" class="border-button">{{$userData->email}}</a></p>
+                        @endif
                     </div>
                     <div class="checkout-heading-flex-group">
                         <h5 class="mb-0">{{@Helper::language('select_store_web')}}</h5>
@@ -1696,6 +1842,8 @@
 
     var validation_name_required = "{{ \Helper::language('name_field_is_required'); }}";
     var validation_name_max_required = "{{ \Helper::language('the_name_may_not_be_greater_than_40_characters'); }}";
+    var validation_email_required = "{{ \Helper::language('email_field_required') ?: 'Email field is required'; }}";
+    var validation_email = "{{ \Helper::language('enter_valid_email_validation') ?: 'Please enter a valid email'; }}";
     var validation_phone_required = "{{ \Helper::language('phone_number_field_is_required'); }}";
     var validation_phone_minlength = "{{ \Helper::language('phone_number_min_max'); }}";
     var validation_phone_maxlength = "{{ \Helper::language('phone_number_min_max'); }}";
@@ -2150,6 +2298,56 @@
         var error = 0;
         var firstErrorElement = null;
 
+        // 0. Contact Details Validation (Guest User)
+        var isGuestClient = {{ $isGuestUser ? 'true' : 'false' }};
+        if (isGuestClient) {
+            $('#guest_email_error, #guest_phone_error').text('');
+            var gEmail = $('#guest_email').length ? $('#guest_email').val().trim() : '';
+            var gPhone = $('#guest_phone').length ? $('#guest_phone').val().trim() : '';
+            var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (!gEmail) {
+                $('#guest_email_error').text(validation_email_required);
+                if (!firstErrorElement) firstErrorElement = $('#guest_email');
+                error++;
+            } else if (!emailRegex.test(gEmail)) {
+                $('#guest_email_error').text(validation_email);
+                if (!firstErrorElement) firstErrorElement = $('#guest_email');
+                error++;
+            }
+
+            if (!gPhone) {
+                $('#guest_phone_error').text(validation_phone_required);
+                if (!firstErrorElement) firstErrorElement = $('#guest_phone');
+                error++;
+            } else if (gPhone.length < 8) {
+                $('#guest_phone_error').text(validation_phone_minlength);
+                if (!firstErrorElement) firstErrorElement = $('#guest_phone');
+                error++;
+            }
+
+            // Sync hidden userPhone for the order
+            $('#userPhone').val(gPhone);
+        } else {
+            var userName = $('#userName').val();
+            var userPhone = $('#userPhone').val();
+            if (!userName) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Missing Information",
+                    text: "Please Update Profile Information before checking out!",
+                    customClass: 
+                    {
+                        confirmButton: 'swal-custom-confirm',
+                        popup: 'swal-small-popup'
+                    }
+                }).then(() => {
+                    location.href = "{{ route('edit-profile') }}";
+                });
+                return false; 
+            }
+        }
+
         // 1. Delivery / Shipping Address Validation
         if (purchase_val == 1) {
             if (!user_address_id.is(":checked")) {
@@ -2254,27 +2452,6 @@
 
         let currentTotal = parseAmount(grandTotalElement.innerText)- giftAmount - parseFloat(deliveryAmount)+parseFloat(couponAmount);
 
-        // Check user Details
-        var userName = $('#userName').val();
-        var userPhone = $('#userPhone').val();
-        console.log(userName , userPhone);
-        // if (!userName || !userPhone) {
-        if (!userName) {
-        Swal.fire({
-            icon: "warning",
-            title: "Missing Information",
-            text: "Please Update Profile Information before checking out!",
-            customClass: 
-            {
-                confirmButton: 'swal-custom-confirm',
-                popup: 'swal-small-popup'
-            }
-        }).then(() => {
-            location.href = "/edit-profile";
-        });
-        return false; 
-        }
-
         $.ajax({
             type: "post",
             data: {
@@ -2305,7 +2482,12 @@
                 giftAmount:giftAmount,
                 discountFlag:discountFlag,
                 discountAmount:discountAmount,
-                currentTotal:currentTotal
+                currentTotal:currentTotal,
+                mode: '{{ request("mode") }}',
+                guest_name: $('#userName').length ? $('#userName').val().trim() : '',
+                guest_email: $('#guest_email').length ? $('#guest_email').val().trim() : '',
+                guest_phone: $('#guest_phone').length ? $('#guest_phone').val().trim() : '',
+                guest_phone_code: $('#guest_phone_code').length ? $('#guest_phone_code').val() : '233'
             },
             url: "{{ route('storeCheckout') }}",
             beforeSend: function() {
@@ -2315,6 +2497,26 @@
             success: function(response) {
                 $('.loader').css("visibility", "hidden");
                 if (response.error == true) {
+                    if (response.type === 'guest_email') {
+                        $('#guest_email_error').text(response.message);
+                        var $gBox = $('#guest_email');
+                        if ($gBox.length) {
+                            $('html, body').animate({
+                                scrollTop: $gBox.offset().top - 120
+                            }, 500);
+                        }
+                        return false;
+                    }
+                    if (response.type === 'guest_phone') {
+                        $('#guest_phone_error').text(response.message);
+                        var $gBox = $('#guest_phone');
+                        if ($gBox.length) {
+                            $('html, body').animate({
+                                scrollTop: $gBox.offset().top - 120
+                            }, 500);
+                        }
+                        return false;
+                    }
                     if (response.type === 'billing_address') {
                         $("#billing_address_error").text(response.message);
                         var scrollTarget = $('#billingAddressContainer').length ? $('#billingAddressContainer') : $('#sameAddress').closest('.check-group');
@@ -2323,6 +2525,25 @@
                                 scrollTop: scrollTarget.offset().top - 120
                             }, 500);
                         }
+                        return false;
+                    }
+                    if (response.type === 'daily_limit') {
+                        Swal.fire({
+                            icon: "warning",
+                            title: "Daily Order Limit Reached",
+                            text: response.message,
+                            showCancelButton: true,
+                            confirmButtonText: "Login / Register",
+                            cancelButtonText: "Close",
+                            customClass: {
+                                confirmButton: 'swal-custom-confirm',
+                                popup: 'swal-small-popup'
+                            }
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.location.href = "{{ route('websitelogin') }}";
+                            }
+                        });
                         return false;
                     }
                     Swal.fire({
@@ -2352,7 +2573,7 @@
                         var redirectUrl = response.redirect_url;
                         window.location.href = redirectUrl;    
                     }else{
-                        var redirectUrl = 'thankyou/' + response.order_id + '/' + response.earnedpoints;
+                        var redirectUrl = "{{ url('thankyou') }}/" + response.order_id + '/' + response.earnedpoints;
                         window.location.href = redirectUrl;
                     }
                 }
@@ -3800,6 +4021,198 @@
             recalculateTotalWithoutCoupon();
         }
 
+    });
+
+    // Guest Existing User Check & Inline Login Modal handlers
+    var lastCheckedGuestEmail = '';
+    var lastCheckedGuestPhone = '';
+
+    $('#guest_phone').on("input", function() {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+
+    function openInlineLoginModal(identifier, message) {
+        $('#inlineLoginEmail').val(identifier);
+        if (message) {
+            $('#existingAccountMessage').text(message);
+        }
+        $('#inlineLoginPassword').val('');
+        $('#inlineLoginError').hide().text('');
+        var modalEl = document.getElementById('existingAccountModal');
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        } else if (typeof $(modalEl).modal === 'function') {
+            $(modalEl).modal('show');
+        } else {
+            $(modalEl).addClass('show').css('display', 'block');
+            $('body').addClass('modal-open');
+            if ($('#inlineModalBackdrop').length === 0) {
+                $('body').append('<div class="modal-backdrop fade show" id="inlineModalBackdrop"></div>');
+            }
+        }
+        setTimeout(function() {
+            $('#inlineLoginPassword').focus();
+        }, 350);
+    }
+
+    function closeInlineLoginModal() {
+        var modalEl = document.getElementById('existingAccountModal');
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        } else if (typeof $(modalEl).modal === 'function') {
+            $(modalEl).modal('hide');
+        }
+        $(modalEl).removeClass('show').css('display', 'none');
+        $('body').removeClass('modal-open');
+        $('#inlineModalBackdrop').remove();
+        $('.modal-backdrop').remove();
+    }
+
+    function checkCustomerAccount(payload, callback) {
+        var email = (payload.email || '').trim().toLowerCase();
+        var phone = (payload.phone || '').trim();
+
+        if (!email && !phone) {
+            if (callback) callback(false);
+            return;
+        }
+
+        $.ajax({
+            url: "{{ route('checkout.check-existing-user') }}",
+            type: "POST",
+            data: JSON.stringify({ email: email, phone: phone }),
+            contentType: "application/json",
+            headers: { 'X-CSRF-TOKEN': "{{ csrf_token() }}" },
+            dataType: 'json',
+            success: function(res) {
+                if (email) lastCheckedGuestEmail = email;
+                if (phone) lastCheckedGuestPhone = phone;
+
+                if (res && res.exists) {
+                    var identifier = res.email || email || res.phone || phone;
+                    $('#email-exists-alert').removeClass('d-none');
+                    $('#inline-login-btn').attr('data-identifier', identifier);
+                    openInlineLoginModal(identifier, res.message);
+                    if (callback) callback(true);
+                } else {
+                    $('#email-exists-alert').addClass('d-none');
+                    if (callback) callback(false);
+                }
+            },
+            error: function() {
+                if (callback) callback(false);
+            }
+        });
+    }
+
+    // Check account on guest email blur with format validation
+    $(document).on('blur', '#guest_email', function() {
+        var emailVal = $(this).val().trim();
+        var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailVal) {
+            $('#guest_email_error').text(validation_email_required);
+            return;
+        }
+        if (!emailRegex.test(emailVal)) {
+            $('#guest_email_error').text(validation_email);
+            return;
+        }
+        $('#guest_email_error').text('');
+        if (emailVal !== lastCheckedGuestEmail) {
+            checkCustomerAccount({ email: emailVal });
+        }
+    });
+
+    $(document).on('input', '#guest_email', function() {
+        var emailVal = $(this).val().trim();
+        var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (emailVal && emailRegex.test(emailVal)) {
+            $('#guest_email_error').text('');
+        }
+    });
+
+    // Check account on guest phone blur with length validation
+    $(document).on('blur', '#guest_phone', function() {
+        var phoneVal = $(this).val().trim();
+        if (!phoneVal) {
+            $('#guest_phone_error').text(validation_phone_required);
+            return;
+        }
+        if (phoneVal.length < 8) {
+            $('#guest_phone_error').text(validation_phone_minlength);
+            return;
+        }
+        $('#guest_phone_error').text('');
+        if (phoneVal !== lastCheckedGuestPhone) {
+            checkCustomerAccount({ phone: phoneVal });
+        }
+    });
+
+    $(document).on('input', '#guest_phone', function() {
+        var phoneVal = $(this).val().trim();
+        if (phoneVal && phoneVal.length >= 8) {
+            $('#guest_phone_error').text('');
+        }
+    });
+
+    // Click handler for inline login alert button
+    $(document).on('click', '#inline-login-btn', function() {
+        var id = $(this).attr('data-identifier') || ($('#guest_email').val() || '').trim() || ($('#guest_phone').val() || '').trim();
+        if (id) {
+            openInlineLoginModal(id);
+        }
+    });
+
+    // Enter key submit in inline login modal
+    $(document).on('submit', '#inlineLoginForm', function(e) {
+        e.preventDefault();
+        $('#inlineLoginActionBtn').click();
+    });
+
+    // Inline login submit
+    $(document).on('click', '#inlineLoginActionBtn', function() {
+        var email = $('#inlineLoginEmail').val().trim();
+        var password = $('#inlineLoginPassword').val();
+        var btn = $(this);
+
+        if (!password) {
+            $('#inlineLoginError').text('Please enter your password.').show();
+            return;
+        }
+
+        btn.prop('disabled', true).text('Signing in...');
+        $('#inlineLoginError').hide().text('');
+
+        $.ajax({
+            url: "{{ route('checkout.inline-login') }}",
+            type: "POST",
+            data: JSON.stringify({ email: email, password: password }),
+            contentType: "application/json",
+            headers: { 'X-CSRF-TOKEN': "{{ csrf_token() }}" },
+            dataType: 'json',
+            success: function(res) {
+                if (res && res.success) {
+                    window.location.href = res.redirect || "{{ route('checkout') }}";
+                } else {
+                    btn.prop('disabled', false).text('Log In to Account');
+                    $('#inlineLoginError').text(res.message || 'Invalid email or password.').show();
+                }
+            },
+            error: function(xhr) {
+                btn.prop('disabled', false).text('Log In to Account');
+                var err = xhr.responseJSON;
+                $('#inlineLoginError').text(err && err.message ? err.message : 'Invalid credentials. Please try again.').show();
+            }
+        });
+    });
+
+    $(document).on('click', '#closeExistingAccountModal, #useDifferentEmailModalBtn', function() {
+        closeInlineLoginModal();
+        $('#guest_email').val('').focus();
+        lastCheckedGuestEmail = '';
+        lastCheckedGuestPhone = '';
     });
 
 </script>

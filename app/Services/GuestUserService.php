@@ -208,4 +208,109 @@ class GuestUserService
             'message'       => $message,
         ];
     }
+
+    /**
+     * Check whether a guest user has reached the daily order limit for the current date.
+     *
+     * @param int|null $guestId
+     * @param string|null $email
+     * @param string|null $phone
+     * @return array ['allowed' => bool, 'limit' => int, 'count' => int, 'message' => string|null]
+     */
+    public function checkDailyOrderLimit(?int $guestId = null, ?string $email = null, ?string $phone = null): array
+    {
+        $setting = \App\Models\Setting::find(1);
+        $dailyLimit = $setting ? (int) ($setting->guest_daily_order_limit ?? 0) : 0;
+
+        // 0 means unlimited orders allowed
+        if ($dailyLimit <= 0) {
+            return [
+                'allowed' => true,
+                'limit'   => 0,
+                'count'   => 0,
+                'message' => null,
+            ];
+        }
+
+        $guest = null;
+        if (!empty($guestId)) {
+            $guest = GuestUser::find($guestId);
+        }
+
+        $normalizedEmail = !empty($email) ? strtolower(trim($email)) : ($guest ? strtolower(trim($guest->email)) : null);
+        $phoneInput = !empty($phone) ? trim($phone) : ($guest ? trim($guest->phone) : null);
+        $digitsOnly = $phoneInput ? preg_replace('/[^\d]/', '', $phoneInput) : null;
+        $phoneSuffix = ($digitsOnly && strlen($digitsOnly) >= 7) ? substr($digitsOnly, -8) : null;
+
+        // Count all orders placed on current date (regardless of order status)
+        $todayQuery = Order::query()->whereDate('created_at', now()->toDateString());
+
+        $todayQuery->where(function ($q) use ($guestId, $normalizedEmail, $phoneSuffix, $phoneInput) {
+            $hasCondition = false;
+
+            if (!empty($guestId)) {
+                $q->where('guest_user_id', $guestId);
+                $hasCondition = true;
+            }
+
+            if (!empty($normalizedEmail) || !empty($phoneSuffix) || !empty($phoneInput)) {
+                $subCallback = function ($sub) use ($normalizedEmail, $phoneSuffix, $phoneInput) {
+                    $sub->where('client_type', 'guest');
+                    $sub->where(function ($infoQuery) use ($normalizedEmail, $phoneSuffix, $phoneInput) {
+                        $hasInfo = false;
+                        if (!empty($normalizedEmail)) {
+                            $infoQuery->whereHas('orderInfo', function ($iq) use ($normalizedEmail) {
+                                $iq->whereRaw('LOWER(TRIM(customer_email)) = ?', [$normalizedEmail]);
+                            });
+                            $hasInfo = true;
+                        }
+                        if (!empty($phoneSuffix)) {
+                            $phoneClause = function ($iq) use ($phoneSuffix) {
+                                $iq->whereRaw("REPLACE(REPLACE(REPLACE(REPLACE(customer_mobile, ' ', ''), '-', ''), '(', ''), ')', '') LIKE ?", ['%' . $phoneSuffix]);
+                            };
+                            if ($hasInfo) {
+                                $infoQuery->orWhereHas('orderInfo', $phoneClause);
+                            } else {
+                                $infoQuery->whereHas('orderInfo', $phoneClause);
+                                $hasInfo = true;
+                            }
+                        } elseif (!empty($phoneInput)) {
+                            $phoneClause = function ($iq) use ($phoneInput) {
+                                $iq->where('customer_mobile', 'LIKE', '%' . $phoneInput . '%');
+                            };
+                            if ($hasInfo) {
+                                $infoQuery->orWhereHas('orderInfo', $phoneClause);
+                            } else {
+                                $infoQuery->whereHas('orderInfo', $phoneClause);
+                            }
+                        }
+                    });
+                };
+
+                if ($hasCondition) {
+                    $q->orWhere($subCallback);
+                } else {
+                    $q->where($subCallback);
+                }
+            }
+        });
+
+        $todayOrdersCount = $todayQuery->count();
+
+        if ($todayOrdersCount >= $dailyLimit) {
+            return [
+                'allowed' => false,
+                'limit'   => $dailyLimit,
+                'count'   => $todayOrdersCount,
+                'message' => "Daily guest limit ({$dailyLimit} order) reached. Log in or register to place more orders.",
+            ];
+        }
+
+        return [
+            'allowed' => true,
+            'limit'   => $dailyLimit,
+            'count'   => $todayOrdersCount,
+            'message' => null,
+        ];
+    }
 }
