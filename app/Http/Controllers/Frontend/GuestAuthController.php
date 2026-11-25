@@ -67,6 +67,7 @@ class GuestAuthController extends Controller
             $validator = Validator::make($request->all(), [
                 'email'    => ['required', 'string', 'max:255'],
                 'password' => ['required', 'string'],
+                'g-recaptcha-response' => [new \App\Rules\ReCaptchaRule('inline_login')],
             ]);
 
             if ($validator->fails()) {

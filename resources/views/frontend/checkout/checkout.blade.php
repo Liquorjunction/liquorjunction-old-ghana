@@ -2452,44 +2452,46 @@
 
         let currentTotal = parseAmount(grandTotalElement.innerText)- giftAmount - parseFloat(deliveryAmount)+parseFloat(couponAmount);
 
-        $.ajax({
-            type: "post",
-            data: {
-                purchase_type: purchase_val,
-                user_address_id: user_address_id,
-                user_bill_address_id:user_bill_address_id,
-                isSameAddress:isSameAddress,
-                payment_method: payment_method,
-                store_location_id: store_location_radio,
-                coupon_code_id: coupon_code_id,
-                coupon_percentage: coupon_percentage,
-                reward_id:reward_id,
-                conversion_rate:conversion_rate,
-                reward_points:reward_points,
-                delivery_charge: delivery_charge,
-                tax: tax,
-                is_buy_now:is_buy_now,
-                pvariant_Ids:pvariant_Ids,
-                bogo_status:bogo_status,
-                offer_status:offer_status,
-                discount_amount:discount_amount,
-                offer_type:offer_type,
-                buy_quantity:buy_quantity,
-                buy_org_price:buy_org_price,
-                buy_discounted_price:buy_discounted_price,
-                giftRecipient:giftRecipient,
-                giftMessage:giftMessage,
-                giftAmount:giftAmount,
-                discountFlag:discountFlag,
-                discountAmount:discountAmount,
-                currentTotal:currentTotal,
-                mode: '{{ request("mode") }}',
-                guest_name: $('#userName').length ? $('#userName').val().trim() : '',
-                guest_email: $('#guest_email').length ? $('#guest_email').val().trim() : '',
-                guest_phone: $('#guest_phone').length ? $('#guest_phone').val().trim() : '',
-                guest_phone_code: $('#guest_phone_code').length ? $('#guest_phone_code').val() : '233'
-            },
-            url: "{{ route('storeCheckout') }}",
+        var executeAjaxOrder = function(recaptchaToken) {
+            $.ajax({
+                type: "post",
+                data: {
+                    purchase_type: purchase_val,
+                    user_address_id: user_address_id,
+                    user_bill_address_id:user_bill_address_id,
+                    isSameAddress:isSameAddress,
+                    payment_method: payment_method,
+                    store_location_id: store_location_radio,
+                    coupon_code_id: coupon_code_id,
+                    coupon_percentage: coupon_percentage,
+                    reward_id:reward_id,
+                    conversion_rate:conversion_rate,
+                    reward_points:reward_points,
+                    delivery_charge: delivery_charge,
+                    tax: tax,
+                    is_buy_now:is_buy_now,
+                    pvariant_Ids:pvariant_Ids,
+                    bogo_status:bogo_status,
+                    offer_status:offer_status,
+                    discount_amount:discount_amount,
+                    offer_type:offer_type,
+                    buy_quantity:buy_quantity,
+                    buy_org_price:buy_org_price,
+                    buy_discounted_price:buy_discounted_price,
+                    giftRecipient:giftRecipient,
+                    giftMessage:giftMessage,
+                    giftAmount:giftAmount,
+                    discountFlag:discountFlag,
+                    discountAmount:discountAmount,
+                    currentTotal:currentTotal,
+                    mode: '{{ request("mode") }}',
+                    guest_name: $('#userName').length ? $('#userName').val().trim() : '',
+                    guest_email: $('#guest_email').length ? $('#guest_email').val().trim() : '',
+                    guest_phone: $('#guest_phone').length ? $('#guest_phone').val().trim() : '',
+                    guest_phone_code: $('#guest_phone_code').length ? $('#guest_phone_code').val() : '233',
+                    'g-recaptcha-response': recaptchaToken || ''
+                },
+                url: "{{ route('storeCheckout') }}",
             beforeSend: function() {
                 $(".loader").fadeIn();
                 $('.loader').css("visibility", "visible");
@@ -2497,6 +2499,14 @@
             success: function(response) {
                 $('.loader').css("visibility", "hidden");
                 if (response.error == true) {
+                    if (response.type === 'recaptcha') {
+                        Swal.fire({
+                            icon: "error",
+                            title: "Security Verification",
+                            text: response.message || "Security check failed. Please refresh and try again.",
+                        });
+                        return false;
+                    }
                     if (response.type === 'guest_email') {
                         $('#guest_email_error').text(response.message);
                         var $gBox = $('#guest_email');
@@ -2580,6 +2590,15 @@
 
             }
         });
+    };
+
+    if (typeof getReCaptchaToken === 'function') {
+        getReCaptchaToken('checkout', function(token) {
+            executeAjaxOrder(token);
+        });
+    } else {
+        executeAjaxOrder('');
+    }
 
     }
     window.isSelectedAddressServiceable = true;
@@ -2974,19 +2993,21 @@
                 $("#coupon_error").text(coupon_error_msg).css('color', 'red');
                 return false;
             }
-            $.ajax({
-                type: "post",
-                data: {
-                    coupon_code: coupon_code,
-                    user_address_id: user_address_id,
-                    is_buy_now: is_buy_now,
-                    pvariant_Ids: pvariant_Ids,
-                    buy_quantity: buy_quantity,
-                    bogo_status:bogo_status,
-                    purchase_type: purchase_type,
-                    currentTotal:currentTotal,
-                },
-                url: "{{ route('applyCoupon') }}",
+            window.getReCaptchaToken('apply_coupon', function (recaptchaToken) {
+                $.ajax({
+                    type: "post",
+                    data: {
+                        coupon_code: coupon_code,
+                        user_address_id: user_address_id,
+                        is_buy_now: is_buy_now,
+                        pvariant_Ids: pvariant_Ids,
+                        buy_quantity: buy_quantity,
+                        bogo_status:bogo_status,
+                        purchase_type: purchase_type,
+                        currentTotal:currentTotal,
+                        'g-recaptcha-response': recaptchaToken
+                    },
+                    url: "{{ route('applyCoupon') }}",
                 success: function(response) {
                     let deliveryFee = parseFloat(response.delivery_fee);
                     let grandTotal = parseFloat(response.grand_total_amount);
@@ -3048,6 +3069,7 @@
 
                     }
                 }
+            });
             });
         });
     });
@@ -3796,53 +3818,56 @@
             // Gift
             var isGiftChecked = $("#userGift").is(":checked"); 
 
-            $.ajax({
-                type: "post",
-                data: {
-                    coupon_code: couponCode,
-                    user_address_id: user_address_id,
-                    is_buy_now: is_buy_now,
-                    pvariant_Ids: pvariant_Ids,
-                    buy_quantity: buy_quantity,
-                    purchase_type: purchase_type,
-                    currentTotal: currentTotal
-                },
-                url: "{{ route('applyCoupon') }}",
-                success: function(response) {
-                    let deliveryFee = parseFloat(response.delivery_fee);
-                    let grandTotal = parseFloat(response.grand_total_amount);
+            window.getReCaptchaToken('apply_coupon', function (recaptchaToken) {
+                $.ajax({
+                    type: "post",
+                    data: {
+                        coupon_code: couponCode,
+                        user_address_id: user_address_id,
+                        is_buy_now: is_buy_now,
+                        pvariant_Ids: pvariant_Ids,
+                        buy_quantity: buy_quantity,
+                        purchase_type: purchase_type,
+                        currentTotal: currentTotal,
+                        'g-recaptcha-response': recaptchaToken
+                    },
+                    url: "{{ route('applyCoupon') }}",
+                    success: function(response) {
+                        let deliveryFee = parseFloat(response.delivery_fee);
+                        let grandTotal = parseFloat(response.grand_total_amount);
 
-                    if(isGiftChecked)
-                    {
-                        grandTotal+=20;
-                    }
-
-                    if (response.code_id != "") {
-                        if(deliveryFee>0)
+                        if(isGiftChecked)
                         {
-                            $("#delivery_fee").text(deliveryFee.toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
-                            $("#delivery_charge").removeClass('delivery-display');
-                            $("#delivery_fee").removeClass('delivery-display');
+                            grandTotal+=20;
                         }
-                        else
-                        {
-                            $("#delivery_fee").text("Yay! free delivery");
+
+                        if (response.code_id != "") {
+                            if(deliveryFee>0)
+                            {
+                                $("#delivery_fee").text(deliveryFee.toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
+                                $("#delivery_charge").removeClass('delivery-display');
+                                $("#delivery_fee").removeClass('delivery-display');
+                            }
+                            else
+                            {
+                                $("#delivery_fee").text("Yay! free delivery");
+                            }
+                            $("#inp-delivery-fee").val(deliveryFee);
+
+                            $("#coupon_applied").val("1");
+                            $("#coupon_code").val(couponCode);
+
+                            $("#coupon_code_amount_text").text('-' + parseFloat(response.coupon_code_price || 0).toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
+                            $("#grand-total-amount").text((grandTotal.toFixed(2)) + " {{Helper::Settings('currency_symbol')}}");
+                            $("#inp-grand-total-amount").val((grandTotal.toFixed(2)));
+                            $("#coupon_percentage").val(response.coupon_percentage);
+                            $("#coupon_code_id").val(response.code_id);
+                            $("#coupon_code_amount").val(response.coupon_code_price);
+                            $("#coupon_min_amount").val(response.minimum_amount || 0);
+                            $("#tax-amount").text(parseFloat(response.tax_amount || 0).toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
                         }
-                        $("#inp-delivery-fee").val(deliveryFee);
-
-                        $("#coupon_applied").val("1");
-                        $("#coupon_code").val(couponCode);
-
-                        $("#coupon_code_amount_text").text('-' + parseFloat(response.coupon_code_price || 0).toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
-                        $("#grand-total-amount").text((grandTotal.toFixed(2)) + " {{Helper::Settings('currency_symbol')}}");
-                        $("#inp-grand-total-amount").val((grandTotal.toFixed(2)));
-                        $("#coupon_percentage").val(response.coupon_percentage);
-                        $("#coupon_code_id").val(response.code_id);
-                        $("#coupon_code_amount").val(response.coupon_code_price);
-                        $("#coupon_min_amount").val(response.minimum_amount || 0);
-                        $("#tax-amount").text(parseFloat(response.tax_amount || 0).toFixed(2) + " {{Helper::Settings('currency_symbol')}}");
                     }
-                }
+                });
             });
         }
 

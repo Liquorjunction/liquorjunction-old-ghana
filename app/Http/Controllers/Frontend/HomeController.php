@@ -45,61 +45,28 @@ class HomeController extends Controller
     {
         $today = Carbon::now()->toDateString();
 
-        // 1. Get the first active valid offer (same logic as special())
-        $offer = Offers::where('status', 1)
+        // 1. Get all active valid offers
+        $activeOffers = Offers::where('status', 1)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
             ->whereDate('expiry_date', '>=', $today)
-            ->first();
+            ->orderByDesc('dis_amount')
+            ->orderByDesc('id')
+            ->get();
 
-        $offerProducts = collect();
-        if ($offer) {
-            $offer_product_id = $offer_brand_id = $offer_category_id = $offer_subcategory_id = null;
-            if (!empty($offer->product_id)) {
-                $offer_product_id = $offer->product_id;
-            } elseif (!empty($offer->brand_id)) {
-                $offer_brand_id = $offer->brand_id;
-            } elseif (!empty($offer->category_id) && !empty($offer->subcategory_id)) {
-                $offer_subcategory_id = $offer->subcategory_id;
-            } elseif (!empty($offer->category_id)) {
-                $offer_category_id = $offer->category_id;
-            }
-
-            $offerProducts = $this->getFilteredProducts(
-                $offer_product_id,
-                $offer_brand_id,
-                $offer_subcategory_id,
-                $offer_category_id
-            );
-        }
-
-        // 2. Get active valid BOGO (same logic as special())
-        $bogo = Bogo::where('status', 1)
+        // 2. Get all active valid BOGOs
+        $activeBogos = Bogo::where('status', 1)
             ->whereDate('start_date', '<=', $today)
             ->whereDate('end_date', '>=', $today)
-            ->first();
+            ->orderByDesc('id')
+            ->get();
 
-        $bogoProducts = collect();
-        if ($bogo) {
-            $bogo_product_id = $bogo_brand_id = $bogo_category_id = $bogo_subcategory_id = null;
-            if (!empty($bogo->product_id)) {
-                $bogo_product_id = $bogo->product_id;
-            } elseif (!empty($bogo->brand_id)) {
-                $bogo_brand_id = $bogo->brand_id;
-            } elseif (!empty($bogo->category_id) && !empty($bogo->subcategory_id)) {
-                $bogo_subcategory_id = $bogo->subcategory_id;
-            } elseif (!empty($bogo->category_id)) {
-                $bogo_category_id = $bogo->category_id;
-            }
+        $offerProducts = $this->getActiveOfferProductsQuery($activeOffers, $activeBogos)->orderBy('p.id', 'desc')->get();
+        $bogoProducts = $this->getActiveBogoProductsQuery($activeBogos)->orderBy('p.id', 'desc')->get();
 
-            $bogoProducts = $this->getFilteredProducts(
-                $bogo_product_id,
-                $bogo_brand_id,
-                $bogo_subcategory_id,
-                $bogo_category_id
-            );
-        }
-
-        // 3. Combine both Offers & BOGO products, removing duplicate products by id
-        $combinedOffers = $offerProducts->concat($bogoProducts)->unique('id');
+        // 3. Combine both Offers & BOGO products, removing duplicate products by product_id
+        $combinedOffers = $offerProducts->concat($bogoProducts)->unique('product_id');
 
         $total_offer_count = $combinedOffers->count();
         // Limit to max 21 items for home page display (20 items + 21st blurred View All item if count > 20)
@@ -114,115 +81,20 @@ class HomeController extends Controller
 
         // Offer Bogo & Discount Check
         foreach ($offer_product as $bogoOffer) {
-            $bogoCheck = Bogo::where('status', 1)
-                ->whereDate('start_date', '<=', $today)
-                ->whereDate('end_date', '>=', $today)
-                ->where(function ($query) use ($bogoOffer) {
-                    $query->where('product_id', $bogoOffer->id)
-                        ->orWhere(function ($q) use ($bogoOffer) {
-                            $q->whereNotNull('subcategory_id')
-                                ->where('subcategory_id', $bogoOffer->subcategory_id);
-                        })
-                        ->orWhere(function ($q) use ($bogoOffer) {
-                            $q->whereNull('subcategory_id')
-                                ->where('category_id', $bogoOffer->category_id);
-                        });
-
-                    if (!empty($bogoOffer->brand_id)) {
-                        $query->orWhere('brand_id', $bogoOffer->brand_id);
-                    }
-                })
-                ->first();
-
-            $bogoOffer->bogo_status = $bogoCheck ? true : false; 
-
-
-            // Offer Check
-            $offerCheck = Offers::where('status', 1)
-                ->whereDate('expiry_date', '>=', $today)
-                ->where(function ($query) use ($bogoOffer) {
-                    $query->where('product_id', $bogoOffer->id)
-                        ->orWhere(function ($q) use ($bogoOffer) {
-                            $q->whereNotNull('subcategory_id')
-                                ->where('subcategory_id', $bogoOffer->subcategory_id);
-                        })
-                        ->orWhere(function ($q) use ($bogoOffer) {
-                            $q->whereNull('subcategory_id')
-                                ->where('category_id', $bogoOffer->category_id);
-                        });
-
-                    if (!empty($bogoOffer->brand_id)) {
-                        $query->orWhere('brand_id', $bogoOffer->brand_id);
-                    }
-                })
-                ->first();
-
-            if ($offerCheck) {
-                $bogoOffer->offer_status = true;
-                $bogoOffer->discount_amount = $offerCheck->dis_amount;
-                $bogoOffer->offer_type = $offerCheck->offer_type;
-            } else {
-                $bogoOffer->offer_status = false;
-                $bogoOffer->discount_amount = 0;
-                $bogoOffer->offer_type = null;
-            }
-
+            $deal = Helper::resolveProductDeal($bogoOffer->id, $bogoOffer->category_id, $bogoOffer->subcategory_id, $bogoOffer->brand_id, $bogoOffer->final_price ?? $bogoOffer->variant_price);
+            $bogoOffer->bogo_status = $deal['is_bogo'];
+            $bogoOffer->offer_status = $deal['is_offer'];
+            $bogoOffer->discount_amount = $deal['discount_amount'];
+            $bogoOffer->offer_type = $deal['offer_type'];
         }
 
         // Best Seller bogo
         foreach ($best_seller_product as $best) {
-            $bogo = Bogo::where('status', 1)
-                ->whereDate('start_date', '<=', $today)
-                ->whereDate('end_date', '>=', $today)
-                ->where(function ($query) use ($best) {
-                    $query->where('product_id', $best->id)
-                        ->orWhere(function ($q) use ($best) {
-                            $q->whereNotNull('subcategory_id')
-                                ->where('subcategory_id', $best->subcategory_id);
-                        })
-                        ->orWhere(function ($q) use ($best) {
-                            $q->whereNull('subcategory_id')
-                                ->where('category_id', $best->category_id);
-                        });
-
-                    if (!empty($best->brand_id)) {
-                        $query->orWhere('brand_id', $best->brand_id);
-                    }
-                })
-                ->first();
-
-            $best->bogo_status = $bogo ? true : false; 
-
-
-             // Offer Check
-              $offer = Offers::where('status', 1)
-                        ->whereDate('expiry_date', '>=', $today)
-                        ->where(function ($query) use ($best) {
-                    $query->where('product_id', $best->id)
-                        ->orWhere(function ($q) use ($best) {
-                            $q->whereNotNull('subcategory_id')
-                                ->where('subcategory_id', $best->subcategory_id);
-                        })
-                        ->orWhere(function ($q) use ($best) {
-                            $q->whereNull('subcategory_id')
-                                ->where('category_id', $best->category_id);
-                        });
-
-                    if (!empty($best->brand_id)) {
-                        $query->orWhere('brand_id', $best->brand_id);
-                    }
-                })
-                ->first();
-
-                if ($offer) {
-                    $best->offer_status = true;
-                    $best->discount_amount = $offer->dis_amount;
-                    $best->offer_type = $offer->offer_type;
-                } else {
-                    $best->offer_status = false;
-                    $best->discount_amount = 0;
-                    $best->offer_type = null;
-                }
+            $deal = Helper::resolveProductDeal($best->id, $best->category_id, $best->subcategory_id, $best->brand_id, $best->product_price);
+            $best->bogo_status = $deal['is_bogo'];
+            $best->offer_status = $deal['is_offer'];
+            $best->discount_amount = $deal['discount_amount'];
+            $best->offer_type = $deal['offer_type'];
         }
     
         $blogs = Blog::where('status',1)->limit(3)->orderby('created_at','desc')->get();
@@ -234,18 +106,19 @@ class HomeController extends Controller
         return view("frontend.home",compact('offer_product','total_offer_count','best_seller_product','blogs','banners','banners_highlight','banners_offer','categories'));
     }
 
-    private function getFilteredProducts($product_id = null, $brand_id = null, $subcategory_id = null, $category_id = null)
+    private function getBasePromotionsQuery()
     {
-        $query = DB::table('product as p')
+        return DB::table('product as p')
             ->select(
                 'pv.*',
+                'pv.id as id',
                 'pv.id as variant_id',
                 'p.id as product_id',
-                'p.id as id',
                 'p.average_rating',
                 'p.product_name',
                 'pi.image',
                 'pv.final_price',
+                'mvp.count',
                 'p.category_id',
                 'p.subcategory_id',
                 'p.brand_id'
@@ -266,24 +139,120 @@ class HomeController extends Controller
                 $join->on('p.brand_id', '=', 'b.id')
                     ->where('b.status', 1);
             })
-            ->join(DB::raw('(SELECT *, COALESCE(NULLIF(variant_discounted_price, ""), variant_price) AS final_price FROM product_variants WHERE status = 1) as pv'),
+            ->join(
+                DB::raw('(SELECT *, COALESCE(NULLIF(variant_discounted_price, ""), variant_price) AS final_price FROM product_variants WHERE status = 1) as pv'),
                 function ($join) {
                     $join->on('p.id', '=', 'pv.product_id');
-                })
-            ->where('p.status', 1);
+                }
+            )
+            ->leftJoin('most_viewed_product as mvp', 'mvp.product_id', '=', 'p.id')
+            ->where('p.status', 1)
+            ->groupBy('p.id');
+    }
 
-            // Priority-based filtering
-            if (!empty($product_id)) {
-                $query->where('p.id', $product_id);
-            } elseif (!empty($brand_id)) {
-                $query->where('b.id', $brand_id);
-            } elseif (!empty($subcategory_id)) {
-                $query->where('sc.id', $subcategory_id);
-            } elseif (!empty($category_id)) {
-                $query->where('c.id', $category_id);
+    private function getActiveBogoProductsQuery($activeBogos)
+    {
+        $query = $this->getBasePromotionsQuery();
+
+        if (empty($activeBogos) || $activeBogos->isEmpty()) {
+            $query->whereRaw('1 = 0');
+            return $query;
+        }
+
+        $query->where(function ($q) use ($activeBogos) {
+            foreach ($activeBogos as $bogo) {
+                $q->orWhere(function ($sub) use ($bogo) {
+                    if (!empty($bogo->product_id)) {
+                        $sub->where('p.id', $bogo->product_id);
+                    } elseif (!empty($bogo->subcategory_id)) {
+                        if (!empty($bogo->category_id)) {
+                            $sub->where('p.category_id', $bogo->category_id);
+                        }
+                        $sub->where('p.subcategory_id', $bogo->subcategory_id);
+                    } elseif (!empty($bogo->category_id)) {
+                        $sub->where('p.category_id', $bogo->category_id);
+                    } elseif (!empty($bogo->brand_id)) {
+                        $sub->where('p.brand_id', $bogo->brand_id);
+                    }
+                });
             }
+        });
 
-            return $query->groupBy('p.id')->orderBy('p.id', 'desc')->get();
+        return $query;
+    }
+
+    private function getActiveOfferProductsQuery($activeOffers, $activeBogos = null)
+    {
+        $query = $this->getBasePromotionsQuery();
+
+        if (empty($activeOffers) || $activeOffers->isEmpty()) {
+            $query->whereRaw('1 = 0');
+            return $query;
+        }
+
+        $query->where(function ($q) use ($activeOffers) {
+            foreach ($activeOffers as $offer) {
+                $q->orWhere(function ($sub) use ($offer) {
+                    if ($offer->offer_type === 'flat') {
+                        $sub->where('pv.final_price', '>', floatval($offer->dis_amount));
+                    }
+                    if (!empty($offer->product_id)) {
+                        $sub->where('p.id', $offer->product_id);
+                    } elseif (!empty($offer->subcategory_id)) {
+                        if (!empty($offer->category_id)) {
+                            $sub->where('p.category_id', $offer->category_id);
+                        }
+                        $sub->where('p.subcategory_id', $offer->subcategory_id);
+                    } elseif (!empty($offer->category_id)) {
+                        $sub->where('p.category_id', $offer->category_id);
+                    } elseif (!empty($offer->brand_id)) {
+                        $sub->where('p.brand_id', $offer->brand_id);
+                    }
+                });
+            }
+        });
+
+        // Deal priority: BOGO > Offer (products with an active BOGO belong in BOGO tab, not Offer tab)
+        if (!empty($activeBogos) && $activeBogos->isNotEmpty()) {
+            $query->whereNot(function ($q) use ($activeBogos) {
+                foreach ($activeBogos as $bogo) {
+                    $q->orWhere(function ($sub) use ($bogo) {
+                        if (!empty($bogo->product_id)) {
+                            $sub->where('p.id', $bogo->product_id);
+                        } elseif (!empty($bogo->subcategory_id)) {
+                            if (!empty($bogo->category_id)) {
+                                $sub->where('p.category_id', $bogo->category_id);
+                            }
+                            $sub->where('p.subcategory_id', $bogo->subcategory_id);
+                        } elseif (!empty($bogo->category_id)) {
+                            $sub->where('p.category_id', $bogo->category_id);
+                        } elseif (!empty($bogo->brand_id)) {
+                            $sub->where('p.brand_id', $bogo->brand_id);
+                        }
+                    });
+                }
+            });
+        }
+
+        return $query;
+    }
+
+    private function getFilteredProducts($product_id = null, $brand_id = null, $subcategory_id = null, $category_id = null)
+    {
+        $query = $this->getBasePromotionsQuery();
+
+        // Priority-based filtering
+        if (!empty($product_id)) {
+            $query->where('p.id', $product_id);
+        } elseif (!empty($brand_id)) {
+            $query->where('b.id', $brand_id);
+        } elseif (!empty($subcategory_id)) {
+            $query->where('sc.id', $subcategory_id);
+        } elseif (!empty($category_id)) {
+            $query->where('c.id', $category_id);
+        }
+
+        return $query->orderBy('p.id', 'desc')->get();
     }
 
     public function special(Request $request)
@@ -296,134 +265,83 @@ class HomeController extends Controller
             $query->where('status', 1);
         })->where('status', 1)->orderBy('id', 'ASC');
 
-        $categories = Categories::with(['subcategory'=>function ($query){
-            $query->where('status',1);
-        }])->where('status',1)->get();
+        $categories = Categories::with(['subcategory' => function ($query) {
+            $query->where('status', 1);
+        }])->where('status', 1)->get();
 
-        $brandData = Brand::where('status',1)->orderBy('title','asc')->get();
+        $brandData = Brand::where('status', 1)->orderBy('title', 'asc')->get();
 
-        $product_val =  new Product;
+        $product_val = new Product;
         $product_max_price = $product_val->getproductMaxPrice();
         $product_min_price = $product_val->getproductMinPrice();
 
-        // offer details
         $today = Carbon::now()->toDateString();
-        $offer = Offers::where('status', 1)
-                ->whereDate('expiry_date', '>=', $today)
-                ->first(); 
 
-        $offer_category_id = null;
-        $offer_subcategory_id = null;
-        $offer_product_id = null;
-        $offer_brand_id = null;
+        // 1. All active offers
+        $activeOffers = Offers::where('status', 1)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
+            ->whereDate('expiry_date', '>=', $today)
+            ->orderByDesc('dis_amount')
+            ->orderByDesc('id')
+            ->get();
 
-        if ($offer) {
-            if (!empty($offer->product_id)) {
-                $offer_product_id = $offer->product_id;
+        // 2. All active BOGOs
+        $activeBogos = Bogo::where('status', 1)
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->orderByDesc('id')
+            ->get();
 
-            } elseif (!empty($offer->brand_id)) {
-                $offer_brand_id = $offer->brand_id;
-
-            } elseif (!empty($offer->category_id) && !empty($offer->subcategory_id)) {
-                $offer_subcategory_id = $offer->subcategory_id;
-
-            } elseif (!empty($offer->category_id)) {
-                $offer_category_id = $offer->category_id;
-            }
-        }
-
-        $offerProductDataFilter=$this->getFilteredProducts(
-                                    $offer_product_id,
-                                    $offer_brand_id,
-                                    $offer_subcategory_id,
-                                    $offer_category_id
-                                );
-
-        // Bogo details
-        $bogo = Bogo::where('status', 1)
-                ->whereDate('start_date', '<=', $today)
-                ->whereDate('end_date', '>=', $today)
-                ->first();
-
-        $bogo_category_id = null;
-        $bogo_subcategory_id = null;
-        $bogo_product_id = null;
-        $bogo_brand_id = null;
-
-        if ($bogo) {
-            if (!empty($bogo->product_id)) {
-                $bogo_product_id = $bogo->product_id;
-
-            } elseif (!empty($bogo->brand_id)) {
-                $bogo_brand_id = $bogo->brand_id;
-
-            } elseif (!empty($bogo->category_id) && !empty($bogo->subcategory_id)) {
-                $bogo_subcategory_id = $bogo->subcategory_id;
-
-            } elseif (!empty($bogo->category_id)) {
-                $bogo_category_id = $bogo->category_id;
-            }
-        }
-
-        $bogoProductDataFilter = $this->getFilteredProducts(
-                                    $bogo_product_id,
-                                    $bogo_brand_id,
-                                    $bogo_subcategory_id,
-                                    $bogo_category_id
-                                );
-
+        $offerProductDataFilter = $this->getActiveOfferProductsQuery($activeOffers, $activeBogos)->orderBy('p.id', 'desc')->get();
+        $bogoProductDataFilter = $this->getActiveBogoProductsQuery($activeBogos)->orderBy('p.id', 'desc')->get();
 
         $limit = 16;
 
-        $has_offer_products = !empty($offer) && $offerProductDataFilter->count() > 0;
-        $has_bogo_products = !empty($bogo) && $bogoProductDataFilter->count() > 0;
+        $offer_total_product_count = $offerProductDataFilter->count();
+        $bogo_total_product_count = $bogoProductDataFilter->count();
+
+        $has_offer_products = $offer_total_product_count > 0;
+        $has_bogo_products = $bogo_total_product_count > 0;
 
         // ---- Offer Products Pagination ----
-        $offer_total_product_count = count($offerProductDataFilter);
         $offerProductData = $offerProductDataFilter->take($limit);
+        $offerProductData->transform(function ($product) {
+            $deal = Helper::resolveProductDeal($product->product_id, $product->category_id, $product->subcategory_id, $product->brand_id, $product->final_price ?? $product->variant_price);
+            $product->offer_status = $deal['is_offer'];
+            $product->offer_type = $deal['offer_type'];
+            $product->discount_amount = $deal['discount_amount'];
+            $product->bogo_status = $deal['is_bogo'];
+            return $product;
+        });
 
-        if ($offer) {
-            $offerProductData->transform(function ($product) use ($offer) {
-                $product->offer_type = $offer->offer_type;
-                $product->discount_amount = $offer->dis_amount;
-                $product->offer_status = $offer ? true : false;
-                return $product;
-            });
-        }
-
-        $offer_showing_product_count = 0;
-        if($offer_total_product_count!=0 && $offer_total_product_count >= $limit ){
-            $offer_showing_product_count = $limit;
-        }elseif($offer_total_product_count <= $limit ){
-            $offer_showing_product_count = $offer_total_product_count;
-        }
+        $offer_showing_product_count = min($limit, $offer_total_product_count);
 
         // ---- BOGO Products Pagination ----
-        $bogo_total_product_count = count($bogoProductDataFilter);
         $bogoProductData = $bogoProductDataFilter->take($limit);
+        $bogoProductData->transform(function ($product) {
+            $deal = Helper::resolveProductDeal($product->product_id, $product->category_id, $product->subcategory_id, $product->brand_id);
+            $product->bogo_status = $deal['is_bogo'];
+            $product->offer_status = false;
+            $product->offer_type = null;
+            $product->discount_amount = 0;
+            return $product;
+        });
 
-        if ($bogo) {
-            $bogoProductData->transform(function ($product) use ($bogo) {
-                $product->bogo_status = $bogo ? true : false;
-                return $product;
-            });
-        }
+        $bogo_showing_product_count = min($limit, $bogo_total_product_count);
 
-        $bogo_showing_product_count = 0;
-        if($bogo_total_product_count!=0 && $bogo_total_product_count >= $limit ){
-            $bogo_showing_product_count = $limit;
-        }elseif($bogo_total_product_count <= $limit ){
-            $bogo_showing_product_count = $bogo_total_product_count;
-        }
-
-
-        return view("frontend.product.offer-list",compact('categoryData','subcategoryData','offerProductDataFilter','bogoProductDataFilter','offerProductData','bogoProductData','user_id','brandData','product_max_price','product_min_price','offer_total_product_count','bogo_total_product_count','offer_showing_product_count','bogo_showing_product_count','categories','has_offer_products', 'has_bogo_products',));
-
+        return view("frontend.product.offer-list", compact(
+            'categoryData', 'subcategoryData', 'offerProductDataFilter', 'bogoProductDataFilter',
+            'offerProductData', 'bogoProductData', 'user_id', 'brandData', 'product_max_price',
+            'product_min_price', 'offer_total_product_count', 'bogo_total_product_count',
+            'offer_showing_product_count', 'bogo_showing_product_count', 'categories',
+            'has_offer_products', 'has_bogo_products'
+        ));
     }
 
-     public function loadfilterofferlist(Request $request)
+    public function loadfilterofferlist(Request $request)
     {
-        $product_last_id_for_pagination = $request->product_last_id;
         $limit = 16;
         $brand_ids = null;
         $category_ids = null;
@@ -447,142 +365,87 @@ class HomeController extends Controller
                 : explode(',', $request->subcategory_ids);
         }
 
-        $minprice = ($request->min_price)?$request->min_price:'';
-        $maxprice = ($request->max_price)?$request->max_price:'';
+        $minprice = ($request->min_price) ? $request->min_price : '';
+        $maxprice = ($request->max_price) ? $request->max_price : '';
 
-          // offer details
         $today = Carbon::now()->toDateString();
-        $offer = Offers::where('status', 1)
-                ->whereDate('expiry_date', '>=', $today)
-                ->first(); 
+        $activeOffers = Offers::where('status', 1)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
+            ->whereDate('expiry_date', '>=', $today)
+            ->orderByDesc('dis_amount')
+            ->orderByDesc('id')
+            ->get();
 
-        $offer_category_id = null;
-        $offer_subcategory_id = null;
-        $offer_product_id = null;
-        $offer_brand_id = null;
+        $activeBogos = Bogo::where('status', 1)
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->orderByDesc('id')
+            ->get();
 
-        if ($offer) {
-            if (!empty($offer->product_id)) {
-                $offer_product_id = $offer->product_id;
+        $offerProductDataFilter = $this->getActiveOfferProductsQuery($activeOffers, $activeBogos);
 
-            } elseif (!empty($offer->brand_id)) {
-                $offer_brand_id = $offer->brand_id;
-
-            } elseif (!empty($offer->category_id) && !empty($offer->subcategory_id)) {
-                $offer_subcategory_id = $offer->subcategory_id;
-
-            } elseif (!empty($offer->category_id)) {
-                $offer_category_id = $offer->category_id;
-            }
-        }
-
-        $offerProductDataFilter=DB::table('product as p')
-                    ->select('p.id as product_id','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.category_id','p.subcategory_id','p.brand_id')
-                    ->join('product_image as pi', 'p.id', '=', 'pi.product_id')
-                    ->where('pi.status', '=', 1)
-                    ->join('categories as c', 'p.category_id', '=', 'c.id')                    
-                        ->where('c.status', '=', 1)
-                    ->join('sub_categories as sc', 'p.subcategory_id', '=', 'sc.id')
-                        ->where('sc.status', '=', 1)
-                    ->join('brand as b', 'p.brand_id', '=', 'b.id')
-                        ->where('b.status', '=', 1)
-                    ->join(
-                        DB::raw('(SELECT *, COALESCE(NULLIF(variant_discounted_price, ""), variant_price) AS final_price FROM product_variants WHERE status = 1) as pv'),
-                        function ($join) {
-                            $join->on('p.id', '=', 'pv.product_id');
-                        }
-                    )
-                    ->leftjoin('most_viewed_product as mvp', 'mvp.product_id', '=', 'p.id')
-                    ->where('p.status', '=', 1)
-                    ->groupBy('p.id');
-
-
-        if($category_ids!=null && $subcategory_ids ==null){
+        if ($category_ids != null && $subcategory_ids == null) {
             $offerProductDataFilter->whereIn('sc.category_id', $category_ids);
-        }
-        else if($category_ids!=null && ($subcategory_ids && $subcategory_ids != null)){
-            $offerProductDataFilter->where(function ($query) use ($subcategory_ids,$category_ids){
+        } else if ($category_ids != null && ($subcategory_ids && $subcategory_ids != null)) {
+            $offerProductDataFilter->where(function ($query) use ($subcategory_ids, $category_ids) {
                 $query->whereIn('sc.id', $subcategory_ids)
                       ->orWhereIn('sc.category_id', $category_ids);
             });
-        }
-        else if($category_ids==null && ($subcategory_ids && $subcategory_ids != null)){
+        } else if ($category_ids == null && ($subcategory_ids && $subcategory_ids != null)) {
             $offerProductDataFilter->whereIn('sc.id', $subcategory_ids);
         }
 
-
-        if($brand_ids && $brand_ids != null){
+        if ($brand_ids && $brand_ids != null) {
             $offerProductDataFilter->whereIn('b.id', $brand_ids);
         }
 
-        if(($minprice && $minprice != null) && ($maxprice && $maxprice != null)){                
+        if (($minprice && $minprice != null) && ($maxprice && $maxprice != null)) {                
             $offerProductDataFilter->whereBetween('pv.final_price', [$minprice, $maxprice]);
         }
 
-        if ($offer_product_id && $offer_product_id!=null) {
-             $offerProductDataFilter->where('p.id', '=', $offer_product_id);
-        } 
-
-        if ($offer_brand_id && $offer_brand_id!=null) {
-             $offerProductDataFilter->where('b.id', '=', $offer_brand_id);
-        } 
-
-        if ($offer_subcategory_id && $offer_subcategory_id!=null) {
-             $offerProductDataFilter->where('sc.id', '=', $offer_subcategory_id);
-        } 
-
-        if ($offer_category_id && $offer_category_id!=null) {
-             $offerProductDataFilter->where('c.id', '=', $offer_category_id);
-        } 
-
         $sort_by = $request->sort_by;
-        if($sort_by==1){
+        if ($sort_by == 1) {
             $offerProductDataFilter = $offerProductDataFilter->orderBy('p.id', 'desc');
-        }elseif($sort_by==2){
-            $offerProductDataFilter =  $offerProductDataFilter->orderBy('pv.final_price', 'desc');
-        }elseif($sort_by==3){
+        } elseif ($sort_by == 2) {
+            $offerProductDataFilter = $offerProductDataFilter->orderBy('pv.final_price', 'desc');
+        } elseif ($sort_by == 3) {
             $offerProductDataFilter = $offerProductDataFilter->orderBy('pv.final_price', 'asc');
-        }elseif($sort_by==4){
-           $sorting_data =  ['mvp.count', 'desc'];
-            // $offerProductDataFilter->orderBy('mvp.count', 'desc');
-        }else{
+        } elseif ($sort_by == 4) {
+            $offerProductDataFilter = $offerProductDataFilter->orderBy('mvp.count', 'desc')->orderBy('p.id', 'desc');
+        } else {
             $offerProductDataFilter = $offerProductDataFilter->orderBy('p.id', 'desc');
         }
 
+        $current_page_count = intval($request->current_page_count ?? 0);
+        $allOfferProducts = $offerProductDataFilter->get();  
 
-        $limit = 16;
-        $current_page_count = $request->current_page_count;
-        $offerProductDataFilter  = $offerProductDataFilter->get();  
+        $offer_total_product_count = count($allOfferProducts);
+        $offerProductData = $allOfferProducts->skip($current_page_count)->take($limit);
 
-        $offer_total_product_count = count($offerProductDataFilter);
-        $offerProductData = $offerProductDataFilter->skip($current_page_count)->take($limit);
+        $offerProductData->transform(function ($product) {
+            $deal = Helper::resolveProductDeal($product->product_id, $product->category_id, $product->subcategory_id, $product->brand_id, $product->final_price ?? $product->variant_price);
+            $product->offer_status = $deal['is_offer'];
+            $product->offer_type = $deal['offer_type'];
+            $product->discount_amount = $deal['discount_amount'];
+            $product->bogo_status = $deal['is_bogo'];
+            return $product;
+        });
 
-        if ($offer) {
-            $offerProductData->transform(function ($product) use ($offer) {
-                $product->offer_type = $offer->offer_type;
-                $product->discount_amount = $offer->dis_amount;
-                $product->offer_status = $offer ? true : false;
-                return $product;
-            });
-        }
+        $offer_showing_product_count = min($current_page_count + count($offerProductData), $offer_total_product_count);
 
+        $data = [
+            'offer_total_product_count' => $offer_total_product_count,
+            'offer_showing_product_count' => $offer_showing_product_count,
+            'offerProductData' => $offerProductData
+        ];
 
-        $offer_showing_product_count = 0;
-        if($offer_total_product_count!=0 && $offer_total_product_count >= $limit ){
-            $offer_showing_product_count = $limit;
-        }elseif($offer_total_product_count <= count($offerProductData) ){
-            $offer_showing_product_count = $offer_total_product_count;
-        }
-
-        $data = ['offer_total_product_count'=>$offer_total_product_count,'offer_showing_product_count'=>$offer_showing_product_count,'offerProductData'=>$offerProductData];
-
-        return view("frontend.product.ajax_filter_offer",$data );
-
+        return view("frontend.product.ajax_filter_offer", $data);
     }
 
-      public function loadfilterbogolist(Request $request)
+    public function loadfilterbogolist(Request $request)
     {
-        $product_last_id_for_pagination = $request->product_last_id;
         $limit = 16;
         $brand_ids = null;
         $category_ids = null;
@@ -606,136 +469,74 @@ class HomeController extends Controller
                 : explode(',', $request->subcategory_ids);
         }
 
-        $minprice = ($request->min_price)?$request->min_price:'';
-        $maxprice = ($request->max_price)?$request->max_price:'';
+        $minprice = ($request->min_price) ? $request->min_price : '';
+        $maxprice = ($request->max_price) ? $request->max_price : '';
 
-        // Bogo details
         $today = Carbon::now()->toDateString();
-        $bogo = Bogo::where('status', 1)
-                ->whereDate('start_date', '<=', $today)
-                ->whereDate('end_date', '>=', $today)
-                ->first();
+        $activeBogos = Bogo::where('status', 1)
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->orderByDesc('id')
+            ->get();
 
-        $bogo_category_id = null;
-        $bogo_subcategory_id = null;
-        $bogo_product_id = null;
-        $bogo_brand_id = null;
+        $bogoProductDataFilter = $this->getActiveBogoProductsQuery($activeBogos);
 
-        if ($bogo) {
-            if (!empty($bogo->product_id)) {
-                $bogo_product_id = $bogo->product_id;
-
-            } elseif (!empty($bogo->brand_id)) {
-                $bogo_brand_id = $bogo->brand_id;
-
-            } elseif (!empty($bogo->category_id) && !empty($bogo->subcategory_id)) {
-                $bogo_subcategory_id = $bogo->subcategory_id;
-
-            } elseif (!empty($bogo->category_id)) {
-                $bogo_category_id = $bogo->category_id;
-            }
-        }
-
-        $bogoProductDataFilter=DB::table('product as p')
-                    ->select('p.id as product_id','p.average_rating','p.product_name','pi.image', 'pv.*', 'pv.final_price','mvp.count','p.category_id','p.subcategory_id','p.brand_id')
-                    ->join('product_image as pi', 'p.id', '=', 'pi.product_id')
-                    ->where('pi.status', '=', 1)
-                    ->join('categories as c', 'p.category_id', '=', 'c.id')                    
-                        ->where('c.status', '=', 1)
-                    ->join('sub_categories as sc', 'p.subcategory_id', '=', 'sc.id')
-                        ->where('sc.status', '=', 1)
-                    ->join('brand as b', 'p.brand_id', '=', 'b.id')
-                        ->where('b.status', '=', 1)
-                    ->join(
-                        DB::raw('(SELECT *, COALESCE(NULLIF(variant_discounted_price, ""), variant_price) AS final_price FROM product_variants WHERE status = 1) as pv'),
-                        function ($join) {
-                            $join->on('p.id', '=', 'pv.product_id');
-                        }
-                    )
-                    ->leftjoin('most_viewed_product as mvp', 'mvp.product_id', '=', 'p.id')
-                    ->where('p.status', '=', 1)
-                    ->groupBy('p.id');
-
-
-        if($category_ids!=null && $subcategory_ids ==null){
+        if ($category_ids != null && $subcategory_ids == null) {
             $bogoProductDataFilter->whereIn('sc.category_id', $category_ids);
-        }
-        else if($category_ids!=null && ($subcategory_ids && $subcategory_ids != null)){
-            $bogoProductDataFilter->where(function ($query) use ($subcategory_ids,$category_ids){
+        } else if ($category_ids != null && ($subcategory_ids && $subcategory_ids != null)) {
+            $bogoProductDataFilter->where(function ($query) use ($subcategory_ids, $category_ids) {
                 $query->whereIn('sc.id', $subcategory_ids)
                       ->orWhereIn('sc.category_id', $category_ids);
             });
-        }
-        else if($category_ids==null && ($subcategory_ids && $subcategory_ids != null)){
+        } else if ($category_ids == null && ($subcategory_ids && $subcategory_ids != null)) {
             $bogoProductDataFilter->whereIn('sc.id', $subcategory_ids);
         }
 
-
-        if($brand_ids && $brand_ids != null){
+        if ($brand_ids && $brand_ids != null) {
             $bogoProductDataFilter->whereIn('b.id', $brand_ids);
         }
 
-        if(($minprice && $minprice != null) && ($maxprice && $maxprice != null)){                
+        if (($minprice && $minprice != null) && ($maxprice && $maxprice != null)) {                
             $bogoProductDataFilter->whereBetween('pv.final_price', [$minprice, $maxprice]);
         }
 
-        if ($bogo_product_id && $bogo_product_id!=null) {
-             $bogoProductDataFilter->where('p.id', '=', $bogo_product_id);
-        } 
-
-        if ($bogo_brand_id && $bogo_brand_id!=null) {
-             $bogoProductDataFilter->where('b.id', '=', $bogo_brand_id);
-        } 
-
-        if ($bogo_subcategory_id && $bogo_subcategory_id!=null) {
-             $bogoProductDataFilter->where('sc.id', '=', $bogo_subcategory_id);
-        } 
-
-        if ($bogo_category_id && $bogo_category_id!=null) {
-             $bogoProductDataFilter->where('c.id', '=', $bogo_category_id);
-        } 
-
         $sort_by = $request->sort_by;
-        if($sort_by==1){
+        if ($sort_by == 1) {
             $bogoProductDataFilter = $bogoProductDataFilter->orderBy('p.id', 'desc');
-        }elseif($sort_by==2){
-            $bogoProductDataFilter =  $bogoProductDataFilter->orderBy('pv.final_price', 'desc');
-        }elseif($sort_by==3){
+        } elseif ($sort_by == 2) {
+            $bogoProductDataFilter = $bogoProductDataFilter->orderBy('pv.final_price', 'desc');
+        } elseif ($sort_by == 3) {
             $bogoProductDataFilter = $bogoProductDataFilter->orderBy('pv.final_price', 'asc');
-        }elseif($sort_by==4){
-           $sorting_data =  ['mvp.count', 'desc'];
-            // $bogoProductDataFilter->orderBy('mvp.count', 'desc');
-        }else{
+        } elseif ($sort_by == 4) {
+            $bogoProductDataFilter = $bogoProductDataFilter->orderBy('mvp.count', 'desc')->orderBy('p.id', 'desc');
+        } else {
             $bogoProductDataFilter = $bogoProductDataFilter->orderBy('p.id', 'desc');
         }
 
+        $current_page_count = intval($request->current_page_count ?? 0);
+        $allBogoProducts = $bogoProductDataFilter->get();  
 
-        $limit = 16;
-        $current_page_count = $request->current_page_count;
-        $bogoProductDataFilter  = $bogoProductDataFilter->get();  
+        $bogo_total_product_count = count($allBogoProducts);
+        $bogoProductData = $allBogoProducts->skip($current_page_count)->take($limit);
 
-        $bogo_total_product_count = count($bogoProductDataFilter);
-    
-        $bogoProductData = $bogoProductDataFilter->skip($current_page_count)->take($limit);
+        $bogoProductData->transform(function ($product) {
+            $deal = Helper::resolveProductDeal($product->product_id, $product->category_id, $product->subcategory_id, $product->brand_id);
+            $product->bogo_status = $deal['is_bogo'];
+            $product->offer_status = false;
+            $product->offer_type = null;
+            $product->discount_amount = 0;
+            return $product;
+        });
 
-        if ($bogo) {
-            $bogoProductData->transform(function ($product) use ($bogo) {
-                $product->bogo_status = $bogo ? true : false;
-                return $product;
-            });
-        }
+        $bogo_showing_product_count = min($current_page_count + count($bogoProductData), $bogo_total_product_count);
 
-        $bogo_showing_product_count = 0;
-        if($bogo_total_product_count!=0 && $bogo_total_product_count >= $limit ){
-            $bogo_showing_product_count = $limit;
-        }elseif($bogo_total_product_count <= count($bogoProductData) ){
-            $bogo_showing_product_count = $bogo_total_product_count;
-        }
+        $data = [
+            'bogo_total_product_count' => $bogo_total_product_count,
+            'bogo_showing_product_count' => $bogo_showing_product_count,
+            'bogoProductData' => $bogoProductData
+        ];
 
-        $data = ['bogo_total_product_count'=>$bogo_total_product_count,'bogo_showing_product_count'=>$bogo_showing_product_count,'bogoProductData'=>$bogoProductData];
-
-        return view("frontend.product.ajax_filter_bogo",$data );
-
+        return view("frontend.product.ajax_filter_bogo", $data);
     }
 
 
@@ -758,8 +559,9 @@ class HomeController extends Controller
     {
         //dd($request->email);
         $validator = Validator::make($request->all(), [
-                    'email' => 'required|email|regex:/(.+)@(.+)\.(.+)/i|unique:news_latter',
-            ]);
+            'email' => 'required|email|regex:/(.+)@(.+)\.(.+)/i|unique:news_latter',
+            'g-recaptcha-response' => [new \App\Rules\ReCaptchaRule('newsletter')],
+        ]);
 
         $data = [
                     'email' =>$request->email,

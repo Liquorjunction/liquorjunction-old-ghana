@@ -15,6 +15,7 @@
                 <h1 class="text-center mb-0">{{@Helper::language('register_create_an_account')}}</h1>
                 <div class="registration-card">
                     <form class="row registration-form" id="register_form" action="" novalidate>
+                        <input type="hidden" name="g-recaptcha-response" class="g-recaptcha-response">
                         <div class="col-12">
                             <div class="form-group">
                             <?php
@@ -214,61 +215,75 @@
 
     var test = $("#register_form").validate({        
         submitHandler: function() {
-            var form_data = new FormData($('#register_form')[0]);
-            action_url = "{{ route('websiteregisterpost') }}";
-            var csrf = "{{ csrf_token() }}";
-            $.ajax({
-                url: action_url,
-                data: form_data,
-                headers: {
-                    'X-CSRF-TOKEN': csrf
-                },
-                processData: false,
-                contentType: false,
-                type: "POST",
-                dataType: 'json',
-                beforeSend: function() {
-                    $(".loader").fadeIn();
-                    $('.loader').css("visibility", "visible");
-                    //$('#submitDetail').prop('disabled', true);
-                },
-                success: function(response) {
-                    $('.loader').css("visibility", "visible");
-                    if (response.redirect) {
-                        window.location.href = response.redirect;
-                    } else {
-                        var url = "{{ route('websitesendotp') }}";
-                        window.location.href = url;
-                    }
-                },
-                error: function(errors) {                  
-                    $('.loader').css("visibility", "hidden");
-
-                    var errors = errors.responseJSON;
-                    $("span#first-name-error,span#last-name-error,span#email-error,span#phone-error,span#password-error,span#age-error").text('');
-                    if (errors.first_name) {
-                        $("span#first-name-error").text(errors.first_name[0]);
-                    }   
-                    if (errors.last_name) {
-                        $("span#last-name-error").text(errors.last_name[0]);
-                    }  
-                    if (errors.age) {
-                        $("span#age-error").text(errors.age[0]);
-                    }   
-                    if (errors.email) {
-                        $("span#email-error").text(errors.email[0]);
-                    }  
-                    if (errors.phone) {
-                        $("span#phone-error").text(errors.phone[0]);
-                    }    
-                    if (errors.password) {
-                        $("span#password-error").text(errors.password[0]);
-                    }
-                    if (errors.confirm_password) {
-                        $("span#confirm-password-error").text(errors.confirm_password[0]);
-                    }                   
+            var proceedSubmit = function(token) {
+                var form_data = new FormData($('#register_form')[0]);
+                if (token) {
+                    form_data.set('g-recaptcha-response', token);
                 }
-            });
+                action_url = "{{ route('websiteregisterpost') }}";
+                var csrf = "{{ csrf_token() }}";
+                $.ajax({
+                    url: action_url,
+                    data: form_data,
+                    headers: {
+                        'X-CSRF-TOKEN': csrf
+                    },
+                    processData: false,
+                    contentType: false,
+                    type: "POST",
+                    dataType: 'json',
+                    beforeSend: function() {
+                        $(".loader").fadeIn();
+                        $('.loader').css("visibility", "visible");
+                        //$('#submitDetail').prop('disabled', true);
+                    },
+                    success: function(response) {
+                        $('.loader').css("visibility", "visible");
+                        if (response.redirect) {
+                            window.location.href = response.redirect;
+                        } else {
+                            var url = "{{ route('websitesendotp') }}";
+                            window.location.href = url;
+                        }
+                    },
+                    error: function(errors) {                  
+                        $('.loader').css("visibility", "hidden");
+
+                        var errors = errors.responseJSON;
+                        $("span#first-name-error,span#last-name-error,span#email-error,span#phone-error,span#password-error,span#age-error").text('');
+                        if (errors.first_name) {
+                            $("span#first-name-error").text(errors.first_name[0]);
+                        }   
+                        if (errors.last_name) {
+                            $("span#last-name-error").text(errors.last_name[0]);
+                        }  
+                        if (errors.age) {
+                            $("span#age-error").text(errors.age[0]);
+                        }   
+                        if (errors.email) {
+                            $("span#email-error").text(errors.email[0]);
+                        }  
+                        if (errors.phone) {
+                            $("span#phone-error").text(errors.phone[0]);
+                        }    
+                        if (errors.password) {
+                            $("span#password-error").text(errors.password[0]);
+                        }
+                        if (errors.confirm_password) {
+                            $("span#confirm-password-error").text(errors.confirm_password[0]);
+                        }
+                        if (errors['g-recaptcha-response']) {
+                            swal("Security Check", errors['g-recaptcha-response'][0], "error");
+                        }                   
+                    }
+                });
+            };
+
+            if (typeof withReCaptcha === 'function') {
+                withReCaptcha('register', '#register_form', proceedSubmit);
+            } else {
+                proceedSubmit('');
+            }
         }
     });
 </script>

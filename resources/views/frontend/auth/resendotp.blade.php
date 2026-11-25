@@ -186,24 +186,30 @@
         action_url = "{{ route('websiteresendotp') }}";
         var csrf = "{{ csrf_token() }}";
 
-        $.ajax({
-            url: action_url,
-            data: {
-                'id': 1
-            },
-            headers: {
-                'X-CSRF-TOKEN': csrf
-            },
-            type: "POST",
+        window.getReCaptchaToken('resend_otp', function(recaptchaToken) {
+            $.ajax({
+                url: action_url,
+                data: {
+                    'id': 1,
+                    'g-recaptcha-response': recaptchaToken
+                },
+                headers: {
+                    'X-CSRF-TOKEN': csrf
+                },
+                type: "POST",
 
-            beforeSend: function() {
-                $(".loader").fadeIn();
-                $('.loader').css("visibility", "visible");
-            },
-            success: function(response) {
-                var url = "{{route('websitesendotp')}}";
-                window.location.href = url;
-            },
+                beforeSend: function() {
+                    $(".loader").fadeIn();
+                    $('.loader').css("visibility", "visible");
+                },
+                success: function(response) {
+                    var url = "{{route('websitesendotp')}}";
+                    window.location.href = url;
+                },
+                error: function() {
+                    $(".loader").fadeOut();
+                }
+            });
         });
     }
 

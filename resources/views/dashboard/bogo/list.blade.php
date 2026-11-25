@@ -84,7 +84,7 @@
                             </label>
                         </th>
                         <th>Applicable On</th>
-                        <th>Category/ Subcategory/ Brand/ Product</th>
+                        <th>Applied Item</th>
                         <th style="width: 150px;">Start Date</th>
                         <th style="width: 150px;">End Date</th>
                         <th class="">{{ __('backend.status') }}</th>
@@ -163,10 +163,11 @@
                 $('.loader').css("visibility", "visible");
             },
             success: function (response) {
-                $('.loader').css("visibility", "visible");
+                $('.loader').css("visibility", "hidden");
                 window.location.href = "{{ route('bogo')}}";
             },
             error: function (response) {
+             $('.loader').css("visibility", "hidden");
              alert(response.responseText);
          }
      });
@@ -198,10 +199,20 @@
                 $('.loader').css("visibility", "visible");
             },
             success: function (response) {
-                $('.loader').css("visibility", "visible");
-                window.location.href = "{{ route('bogo')}}";
+                $('.loader').css("visibility", "hidden");
+                if (response.success) {
+                    window.location.href = "{{ route('bogo')}}";
+                } else {
+                    swal({
+                        title: "Cannot Activate",
+                        text: response.msg,
+                        type: "warning",
+                        confirmButtonColor: "#fbb516"
+                    });
+                }
             },
             error: function (response) {
+             $('.loader').css("visibility", "hidden");
              alert(response.responseText);
          }
      });

@@ -107,76 +107,163 @@ class ProductController extends Controller
         $today = Carbon::now()->toDateString();
         $limit = 16;
 
-        // offer details
-        $offer = Offers::where('status', 1)
-                ->whereDate('expiry_date', '>=', $today)
-                ->first(); 
+        // 1. All active offers
+        $activeOffers = Offers::where('status', 1)
+            ->where(function($q) use ($today) {
+                $q->whereNull('start_date')
+                  ->orWhereDate('start_date', '<=', $today);
+            })
+            ->whereDate('expiry_date', '>=', $today)
+            ->orderByDesc('dis_amount')
+            ->orderByDesc('id')
+            ->get();
 
-        $offer_category_id = null;
-        $offer_subcategory_id = null;
-        $offer_product_id = null;
-        $offer_brand_id = null;
+        // 2. All active BOGOs
+        $activeBogos = Bogo::where('status', 1)
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->orderByDesc('id')
+            ->get();
 
-        if ($offer) {
-            if (!empty($offer->product_id)) {
-                $offer_product_id = $offer->product_id;
+        // Query products for active offers (excluding active BOGOs due to BOGO > Offer precedence)
+        $offerQuery = DB::table('product as p')
+            ->select(
+                'pv.*',
+                'pv.id as variant_id',
+                'pv.id as id',
+                'p.id as product_id',
+                'p.average_rating',
+                'p.product_name',
+                'pi.image',
+                'pv.final_price',
+                'p.category_id',
+                'p.subcategory_id',
+                'p.brand_id'
+            )
+            ->join('product_image as pi', function ($join) {
+                $join->on('p.id', '=', 'pi.product_id')->where('pi.status', 1);
+            })
+            ->join('categories as c', function ($join) {
+                $join->on('p.category_id', '=', 'c.id')->where('c.status', 1);
+            })
+            ->join('sub_categories as sc', function ($join) {
+                $join->on('p.subcategory_id', '=', 'sc.id')->where('sc.status', 1);
+            })
+            ->join('brand as b', function ($join) {
+                $join->on('p.brand_id', '=', 'b.id')->where('b.status', 1);
+            })
+            ->join(DB::raw('(SELECT *, COALESCE(NULLIF(variant_discounted_price, ""), variant_price) AS final_price FROM product_variants WHERE status = 1) as pv'), function ($join) {
+                $join->on('p.id', '=', 'pv.product_id');
+            })
+            ->where('p.status', 1)
+            ->groupBy('p.id');
 
-            } elseif (!empty($offer->brand_id)) {
-                $offer_brand_id = $offer->brand_id;
+        if ($activeOffers->isEmpty()) {
+            $offerQuery->whereRaw('1 = 0');
+        } else {
+            $offerQuery->where(function ($q) use ($activeOffers) {
+                foreach ($activeOffers as $offer) {
+                    $q->orWhere(function ($sub) use ($offer) {
+                        if ($offer->offer_type === 'flat') {
+                            $sub->where('pv.final_price', '>', floatval($offer->dis_amount));
+                        }
+                        if (!empty($offer->product_id)) {
+                            $sub->where('p.id', $offer->product_id);
+                        } elseif (!empty($offer->subcategory_id)) {
+                            if (!empty($offer->category_id)) {
+                                $sub->where('p.category_id', $offer->category_id);
+                            }
+                            $sub->where('p.subcategory_id', $offer->subcategory_id);
+                        } elseif (!empty($offer->category_id)) {
+                            $sub->where('p.category_id', $offer->category_id);
+                        } elseif (!empty($offer->brand_id)) {
+                            $sub->where('p.brand_id', $offer->brand_id);
+                        }
+                    });
+                }
+            });
 
-            } elseif (!empty($offer->category_id) && !empty($offer->subcategory_id)) {
-                $offer_subcategory_id = $offer->subcategory_id;
-
-            } elseif (!empty($offer->category_id)) {
-                $offer_category_id = $offer->category_id;
+            if ($activeBogos->isNotEmpty()) {
+                $offerQuery->whereNot(function ($q) use ($activeBogos) {
+                    foreach ($activeBogos as $bogo) {
+                        $q->orWhere(function ($sub) use ($bogo) {
+                            if (!empty($bogo->product_id)) {
+                                $sub->where('p.id', $bogo->product_id);
+                            } elseif (!empty($bogo->subcategory_id)) {
+                                if (!empty($bogo->category_id)) {
+                                    $sub->where('p.category_id', $bogo->category_id);
+                                }
+                                $sub->where('p.subcategory_id', $bogo->subcategory_id);
+                            } elseif (!empty($bogo->category_id)) {
+                                $sub->where('p.category_id', $bogo->category_id);
+                            } elseif (!empty($bogo->brand_id)) {
+                                $sub->where('p.brand_id', $bogo->brand_id);
+                            }
+                        });
+                    }
+                });
             }
         }
 
-        $offerProductDataFilter=$this->getFilteredProducts(
-                            $offer_product_id,
-                            $offer_brand_id,
-                            $offer_subcategory_id,
-                            $offer_category_id
-                        );
+        $offerProductDataFilter = $offerQuery->orderBy('p.id', 'desc')->get();
 
+        // Query products for active BOGOs
+        $bogoQuery = DB::table('product as p')
+            ->select(
+                'pv.*',
+                'pv.id as variant_id',
+                'pv.id as id',
+                'p.id as product_id',
+                'p.average_rating',
+                'p.product_name',
+                'pi.image',
+                'pv.final_price',
+                'p.category_id',
+                'p.subcategory_id',
+                'p.brand_id'
+            )
+            ->join('product_image as pi', function ($join) {
+                $join->on('p.id', '=', 'pi.product_id')->where('pi.status', 1);
+            })
+            ->join('categories as c', function ($join) {
+                $join->on('p.category_id', '=', 'c.id')->where('c.status', 1);
+            })
+            ->join('sub_categories as sc', function ($join) {
+                $join->on('p.subcategory_id', '=', 'sc.id')->where('sc.status', 1);
+            })
+            ->join('brand as b', function ($join) {
+                $join->on('p.brand_id', '=', 'b.id')->where('b.status', 1);
+            })
+            ->join(DB::raw('(SELECT *, COALESCE(NULLIF(variant_discounted_price, ""), variant_price) AS final_price FROM product_variants WHERE status = 1) as pv'), function ($join) {
+                $join->on('p.id', '=', 'pv.product_id');
+            })
+            ->where('p.status', 1)
+            ->groupBy('p.id');
 
-                        
-        // Bogo details
-        $bogo = Bogo::where('status', 1)
-                ->whereDate('start_date', '<=', $today)
-                ->whereDate('end_date', '>=', $today)
-                ->first();
-
-        $bogo_category_id = null;
-        $bogo_subcategory_id = null;
-        $bogo_product_id = null;
-        $bogo_brand_id = null;
-
-        if ($bogo) {
-            if (!empty($bogo->product_id)) {
-                $bogo_product_id = $bogo->product_id;
-
-            } elseif (!empty($bogo->brand_id)) {
-                $bogo_brand_id = $bogo->brand_id;
-
-            } elseif (!empty($bogo->category_id) && !empty($bogo->subcategory_id)) {
-                $bogo_subcategory_id = $bogo->subcategory_id;
-
-            } elseif (!empty($bogo->category_id)) {
-                $bogo_category_id = $bogo->category_id;
-            }
+        if ($activeBogos->isEmpty()) {
+            $bogoQuery->whereRaw('1 = 0');
+        } else {
+            $bogoQuery->where(function ($q) use ($activeBogos) {
+                foreach ($activeBogos as $bogo) {
+                    $q->orWhere(function ($sub) use ($bogo) {
+                        if (!empty($bogo->product_id)) {
+                            $sub->where('p.id', $bogo->product_id);
+                        } elseif (!empty($bogo->subcategory_id)) {
+                            if (!empty($bogo->category_id)) {
+                                $sub->where('p.category_id', $bogo->category_id);
+                            }
+                            $sub->where('p.subcategory_id', $bogo->subcategory_id);
+                        } elseif (!empty($bogo->category_id)) {
+                            $sub->where('p.category_id', $bogo->category_id);
+                        } elseif (!empty($bogo->brand_id)) {
+                            $sub->where('p.brand_id', $bogo->brand_id);
+                        }
+                    });
+                }
+            });
         }
 
-        $bogoProductDataFilter = $this->getFilteredProducts(
-                                    $bogo_product_id,
-                                    $bogo_brand_id,
-                                    $bogo_subcategory_id,
-                                    $bogo_category_id
-                                );
-
-
-        $has_offer_products = !empty($offer) && $offerProductDataFilter->count() > 0;
-        $has_bogo_products = !empty($bogo) && $bogoProductDataFilter->count() > 0;
+        $bogoProductDataFilter = $bogoQuery->orderBy('p.id', 'desc')->get();
 
         $offer_total_product_count = count($offerProductDataFilter);
         $offerProductData = $offerProductDataFilter->take($limit);
@@ -186,7 +273,9 @@ class ProductController extends Controller
         $bogoProductData = $bogoProductDataFilter->take($limit);
         $bogo_showing_product_count = min($limit, $bogo_total_product_count);
 
-        
+        $has_offer_products = $offer_total_product_count > 0;
+        $has_bogo_products = $bogo_total_product_count > 0;
+
         // Transform offer products
         $offerProductArr = [];
         foreach ($offerProductData as $product) {
@@ -211,6 +300,8 @@ class ProductController extends Controller
                 }
             }
 
+            $deal = Helper::resolveProductDeal($product->product_id, $product->category_id, $product->subcategory_id, $product->brand_id, $product->final_price ?? $product->variant_price);
+
             $offerProductArr[] = [
                 'product_id' => strval(@$product->product_id),
                 'product_title' => strval($title),
@@ -228,9 +319,9 @@ class ProductController extends Controller
                 'product_category_id' => @$product->category_id,
                 'product_subcategory_id' => $product->subcategory_id,
                 'product_brand_id' => $product->brand_id,
-                'offer_type' => $offer->offer_type ?? '',
-                'discount_amount' => $offer->dis_amount ?? '',
-                'offer_status' => true
+                'offer_type' => $deal['offer_type'] ?? '',
+                'discount_amount' => $deal['discount_amount'] ? strval($deal['discount_amount']) : '',
+                'offer_status' => $deal['is_offer']
             ];
         }
 
@@ -258,6 +349,8 @@ class ProductController extends Controller
                 }
             }
 
+            $deal = Helper::resolveProductDeal($product->product_id, $product->category_id, $product->subcategory_id, $product->brand_id, $product->final_price ?? $product->variant_price);
+
             $bogoProductArr[] = [
                 'product_id' => strval(@$product->product_id),
                 'product_title' => strval($title),
@@ -275,7 +368,7 @@ class ProductController extends Controller
                 'product_category_id' => @$product->category_id,
                 'product_subcategory_id' => $product->subcategory_id,
                 'product_brand_id' => $product->brand_id,
-                'bogo_status' => true
+                'bogo_status' => $deal['is_bogo']
             ];
         }
 
@@ -293,7 +386,7 @@ class ProductController extends Controller
         // Final response
         $response = [
             'combined_offers' => [
-                'status' => (!empty($offer) || !empty($bogo)) && count($combinedProducts) > 0,
+                'status' => count($combinedProducts) > 0,
                 'products' => array_slice($combinedProducts, 0, $limit),
                 'total_count' => count($combinedProducts),
                 'showing_count' => min($limit, count($combinedProducts)),
@@ -785,6 +878,10 @@ class ProductController extends Controller
                         if ($list_type == 1 || $list_type == 4) {
                             // Only offer & bogo products (Special Offers matching Web)
                             $offer = Offers::where('status', 1)
+                                ->where(function($q) use ($today) {
+                                    $q->whereNull('start_date')
+                                      ->orWhereDate('start_date', '<=', $today);
+                                })
                                 ->whereDate('expiry_date', '>=', $today)
                                 ->first();
 
@@ -930,85 +1027,19 @@ class ProductController extends Controller
                     $original_price = ($data->variant_price) ? $data->variant_price :'';
                     $discounted_price = ($data->variant_discounted_price!='' && $data->variant_discounted_price!=0.00)? $data->variant_discounted_price :NULL;
 
-                    // Common Offers
-                    $bogo = Bogo::where('status', 1)
-                        ->whereDate('start_date', '<=', $today)
-                        ->whereDate('end_date', '>=', $today)
-                        ->where(function ($query) use ($data) {
-                            $query->where('product_id', $data->productId)
-                                ->orWhere(function ($q) use ($data) {
-                                    $q->whereNotNull('subcategory_id')
-                                        ->where('subcategory_id', $data->subcategory_id);
-                                })
-                                ->orWhere(function ($q) use ($data) {
-                                    $q->whereNull('subcategory_id')
-                                        ->where('category_id', $data->category_id);
-                                });
+                    // Deal resolution (BOGO > Offer, with Product > Subcategory > Category > Brand)
+                    $deal = Helper::resolveProductDeal($data->productId, $data->category_id, $data->subcategory_id, $data->brand_id);
 
-                            if (!empty($data->brand_id)) {
-                                $query->orWhere('brand_id', $data->brand_id);
-                            }
-                        })
-                        ->first();
+                    $final_bogo_status = $deal['is_bogo'];
+                    $final_bogo_label = $deal['is_bogo'] ? 'BOGO' : '';
 
-                    $final_bogo_status = false;
-                    $final_bogo_label = '';
-                    
-                    if (($list_type == 1 || $list_type == 4) && $bogo && (
-                        ($bogo->product_id && $bogo->product_id == $data->productId) ||
-                        ($bogo->brand_id && $bogo->brand_id == $data->brand_id) ||
-                        ($bogo->subcategory_id && $bogo->subcategory_id == $data->subcategory_id) ||
-                        ($bogo->category_id && $bogo->category_id == $data->category_id)
-                    )) {
-                        $final_bogo_status = true;
-                        $final_bogo_label = 'BOGO';
-                    } elseif ($list_type != 1 && $list_type != 4 && $bogo) {
-                        $final_bogo_status = true;
-                        $final_bogo_label = 'BOGO';
-                    }
-
-                    // -----Offer-----
-                    $offer = Offers::where('status', 1)
-                    ->whereDate('expiry_date', '>=', $today)
-                    ->where(function ($query) use ($data) {
-                        $query->where('product_id', $data->productId)
-                            ->orWhere(function ($q) use ($data) {
-                                $q->whereNotNull('subcategory_id')
-                                    ->where('subcategory_id', $data->subcategory_id);
-                            })
-                            ->orWhere(function ($q) use ($data) {
-                                $q->whereNull('subcategory_id')
-                                    ->where('category_id', $data->category_id);
-                            });
-
-                        if (!empty($data->brand_id)) {
-                            $query->orWhere('brand_id', $data->brand_id);
-                        }
-                    })
-                    ->first();
-
-                    $final_offer_status = false;
+                    $final_offer_status = $deal['is_offer'];
                     $final_offer_label = '';
-                    $final_offer_type = null;
-                    $final_discount_amount = 0;
+                    $final_offer_type = $deal['offer_type'];
+                    $final_discount_amount = $deal['discount_amount'];
                     $final_offer_category_id = $data->category_id;
                     $final_offer_subcategory_id = $data->subcategory_id;
                     $final_offer_brand_id = $data->brand_id;
-
-                    if (($list_type == 1 || $list_type == 4) && $offer && (
-                        ($offer->product_id && $offer->product_id == $data->productId) ||
-                        ($offer->brand_id && $offer->brand_id == $data->brand_id) ||
-                        ($offer->subcategory_id && $offer->subcategory_id == $data->subcategory_id) ||
-                        ($offer->category_id && $offer->category_id == $data->category_id)
-                    )) {
-                        $final_offer_status = true;
-                        $final_offer_type = $offer->offer_type ?? null;
-                        $final_discount_amount = $offer->dis_amount ?? 0;
-                    } elseif ($list_type != 1 && $list_type != 4 && $offer) {
-                        $final_offer_status = true;
-                        $final_offer_type = $offer->offer_type ?? null;
-                        $final_discount_amount = $offer->dis_amount ?? 0;
-                    }
 
                     if ($final_offer_status) {
                         $formatted_discount = rtrim(rtrim(number_format($final_discount_amount, 2, '.', ''), '0'), '.');
@@ -1094,58 +1125,11 @@ class ProductController extends Controller
         if($products)
         {
             foreach ($products as $related) {
-                    $bogo = Bogo::where('status', 1)
-                        ->whereDate('start_date', '<=', $today)
-                        ->whereDate('end_date', '>=', $today)
-                        ->where(function ($query) use ($related) {
-                            $query->where('product_id', $related->id)
-                                ->orWhere(function ($q) use ($related) {
-                                    $q->whereNotNull('subcategory_id')
-                                        ->where('subcategory_id', $related->subcategory_id);
-                                })
-                                ->orWhere(function ($q) use ($related) {
-                                    $q->whereNull('subcategory_id')
-                                        ->where('category_id', $related->category_id);
-                                });
-
-                            if (!empty($related->brand_id)) {
-                                $query->orWhere('brand_id', $related->brand_id);
-                            }
-                        })
-                        ->first();
-
-                    $related->bogo_status = $bogo ? true : false; 
-
-
-                    // offer check
-                    $offer = Offers::where('status', 1)
-                        ->whereDate('expiry_date', '>=', $today)
-                        ->where(function ($query) use ($related) {
-                    $query->where('product_id', $related->id)
-                        ->orWhere(function ($q) use ($related) {
-                            $q->whereNotNull('subcategory_id')
-                                ->where('subcategory_id', $related->subcategory_id);
-                        })
-                        ->orWhere(function ($q) use ($related) {
-                            $q->whereNull('subcategory_id')
-                                ->where('category_id', $related->category_id);
-                        });
-
-                    if (!empty($related->brand_id)) {
-                        $query->orWhere('brand_id', $related->brand_id);
-                    }
-                })
-                ->first();
-
-                if ($offer) {
-                    $related->offer_status = true;
-                    $related->discount_amount = $offer->dis_amount;
-                    $related->offer_type = $offer->offer_type;
-                } else {
-                    $related->offer_status = false;
-                    $related->discount_amount = 0;
-                    $related->offer_type = null;
-                }
+                $deal = Helper::resolveProductDeal($related->id, $related->category_id, $related->subcategory_id, $related->brand_id);
+                $related->bogo_status = $deal['is_bogo'];
+                $related->offer_status = $deal['is_offer'];
+                $related->discount_amount = $deal['discount_amount'];
+                $related->offer_type = $deal['offer_type'];
             }
         }
        
@@ -1415,54 +1399,14 @@ class ProductController extends Controller
                 $discounted_price = ($product_variant->variant_discounted_price=='' && $product_variant->variant_discounted_price==0)? $product_variant->variant_discounted_price :NULL;
 
 
-                   // === BOGO Check ===
-                $today = Carbon::now()->toDateString();
-                $bogo = Bogo::where('status', 1)
-                    ->whereDate('start_date', '<=', $today)
-                    ->whereDate('end_date', '>=', $today)
-                    ->where(function ($query) use ($data) {
-                        $query->where('product_id', $data->id)
-                            ->orWhere(function ($q) use ($data) {
-                                $q->whereNotNull('subcategory_id')
-                                    ->where('subcategory_id', $data->subcategory_id);
-                            })
-                            ->orWhere(function ($q) use ($data) {
-                                $q->whereNull('subcategory_id')
-                                    ->where('category_id', $data->category_id);
-                            });
-
-                        if (!empty($data->brand_id)) {
-                            $query->orWhere('brand_id', $data->brand_id);
-                        }
-                    })
-                    ->first();
-                $bogo_status = $bogo ? true : false;
+                // === Resolve Deal (BOGO > Offer, with Product > Subcategory > Category > Brand) ===
+                $deal = Helper::resolveProductDeal($data->id, $data->category_id, $data->subcategory_id, $data->brand_id);
+                $bogo_status = $deal['is_bogo'];
                 $bogo_label = $bogo_status ? 'BOGO' : '';
 
-                // === Offer Check ===
-                $offer = Offers::where('status', 1)
-                    ->whereDate('expiry_date', '>=', $today)
-                    ->where(function ($query) use ($data) {
-                        $query->where('product_id', $data->id)
-                            ->orWhere(function ($q) use ($data) {
-                                $q->whereNotNull('subcategory_id')
-                                    ->where('subcategory_id', $data->subcategory_id);
-                            })
-                            ->orWhere(function ($q) use ($data) {
-                                $q->whereNull('subcategory_id')
-                                    ->where('category_id', $data->category_id);
-                            });
-
-                        if (!empty($data->brand_id)) {
-                            $query->orWhere('brand_id', $data->brand_id);
-                        }
-                    })
-                    ->first();
-
-                // offer and Bogo status 
-                $offer_status = $offer ? true : false;
-                $discount_amount = $offer ? $offer->dis_amount : 0;
-                $offer_type = $offer ? $offer->offer_type : null;
+                $offer_status = $deal['is_offer'];
+                $discount_amount = $deal['discount_amount'];
+                $offer_type = $deal['offer_type'];
                 $offer_label = '';
 
                 if($offer_status)
@@ -1541,58 +1485,11 @@ class ProductController extends Controller
         if($products)
         {
             foreach ($products as $recent) {
-                    $bogo = Bogo::where('status', 1)
-                        ->whereDate('start_date', '<=', $today)
-                        ->whereDate('end_date', '>=', $today)
-                        ->where(function ($query) use ($recent) {
-                            $query->where('product_id', $recent->id)
-                                ->orWhere(function ($q) use ($recent) {
-                                    $q->whereNotNull('subcategory_id')
-                                        ->where('subcategory_id', $recent->subcategory_id);
-                                })
-                                ->orWhere(function ($q) use ($recent) {
-                                    $q->whereNull('subcategory_id')
-                                        ->where('category_id', $recent->category_id);
-                                });
-
-                            if (!empty($recent->brand_id)) {
-                                $query->orWhere('brand_id', $recent->brand_id);
-                            }
-                        })
-                        ->first();
-
-                    $recent->bogo_status = $bogo ? true : false; 
-
-
-                    // offer check
-                    $offer = Offers::where('status', 1)
-                        ->whereDate('expiry_date', '>=', $today)
-                        ->where(function ($query) use ($recent) {
-                    $query->where('product_id', $recent->id)
-                        ->orWhere(function ($q) use ($recent) {
-                            $q->whereNotNull('subcategory_id')
-                                ->where('subcategory_id', $recent->subcategory_id);
-                        })
-                        ->orWhere(function ($q) use ($recent) {
-                            $q->whereNull('subcategory_id')
-                                ->where('category_id', $recent->category_id);
-                        });
-
-                    if (!empty($recent->brand_id)) {
-                        $query->orWhere('brand_id', $recent->brand_id);
-                    }
-                })
-                ->first();
-
-                if ($offer) {
-                    $recent->offer_status = true;
-                    $recent->discount_amount = $offer->dis_amount;
-                    $recent->offer_type = $offer->offer_type;
-                } else {
-                    $recent->offer_status = false;
-                    $recent->discount_amount = 0;
-                    $recent->offer_type = null;
-                }
+                $deal = Helper::resolveProductDeal($recent->id, $recent->category_id, $recent->subcategory_id, $recent->brand_id);
+                $recent->bogo_status = $deal['is_bogo'];
+                $recent->offer_status = $deal['is_offer'];
+                $recent->discount_amount = $deal['discount_amount'];
+                $recent->offer_type = $deal['offer_type'];
             }
         }
 
@@ -1768,58 +1665,34 @@ class ProductController extends Controller
 
             $bogoStatus=false;
 
-            $bogo = Bogo::where('status', 1)
-            ->whereDate('start_date', '<=', $today)
-            ->whereDate('end_date', '>=', $today)
-            ->where(function ($query) use ($product_info) {
-                $query->where('product_id', $product_info->id)
-                    ->orWhere(function ($q) use ($product_info) {
-                        $q->whereNotNull('subcategory_id')
-                        ->where('subcategory_id', $product_info->subcategory_id);
-                    })
-                    ->orWhere(function ($q) use ($product_info) {
-                        $q->whereNull('subcategory_id')
-                        ->where('category_id', $product_info->category_id);
-                    });
-
-                if (!empty($product_info->brand_id)) {
-                    $query->orWhere('brand_id', $product_info->brand_id);
-                }
-            })
-            ->first();
-
-            if ($bogo) {
-                $bogoStatus=true;
-            } 
-
-            // $offerDetails=[];
+            $deal = Helper::resolveProductDeal($product_info->id, $product_info->category_id, $product_info->subcategory_id, $product_info->brand_id);
+            $bogoStatus = $deal['is_bogo'];
             $offerDetails = (object)[];
-            $offer = Offers::where('status', 1)
-            ->whereDate('expiry_date', '>=', $today)
-            ->where(function ($query) use ($product_info) {
-                $query->where('product_id', $product_info->id)
-                    ->orWhere('category_id', $product_info->category_id)
-                    ->orWhere('subcategory_id', $product_info->subcategory_id)
-                    ->orWhere('brand_id', $product_info->brand_id);
-            })
-            ->first(); 
 
-            if ($offer) {
+            if ($deal['is_offer'] && $deal['offer']) {
+                $offer = $deal['offer'];
                 $offer_label = '';
-                $formatted_discount = rtrim(rtrim(number_format($offer->dis_amount, 2, '.', ''), '0'), '.');
-                if ($offer->offer_type == 'flat') {
+                $formatted_discount = rtrim(rtrim(number_format($deal['discount_amount'], 2, '.', ''), '0'), '.');
+                if ($deal['offer_type'] == 'flat') {
                     $offer_label = 'Flat ' . $formatted_discount  . ' GH₵ off';
-                } elseif ($offer->offer_type == 'percentage') {
+                } elseif ($deal['offer_type'] == 'percentage') {
                     $offer_label = $formatted_discount  . '% off';
                 }
 
                 $offerDetails = (object)[
-                    'offer_type' => $offer->offer_type,
-                    'discount_amount' => $offer->dis_amount,
+                    'offer_type' => $deal['offer_type'],
+                    'discount_amount' => $deal['discount_amount'],
                     'offer_label' => $offer_label,
-                    'offer_status'=> $offer ? true : false
+                    'offer_status'=> true
                 ];
-            } 
+            } else {
+                $offerDetails = (object)[
+                    'offer_type' => null,
+                    'discount_amount' => 0,
+                    'offer_label' => '',
+                    'offer_status'=> false
+                ];
+            }
 
             // Add BOGO info into offerDetails
             $offerDetails->bogoStatus = $bogoStatus;
@@ -1893,32 +1766,17 @@ class ProductController extends Controller
                 $product_category_id = $product_info->category_id;
                 $product_brand_id = $product_info->brand_id;
 
-                // -----Offer-----
-                $offer = Offers::where('status', 1)
-                    ->whereDate('expiry_date', '>=', $today)
-                    ->where(function ($query) use ($variant, $product_subcategory_id, $product_category_id, $product_brand_id) {
-                        $query->where('product_id', $variant->product_id)
-                            ->orWhere(function ($q) use ($product_subcategory_id) {
-                                $q->whereNotNull('subcategory_id')
-                                ->where('subcategory_id', $product_subcategory_id);
-                            })
-                            ->orWhere(function ($q) use ($product_category_id) {
-                                $q->whereNull('subcategory_id')
-                                ->where('category_id', $product_category_id);
-                            });
+                // Deal resolution (BOGO > Offer, with Product > Subcategory > Category > Brand)
+                $deal = Helper::resolveProductDeal($variant->product_id, $product_category_id, $product_subcategory_id, $product_brand_id);
+                $discounted_price = 0;
+                $offer_status = false;
+                $offer_type = null;
+                $discount_amount = 0;
 
-                        if (!empty($product_brand_id)) {
-                            $query->orWhere('brand_id', $product_brand_id);
-                        }
-                    })
-                    ->first();
-
-                $discounted_price=0;
-                if($offer)
-                {
+                if ($deal['is_offer'] && $deal['offer']) {
                     $offer_status = true;
-                    $offer_type = $offer->offer_type ?? null;
-                    $discount_amount = $offer->dis_amount ?? 0;
+                    $offer_type = $deal['offer_type'];
+                    $discount_amount = $deal['discount_amount'];
 
                     if ($offer_type == 'flat') {
                         $discounted_price = max(0, $variant->variant_price - $discount_amount);
@@ -2440,58 +2298,11 @@ class ProductController extends Controller
             if($products)
             {
                 foreach ($products as $favour) {
-                        $bogo = Bogo::where('status', 1)
-                            ->whereDate('start_date', '<=', $today)
-                            ->whereDate('end_date', '>=', $today)
-                            ->where(function ($query) use ($favour) {
-                                $query->where('product_id', $favour->id)
-                                    ->orWhere(function ($q) use ($favour) {
-                                        $q->whereNotNull('subcategory_id')
-                                            ->where('subcategory_id', $favour->subcategory_id);
-                                    })
-                                    ->orWhere(function ($q) use ($favour) {
-                                        $q->whereNull('subcategory_id')
-                                            ->where('category_id', $favour->category_id);
-                                    });
-
-                                if (!empty($favour->brand_id)) {
-                                    $query->orWhere('brand_id', $favour->brand_id);
-                                }
-                            })
-                            ->first();
-
-                        $favour->bogo_status = $bogo ? true : false; 
-
-
-                        // offer check
-                        $offer = Offers::where('status', 1)
-                            ->whereDate('expiry_date', '>=', $today)
-                            ->where(function ($query) use ($favour) {
-                        $query->where('product_id', $favour->id)
-                            ->orWhere(function ($q) use ($favour) {
-                                $q->whereNotNull('subcategory_id')
-                                    ->where('subcategory_id', $favour->subcategory_id);
-                            })
-                            ->orWhere(function ($q) use ($favour) {
-                                $q->whereNull('subcategory_id')
-                                    ->where('category_id', $favour->category_id);
-                            });
-
-                        if (!empty($favour->brand_id)) {
-                            $query->orWhere('brand_id', $favour->brand_id);
-                        }
-                    })
-                    ->first();
-
-                    if ($offer) {
-                        $favour->offer_status = true;
-                        $favour->discount_amount = $offer->dis_amount;
-                        $favour->offer_type = $offer->offer_type;
-                    } else {
-                        $favour->offer_status = false;
-                        $favour->discount_amount = 0;
-                        $favour->offer_type = null;
-                    }
+                    $deal = Helper::resolveProductDeal($favour->id, $favour->category_id, $favour->subcategory_id, $favour->brand_id);
+                    $favour->bogo_status = $deal['is_bogo'];
+                    $favour->offer_status = $deal['is_offer'];
+                    $favour->discount_amount = $deal['discount_amount'];
+                    $favour->offer_type = $deal['offer_type'];
                 }
             }
 

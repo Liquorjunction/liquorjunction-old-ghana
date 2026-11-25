@@ -46,4 +46,19 @@ class Setting extends Model
         'site_maintenance',
         'site_maintenance_at',
     ];
+
+    public function getNocaptchaStatusAttribute($value)
+    {
+        return $value !== null ? $value : (int) env('RECAPTCHA_STATUS', 1);
+    }
+
+    public function getNocaptchaSitekeyAttribute($value)
+    {
+        return $value !== null ? $value : env('RECAPTCHA_SITE_KEY', env('NOCAPTCHA_SITEKEY', ''));
+    }
+
+    public function getNocaptchaSecretAttribute($value)
+    {
+        return $value !== null ? $value : env('RECAPTCHA_SECRET_KEY', env('NOCAPTCHA_SECRET', ''));
+    }
 }

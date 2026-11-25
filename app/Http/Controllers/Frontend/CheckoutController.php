@@ -1371,6 +1371,14 @@ class CheckoutController extends Controller
 
     public function applyCoupon(Request $request)
     {
+        $recaptchaService = app(\App\Services\ReCaptchaService::class);
+        if ($recaptchaService->isEnabled() && !$recaptchaService->verify($request->input('g-recaptcha-response'), 'apply_coupon')) {
+            return response()->json([
+                'message' => 'Security verification failed. Please try again.',
+                'code_id' => '',
+            ]);
+        }
+
         $user_id = $this->user_id;
         $code = $request->coupon_code;
         $user_address_id = $request->user_address_id;
@@ -1629,6 +1637,16 @@ class CheckoutController extends Controller
         logger()->info("storeplaceorder");
 
         logger()->info($request->all());
+
+        // Security: Google reCAPTCHA v3 verification for order placement
+        $recaptchaRule = new \App\Rules\ReCaptchaRule('checkout');
+        if (!$recaptchaRule->passes('g-recaptcha-response', $request->input('g-recaptcha-response'))) {
+            return response()->json([
+                'error'   => true,
+                'type'    => 'recaptcha',
+                'message' => $recaptchaRule->message()
+            ], 422);
+        }
 
         $user_id = $this->user_id;
         $user_address_id = $request->user_address_id;

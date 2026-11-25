@@ -14,6 +14,7 @@ class Offers extends Model
     protected $fillable = [
         'offer_type',
         'dis_amount',
+        'start_date',
         // 'min_amount',
         // 'max_amount',
         'expiry_date',

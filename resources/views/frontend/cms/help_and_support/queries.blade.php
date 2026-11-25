@@ -40,7 +40,14 @@ $page_title = $pageInfo->page_name; $page_content = $pageInfo->page_content; $ph
                         </div>
                         <div class="col-lg-6">
                             <div class="common-card queries-from">
-                                <form action="{{route('queriesStore')}}" method="POST" class="row">
+                                <form action="{{route('queriesStore')}}" method="POST" class="row" data-recaptcha-action="contact_us">
+                                    @if ($errors->has('g-recaptcha-response'))
+                                    <div class="col-12 mb-2">
+                                        <span class="help-block">
+                                            <span style="color: red;" class='validate'>{{ $errors->first('g-recaptcha-response') }}</span>
+                                        </span>
+                                    </div>
+                                    @endif
                                     <div class="form-group col-12">
                                         <label for="">{{@Helper::language('name_label_web')}} <span class="error">*</span></label>
                                         <input type="text" name="name" id="name" value="{{old('name')}}" placeholder="{{@Helper::language('enter_name_web')}}"  onkeypress="return onlyString(event)" >

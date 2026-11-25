@@ -436,82 +436,92 @@
                 return;
             }
     
-            $.ajax({
-                url: '{{ route("checkOrderStatus") }}',
-                method: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    order_number: orderNumber
-                },
-                success: function (response) {
-                    if (response.status === 'success') {
-                        console.log(response)
-                        $('#orderId').text(response.order_id);
-                        $('#currentStatus').text(response.current_status);
-                        $('#stats').text(response.current_status);
-                        if (response.current_status.toLowerCase() === 'cancelled') {
-                            $('#stats').css('color', '#cd0c0c');
+            window.getReCaptchaToken('track_order', function (recaptchaToken) {
+                $.ajax({
+                    url: '{{ route("checkOrderStatus") }}',
+                    method: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        order_number: orderNumber,
+                        'g-recaptcha-response': recaptchaToken
+                    },
+                    success: function (response) {
+                        if (response.status === 'success') {
+                            console.log(response)
+                            $('#orderId').text(response.order_id);
+                            $('#currentStatus').text(response.current_status);
+                            $('#stats').text(response.current_status);
+                            if (response.current_status.toLowerCase() === 'cancelled') {
+                                $('#stats').css('color', '#cd0c0c');
+                            } else {
+                                $('#stats').css('color', '#4CAF50');
+                            }
+
+                            // $('#shippingTo').text(response.shipping_address);
+
+                            if(response.order_num==2 || response.order_num==3)
+                            {
+                                $('#shippingTo').text(response.address);
+                            }
+                            else{
+                                $('#shippingTo').text(response.shipping_address);    
+                            }
+
+
+                            const orderDate = new Date(response.order_date);
+                            const formattedDate = orderDate.toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                            });
+
+
+                            $('#orderDetailsContent').html(`
+                                <p><strong>Order Type:</strong> ${response.order_type}</p>
+                                <p><strong>Amount:</strong> ${response.amount}GH₵</p>
+                                <p><strong>Order Date:</strong> ${formattedDate}</p>
+                                <p><strong>Payment Method:</strong> ${response.payment_type}</p>
+                            `);
+
+
+        
+                            const totalSteps = response.status_steps.length;
+                            const currentStatusIndex = response.currentStatusIndex;
+                            const progressPercentage = ((currentStatusIndex + 1) / totalSteps) * 100;
+                            $('.progress').css('width', progressPercentage + '%');
+        
+                            renderOrderProgress(response.status_steps, response.currentStatusIndex,response.icon_classes);
+        
+                            $('#orderStatusContainer').show();
+                             $('#error-container').hide()
                         } else {
-                            $('#stats').css('color', '#4CAF50');
+                            $('#error-container').html(`
+                                    <p style="color:red;"><strong>Error:-${response.message}</strong></p>
+                            `).show();
+
+                            let check=setTimeout(() => {
+                                $('#error-container').hide();
+                            }, 2000);
+                            }
+                    },
+                    error: function (xhr, status, error) {
+                        let errMsg = 'An error occurred. Please try again later.';
+                        if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            const errs = Object.values(xhr.responseJSON.errors).flat();
+                            if (errs.length > 0) errMsg = errs[0];
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errMsg = xhr.responseJSON.message;
                         }
-
-                        // $('#shippingTo').text(response.shipping_address);
-
-                        if(response.order_num==2 || response.order_num==3)
-                        {
-                            $('#shippingTo').text(response.address);
-                        }
-                        else{
-                            $('#shippingTo').text(response.shipping_address);    
-                        }
-
-
-                        const orderDate = new Date(response.order_date);
-                        const formattedDate = orderDate.toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                        });
-
-
-                        $('#orderDetailsContent').html(`
-                            <p><strong>Order Type:</strong> ${response.order_type}</p>
-                            <p><strong>Amount:</strong> ${response.amount}GH₵</p>
-                            <p><strong>Order Date:</strong> ${formattedDate}</p>
-                            <p><strong>Payment Method:</strong> ${response.payment_type}</p>
-                        `);
-
-
-    
-                        const totalSteps = response.status_steps.length;
-                        const currentStatusIndex = response.currentStatusIndex;
-                        const progressPercentage = ((currentStatusIndex + 1) / totalSteps) * 100;
-                        $('.progress').css('width', progressPercentage + '%');
-    
-                        renderOrderProgress(response.status_steps, response.currentStatusIndex,response.icon_classes);
-    
-                        $('#orderStatusContainer').show();
-                         $('#error-container').hide()
-                    } else {
                         $('#error-container').html(`
-                                <p style="color:red;"><strong>Error:-${response.message}</strong></p>
+                                    <p style="color:red;"><strong>Error:-${errMsg}</strong></p>
                         `).show();
 
                         let check=setTimeout(() => {
                             $('#error-container').hide();
                         }, 2000);
-                        }
-                },
-                error: function (xhr, status, error) {
-                    $('#error-container').html(`
-                                <p style="color:red;"><strong>Error:-An error occurred. Please try again later.</strong></p>
-                    `).show();
-
-                    let check=setTimeout(() => {
-                        $('#error-container').hide();
-                    }, 2000);
-                   
-                }
+                       
+                    }
+                });
             });
         });
     });

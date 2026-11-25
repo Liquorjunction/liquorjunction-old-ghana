@@ -133,6 +133,12 @@
                                 onclick="document.getElementById('active_tab').value='maintenance'">
                                  &nbsp; Website Maintenance</a>                             
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link block {{ (Session::get('active_tab') == 'googleRecaptchaTab') ? 'active' : '' }}"
+                                href data-toggle="tab" data-target="#tab-recaptcha"
+                                onclick="document.getElementById('active_tab').value='googleRecaptchaTab'">
+                                 &nbsp; {!!  __('backend.googleRecaptcha') !!}</a>                             
+                            </li>
                            {{-- <li class="nav-item">
                                 <a class="nav-link block {{  ( Session::get('active_tab') == 'googleTagsTab') ? 'active' : '' }}"
                                    href data-toggle="tab" data-target="#tab-9"
@@ -185,7 +191,7 @@
                     {{-- @include('dashboard.webmaster.settings.api') --}}
                     @include('dashboard.webmaster.settings.mail')
                     @include('dashboard.webmaster.settings.maintenance')
-                    {{-- @include('dashboard.webmaster.settings.captcha') --}}
+                    @include('dashboard.webmaster.settings.captcha')
                     {{-- @include('dashboard.webmaster.settings.tags') --}}
                     {{-- @include('dashboard.webmaster.settings.maps') --}}
                     {{-- @include('dashboard.webmaster.settings.analytics') --}}

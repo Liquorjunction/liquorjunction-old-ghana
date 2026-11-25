@@ -11,7 +11,8 @@ label.error{
                 <div class="newsletter-main">
                     <div class="newsletter-wrapper">
                         <h3>{{ \Helper::language('subscribe_our_newsletter');}}</h3>
-                        <form action="" class="mb-0"id ="subscribe_form" >
+                        <form action="" class="mb-0" id="subscribe_form">
+                            <input type="hidden" name="g-recaptcha-response" class="g-recaptcha-response">
                             <!-- <div class="subscription-form">
                                 <div class="row">
                                     <div class="col-md-9 col-12">
@@ -72,36 +73,49 @@ label.error{
                 return false;
             }
 
-            var form_data = new FormData($('#subscribe_form')[0]);
-            action_url = "{{route('subscribeemail')}}";
-            var csrf = "{{ csrf_token() }}";
-            $.ajax({
-                url: action_url,
-                data: form_data,
-                headers: {
-                    'X-CSRF-TOKEN': csrf
-                },
-                processData: false,
-                contentType: false,
-                type: "POST",
-                dataType: 'json',
-                beforeSend: function() {
-                    $(".loader").fadeIn();
-                    $('.loader').css("visibility", "visible");
-                },
-                success: function(response) {
-                    $('.loader').css("visibility", "hidden");
-                    var url = "{{route('frontend.home')}}";
-                    window.location.href = url;
-                },             
-                error: function(errors) {
-                    $('.loader').css("visibility", "hidden");
-                    var errors = errors.responseJSON;
-                    if (errors.email) { 
-                        $("span#newslatter-error").text(errors.email[0]);
-                    }
+            var proceedSubscribe = function(token) {
+                var form_data = new FormData($('#subscribe_form')[0]);
+                if (token) {
+                    form_data.set('g-recaptcha-response', token);
                 }
-            });
+                action_url = "{{route('subscribeemail')}}";
+                var csrf = "{{ csrf_token() }}";
+                $.ajax({
+                    url: action_url,
+                    data: form_data,
+                    headers: {
+                        'X-CSRF-TOKEN': csrf
+                    },
+                    processData: false,
+                    contentType: false,
+                    type: "POST",
+                    dataType: 'json',
+                    beforeSend: function() {
+                        $(".loader").fadeIn();
+                        $('.loader').css("visibility", "visible");
+                    },
+                    success: function(response) {
+                        $('.loader').css("visibility", "hidden");
+                        var url = "{{route('frontend.home')}}";
+                        window.location.href = url;
+                    },             
+                    error: function(errors) {
+                        $('.loader').css("visibility", "hidden");
+                        var errors = errors.responseJSON;
+                        if (errors && errors.email) { 
+                            $("span#newslatter-error").text(errors.email[0]);
+                        } else if (errors && errors['g-recaptcha-response']) {
+                            $("span#newslatter-error").text(errors['g-recaptcha-response'][0]);
+                        }
+                    }
+                });
+            };
+
+            if (typeof withReCaptcha === 'function') {
+                withReCaptcha('newsletter', '#subscribe_form', proceedSubscribe);
+            } else {
+                proceedSubscribe('');
+            }
         });
     });
 </script>

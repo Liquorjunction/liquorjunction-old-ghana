@@ -36,6 +36,8 @@ use App\Models\EmailTemplate;
 use App\Models\User;
 use GuzzleHttp\Client;
 use App\Models\TransactionTokens;
+use App\Models\Offers;
+use App\Models\Bogo;
 
 
 
@@ -97,7 +99,13 @@ static function getUserCartItems()
 
             if ($isOffer && !$isBogo) {
                 if ($offerType === 'flat') {
-                    $finalPrice = max(0, $originalPrice - $discountAmount);
+                    if ($originalPrice > $discountAmount) {
+                        $finalPrice = max(0, $originalPrice - $discountAmount);
+                    } else {
+                        // Flat discount exceeds or equals product price: do not apply!
+                        $finalPrice = $originalPrice;
+                        $isOffer = false;
+                    }
                 } elseif ($offerType === 'percentage') {
                     $finalPrice = max(0, $originalPrice - ($originalPrice * $discountAmount / 100));
                 }
@@ -1689,6 +1697,11 @@ static function getUserCartItems()
         return $encode;
     }
 
+    static function decodeUrl($str)
+    {
+        return base64_decode($str);
+    }
+
     static function getUnitById($id)
     {
         $get_result = Uofs::where(['status' => 1, 'id' => $id])->first();
@@ -2042,7 +2055,7 @@ static function getUserCartItems()
     }
 
 
-   public static function getCartOfferType($variant_id)
+    public static function getCartOfferType($variant_id)
     {
         $get_cart_array = Session::get('cart_info');
         foreach ($get_cart_array as $key => $variant_array) {
@@ -2084,6 +2097,171 @@ static function getUserCartItems()
             }
         }
         return 0;
+    }
+
+    /**
+     * Get active BOGO for a product based on priority:
+     * Priority 1: Specific Product ID
+     * Priority 2: Subcategory
+     * Priority 3: Category (without subcategory constraint)
+     * Priority 4: Brand
+     */
+    public static function getProductActiveBogo($productId, $categoryId = null, $subcategoryId = null, $brandId = null){
+        if ($categoryId === null || $brandId === null) {
+            $prod = DB::table('product')->where('id', $productId)->first(['id', 'category_id', 'subcategory_id', 'brand_id']);
+            if (!$prod) {
+                return null;
+            }
+            $categoryId = $prod->category_id;
+            $subcategoryId = $prod->subcategory_id;
+            $brandId = $prod->brand_id;
+        }
+
+        $today = Carbon::now()->toDateString();
+
+        return Bogo::where('status', 1)
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->where(function ($query) use ($productId, $categoryId, $subcategoryId, $brandId) {
+                $query->where('product_id', $productId);
+
+                if (!empty($subcategoryId)) {
+                    $query->orWhere('subcategory_id', $subcategoryId);
+                }
+
+                if (!empty($categoryId)) {
+                    $query->orWhere(function ($q) use ($categoryId) {
+                        $q->whereNull('subcategory_id')->where('category_id', $categoryId);
+                    });
+                }
+
+                if (!empty($brandId)) {
+                    $query->orWhere('brand_id', $brandId);
+                }
+            })
+            ->orderByRaw("CASE 
+                WHEN product_id IS NOT NULL AND product_id > 0 THEN 1 
+                WHEN subcategory_id IS NOT NULL AND subcategory_id > 0 THEN 2 
+                WHEN category_id IS NOT NULL AND category_id > 0 THEN 3 
+                WHEN brand_id IS NOT NULL AND brand_id > 0 THEN 4 
+                ELSE 5 END ASC, id DESC")
+            ->first();
+    }
+
+    /**
+     * Get active Offer for a product based on priority:
+     * Priority 1: Specific Product ID
+     * Priority 2: Subcategory
+     * Priority 3: Category (without subcategory constraint)
+     * Priority 4: Brand
+     *
+     * Validates: (start_date IS NULL OR start_date <= today) AND expiry_date >= today
+     * Business Rule: For flat discount, product price must be strictly greater than dis_amount (dis_amount < price).
+     * If a flat offer discount exceeds or equals price, it is skipped so another lower or percentage offer can apply.
+     */
+    public static function getProductActiveOffer($productId, $categoryId = null, $subcategoryId = null, $brandId = null, $price = null){
+        if ($categoryId === null || $brandId === null || $price === null) {
+            $prod = DB::table('product')->where('id', $productId)->first(['id', 'category_id', 'subcategory_id', 'brand_id']);
+            if (!$prod) {
+                return null;
+            }
+            if ($categoryId === null) $categoryId = $prod->category_id;
+            if ($subcategoryId === null) $subcategoryId = $prod->subcategory_id;
+            if ($brandId === null) $brandId = $prod->brand_id;
+
+            if ($price === null) {
+                $variantPrice = DB::table('product_variants')
+                    ->where('product_id', $productId)
+                    ->where('status', 1)
+                    ->orderBy('id', 'asc')
+                    ->value('variant_price');
+                $price = $variantPrice ? (float)$variantPrice : null;
+            }
+        }
+
+        $today = Carbon::now()->toDateString();
+        $numericPrice = ($price !== null && is_numeric($price)) ? (float)$price : null;
+
+        $query = Offers::where('status', 1)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
+            ->whereDate('expiry_date', '>=', $today)
+            ->where(function ($query) use ($productId, $categoryId, $subcategoryId, $brandId) {
+                $query->where('product_id', $productId);
+
+                if (!empty($subcategoryId)) {
+                    $query->orWhere('subcategory_id', $subcategoryId);
+                }
+
+                if (!empty($categoryId)) {
+                    $query->orWhere(function ($q) use ($categoryId) {
+                        $q->whereNull('subcategory_id')->where('category_id', $categoryId);
+                    });
+                }
+
+                if (!empty($brandId)) {
+                    $query->orWhere('brand_id', $brandId);
+                }
+            });
+
+        // Business Rule: Flat discount cannot exceed or equal the product price (dis_amount < price)
+        if ($numericPrice !== null && $numericPrice > 0) {
+            $query->where(function ($q) use ($numericPrice) {
+                $q->where('offer_type', '!=', 'flat')
+                  ->orWhere('dis_amount', '<', $numericPrice);
+            });
+        }
+
+        return $query->orderByRaw("CASE 
+                WHEN product_id IS NOT NULL AND product_id > 0 THEN 1 
+                WHEN subcategory_id IS NOT NULL AND subcategory_id > 0 THEN 2 
+                WHEN category_id IS NOT NULL AND category_id > 0 THEN 3 
+                WHEN brand_id IS NOT NULL AND brand_id > 0 THEN 4 
+                ELSE 5 END ASC, dis_amount DESC, id DESC")
+            ->first();
+    }
+
+    /**
+     * Resolve final deal for a product:
+     * BOGO takes precedence over Regular Offer (BOGO > Offer).
+     * Inside BOGO: Product > Subcategory > Category > Brand
+     * Inside Offer: Product > Subcategory > Category > Brand
+     * Business Rule: For flat discount, product price must be strictly greater than dis_amount.
+     */
+    public static function resolveProductDeal($productId, $categoryId = null, $subcategoryId = null, $brandId = null, $price = null){
+        $bogo = self::getProductActiveBogo($productId, $categoryId, $subcategoryId, $brandId);
+        if ($bogo) {
+            return [
+                'is_bogo' => true,
+                'bogo' => $bogo,
+                'is_offer' => false,
+                'offer' => null,
+                'offer_type' => null,
+                'discount_amount' => 0,
+            ];
+        }
+
+        $offer = self::getProductActiveOffer($productId, $categoryId, $subcategoryId, $brandId, $price);
+        if ($offer) {
+            return [
+                'is_bogo' => false,
+                'bogo' => null,
+                'is_offer' => true,
+                'offer' => $offer,
+                'offer_type' => $offer->offer_type,
+                'discount_amount' => $offer->dis_amount,
+            ];
+        }
+
+        return [
+            'is_bogo' => false,
+            'bogo' => null,
+            'is_offer' => false,
+            'offer' => null,
+            'offer_type' => null,
+            'discount_amount' => 0,
+        ];
     }
 
     static function getUserCartQuantity($variantId, $user_id)

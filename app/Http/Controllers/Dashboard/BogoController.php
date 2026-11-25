@@ -88,86 +88,101 @@ class BogoController extends Controller
         return $validateData;
     }
 
-     public function store(Request $request)
+    public function store(Request $request)
     {
-        $this->validateRequest();
-        
         $brand_id = $request->brand_id;
         $category_id = $request->category_id;
         $subcategory_id = $request->subcategory_id;
         $product_id = $request->product_id;
-        $product_type=$request->product_type;
+        $product_type = $request->product_type;
 
-        if ($brand_id && $product_type==1) {
+        if ($brand_id && $product_type == 1) {
             $category_id = null;
             $product_id = null;
-            $subcategory_id=null;
-        }elseif ($category_id && $product_type==2) {
+            $subcategory_id = null;
+        } elseif ($product_type == 2) {
             $brand_id = null;
             $product_id = null;
-        }elseif ($subcategory_id && $product_type==2) {
-            $brand_id = null;
-            $product_id = null;
-        }elseif ($product_id && $product_type==3) {
+        } elseif ($product_id && $product_type == 3) {
             $brand_id = null;
             $category_id = null;
-            $subcategory_id=null;
+            $subcategory_id = null;
         }
 
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'product_type' => 'required|in:1,2,3',
+                'brand_id' => 'required_if:product_type,1',
+                'category_id' => 'required_if:product_type,2',
+                'product_id' => 'required_if:product_type,3',
+                'startdate' => 'required|date_format:d-m-Y|after_or_equal:today',
+                'enddate' => 'required|date_format:d-m-Y|after_or_equal:startdate',
+            ],
+            [
+                'product_type.required' => 'Please select Applicable On.',
+                'brand_id.required_if' => 'Please select a Brand.',
+                'category_id.required_if' => 'Please select a Category.',
+                'product_id.required_if' => 'Please select a Product.',
+                'startdate.required' => 'Start date is required.',
+                'startdate.date_format' => 'Start date must be in DD-MM-YYYY format.',
+                'startdate.after_or_equal' => 'Start date must be today or a future date.',
+                'enddate.required' => 'End date is required.',
+                'enddate.date_format' => 'End date must be in DD-MM-YYYY format.',
+                'enddate.after_or_equal' => 'End date must be on or after start date.',
+            ]
+        );
 
-        // Checking if same offer exist
-        $conflict = Offers::where('status', 1)
-        ->where(function ($query) use ($brand_id, $category_id, $subcategory_id, $product_id) {
-            if ($brand_id) {
-                $query->orWhere('brand_id', $brand_id);
+        $validator->after(function ($validator) use ($request, $product_type, $brand_id, $category_id, $subcategory_id, $product_id) {
+            if (!empty($request->startdate) && !empty($request->enddate)) {
+                try {
+                    $start_date = Carbon::createFromFormat('d-m-Y', $request->startdate)->format('Y-m-d');
+                    $end_date = Carbon::createFromFormat('d-m-Y', $request->enddate)->format('Y-m-d');
+                } catch (\Exception $e) {
+                    return;
+                }
+
+                $targetDetails = $this->getTargetDetails($product_type, $brand_id, $category_id, $subcategory_id, $product_id);
+
+                // 1. Check conflict with another active BOGO offer on the same target and overlapping dates
+                $conflictingBogo = $this->findConflictingBogo($product_type, $brand_id, $category_id, $subcategory_id, $product_id, $start_date, $end_date);
+                if ($conflictingBogo) {
+                    $startFmt = date('d-m-Y', strtotime($conflictingBogo->start_date));
+                    $endFmt = date('d-m-Y', strtotime($conflictingBogo->end_date));
+                    $validator->errors()->add('conflict', "This {$targetDetails['type']} already has an active bogo offer from {$startFmt} to {$endFmt}.");
+                }
+
+                // 2. Check conflict with active Discount Offer on the same target and overlapping dates
+                $conflictingOffer = $this->findConflictingOffer($product_type, $brand_id, $category_id, $subcategory_id, $product_id, $start_date, $end_date);
+                if ($conflictingOffer) {
+                    $startFmt = $conflictingOffer->start_date ? date('d-m-Y', strtotime($conflictingOffer->start_date)) : 'N/A';
+                    $expiryFmt = date('d-m-Y', strtotime($conflictingOffer->expiry_date));
+                    $validator->errors()->add('conflict', "Conflict: A Discount offer for this {$targetDetails['type']} '{$targetDetails['name']}' is already active from {$startFmt} to {$expiryFmt}.");
+                }
             }
+        });
 
-            if ($subcategory_id) {
-                // If subcategory is present, compare with it (ignore category)
-                $query->orWhere('subcategory_id', $subcategory_id);
-            } elseif ($category_id) {
-                // Only compare category if subcategory is NOT present
-                $query->orWhere(function ($q) use ($category_id) {
-                    $q->where('subcategory_id', null)
-                    ->where('category_id', $category_id);
-                });
-            }
-
-            if ($product_id) {
-                $query->orWhere('product_id', $product_id);
-            }
-        })
-        ->exists();
-
-
-        if ($conflict) {
+        if ($validator->fails()) {
             return redirect()->back()
                 ->withInput()
-                ->with('errorMessage', 'A Discount offer with the same product, brand, or category is already active.');
-        }
-
-
-        $newStatus = 1;
-
-        //  update all others to 0
-        if ($newStatus == 1) {
-            Bogo::where('status', 1)->update(['status' => 0]);
+                ->withErrors($validator);
         }
 
         $bogo = new Bogo;
-        $bogo->start_date = isset($request->startdate) ? Carbon::createFromFormat('d-m-Y', $request->startdate)->format('Y-m-d') : '';
-        $bogo->end_date = isset($request->enddate) ? Carbon::createFromFormat('d-m-Y', $request->enddate)->format('Y-m-d') : '';
+        $bogo->start_date = Carbon::createFromFormat('d-m-Y', $request->startdate)->format('Y-m-d');
+        $bogo->end_date = Carbon::createFromFormat('d-m-Y', $request->enddate)->format('Y-m-d');
         $bogo->product_type = $product_type;
         $bogo->brand_id = $brand_id;
         $bogo->category_id = $category_id;
         $bogo->subcategory_id = $subcategory_id;
         $bogo->product_id = $product_id;
-        $bogo->status = $newStatus;
+        $bogo->status = 1;
         $bogo->created_at = date('Y-m-d H:i:s');
         $bogo->updated_at = date('Y-m-d H:i:s');
         $bogo->created_id = Auth::user()->id;
         $bogo->updated_id = Auth::user()->id;
         $bogo->save();
+
         return redirect()->route('bogo')->with('doneMessage', 'Bogo Offer created successfully.');
     }
 
@@ -206,86 +221,104 @@ class BogoController extends Controller
         }
     }
 
-     public function update(Request $request, $id)
+    public function update(Request $request, $id)
     {
         $Bogo = Bogo::find($id);
         $authId = Auth::user()->id;
 
-        if (!empty($Bogo)) {
-
-            $this->validateRequest($id);
-
-            $brand_id = $request->brand_id;
-            $category_id = $request->category_id;
-            $subcategory_id = $request->subcategory_id;
-            $product_id = $request->product_id;
-            $product_type=$request->product_type;
-
-            if ($brand_id && $product_type==1) {
-                $category_id = null;
-                $product_id = null;
-                $subcategory_id=null;
-            }elseif ($category_id && $product_type==2) {
-                $brand_id = null;
-                $product_id = null;
-            }elseif ($subcategory_id && $product_type==2) {
-                $brand_id = null;
-                $product_id = null;
-            }elseif ($product_id && $product_type==3) {
-                $brand_id = null;
-                $category_id = null;
-                $subcategory_id=null;
-            }
-
-            
-            // Checking if same offer exist
-            $conflict = Offers::where('status', 1)
-            ->where(function ($query) use ($brand_id, $category_id, $subcategory_id, $product_id) {
-                if ($brand_id) {
-                    $query->orWhere('brand_id', $brand_id);
-                }
-
-                if ($subcategory_id) {
-                    // If subcategory is present, compare with it (ignore category)
-                    $query->orWhere('subcategory_id', $subcategory_id);
-                } elseif ($category_id) {
-                    // Only compare category if subcategory is NOT present
-                    $query->orWhere(function ($q) use ($category_id) {
-                        $q->where('subcategory_id', null)
-                        ->where('category_id', $category_id);
-                    });
-                }
-
-                if ($product_id) {
-                    $query->orWhere('product_id', $product_id);
-                }
-            })
-            ->exists();
-
-
-            if ($conflict) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('errorMessage', 'A Discount offer with the same product, brand, or category is already active.');
-            }
-
-
-            $Bogo->start_date = isset($request->startdate) ? Carbon::createFromFormat('d-m-Y', $request->startdate)->format('Y-m-d') : '';
-            $Bogo->end_date = isset($request->enddate) ? Carbon::createFromFormat('d-m-Y', $request->enddate)->format('Y-m-d')  : '';
-            $Bogo->product_type = $product_type;
-            $Bogo->brand_id = $brand_id;
-            $Bogo->category_id = $category_id;
-            $Bogo->subcategory_id = $subcategory_id;
-            $Bogo->product_id = $product_id;
-            $Bogo->updated_at = date('Y-m-d H:i:s');
-            $Bogo->updated_id = $authId;
-            $Bogo->save();
-
-
-            return redirect()->route('bogo')->with('doneMessage', 'Bogo Offer updated successfully.');
-        } else {
+        if (empty($Bogo)) {
             return redirect()->route('bogo')->with('errorMessage', __('backend.something_wrong'));
         }
+
+        $brand_id = $request->brand_id;
+        $category_id = $request->category_id;
+        $subcategory_id = $request->subcategory_id;
+        $product_id = $request->product_id;
+        $product_type = $request->product_type;
+
+        if ($brand_id && $product_type == 1) {
+            $category_id = null;
+            $product_id = null;
+            $subcategory_id = null;
+        } elseif ($product_type == 2) {
+            $brand_id = null;
+            $product_id = null;
+        } elseif ($product_id && $product_type == 3) {
+            $brand_id = null;
+            $category_id = null;
+            $subcategory_id = null;
+        }
+
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'product_type' => 'required|in:1,2,3',
+                'brand_id' => 'required_if:product_type,1',
+                'category_id' => 'required_if:product_type,2',
+                'product_id' => 'required_if:product_type,3',
+                'startdate' => 'required|date_format:d-m-Y',
+                'enddate' => 'required|date_format:d-m-Y|after_or_equal:startdate',
+            ],
+            [
+                'product_type.required' => 'Please select Applicable On.',
+                'brand_id.required_if' => 'Please select a Brand.',
+                'category_id.required_if' => 'Please select a Category.',
+                'product_id.required_if' => 'Please select a Product.',
+                'startdate.required' => 'Start date is required.',
+                'startdate.date_format' => 'Start date must be in DD-MM-YYYY format.',
+                'enddate.required' => 'End date is required.',
+                'enddate.date_format' => 'End date must be in DD-MM-YYYY format.',
+                'enddate.after_or_equal' => 'End date must be on or after start date.',
+            ]
+        );
+
+        $validator->after(function ($validator) use ($request, $product_type, $brand_id, $category_id, $subcategory_id, $product_id, $id) {
+            if (!empty($request->startdate) && !empty($request->enddate)) {
+                try {
+                    $start_date = Carbon::createFromFormat('d-m-Y', $request->startdate)->format('Y-m-d');
+                    $end_date = Carbon::createFromFormat('d-m-Y', $request->enddate)->format('Y-m-d');
+                } catch (\Exception $e) {
+                    return;
+                }
+
+                $targetDetails = $this->getTargetDetails($product_type, $brand_id, $category_id, $subcategory_id, $product_id);
+
+                // 1. Conflict with another active BOGO offer (excluding current $id)
+                $conflictingBogo = $this->findConflictingBogo($product_type, $brand_id, $category_id, $subcategory_id, $product_id, $start_date, $end_date, $id);
+                if ($conflictingBogo) {
+                    $startFmt = date('d-m-Y', strtotime($conflictingBogo->start_date));
+                    $endFmt = date('d-m-Y', strtotime($conflictingBogo->end_date));
+                    $validator->errors()->add('conflict', "This {$targetDetails['type']} already has an active bogo offer from {$startFmt} to {$endFmt}.");
+                }
+
+                // 2. Conflict with active Discount Offer
+                $conflictingOffer = $this->findConflictingOffer($product_type, $brand_id, $category_id, $subcategory_id, $product_id, $start_date, $end_date);
+                if ($conflictingOffer) {
+                    $startFmt = $conflictingOffer->start_date ? date('d-m-Y', strtotime($conflictingOffer->start_date)) : 'N/A';
+                    $expiryFmt = date('d-m-Y', strtotime($conflictingOffer->expiry_date));
+                    $validator->errors()->add('conflict', "Conflict: A Discount offer for this {$targetDetails['type']} '{$targetDetails['name']}' is already active from {$startFmt} to {$expiryFmt}.");
+                }
+            }
+        });
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors($validator);
+        }
+
+        $Bogo->start_date = Carbon::createFromFormat('d-m-Y', $request->startdate)->format('Y-m-d');
+        $Bogo->end_date = Carbon::createFromFormat('d-m-Y', $request->enddate)->format('Y-m-d');
+        $Bogo->product_type = $product_type;
+        $Bogo->brand_id = $brand_id;
+        $Bogo->category_id = $category_id;
+        $Bogo->subcategory_id = $subcategory_id;
+        $Bogo->product_id = $product_id;
+        $Bogo->updated_at = date('Y-m-d H:i:s');
+        $Bogo->updated_id = $authId;
+        $Bogo->save();
+
+        return redirect()->route('bogo')->with('doneMessage', 'Bogo Offer updated successfully.');
     }
 
     public function updateAll(Request $request)
@@ -293,39 +326,66 @@ class BogoController extends Controller
         if ($request->ajax()) {
             if ($request->ids != "") {
                 $ids = explode(",", $request->ids);
-                $id_multiple = explode(",", $request->ids);
-
                 $status = $request->status;
+
+                // Check for activate action (status == 1)
+                if ($status == 1) {
+                    $bogosToActivate = Bogo::whereIn('id', $ids)->get();
+                    $conflictingIds = [];
+                    $conflictMsgs = [];
+                    foreach ($bogosToActivate as $bog) {
+                        if ($bog->end_date && $bog->end_date < date('Y-m-d')) {
+                            $conflictingIds[] = $bog->id;
+                            $conflictMsgs[] = "BOGO #{$bog->id} (Expired)";
+                            continue;
+                        }
+                        $conflictBogo = $this->findConflictingBogo(
+                            $bog->product_type, $bog->brand_id, $bog->category_id,
+                            $bog->subcategory_id, $bog->product_id, $bog->start_date,
+                            $bog->end_date, $bog->id
+                        );
+                        $conflictOffer = $this->findConflictingOffer(
+                            $bog->product_type, $bog->brand_id, $bog->category_id,
+                            $bog->subcategory_id, $bog->product_id, $bog->start_date,
+                            $bog->end_date
+                        );
+                        if ($conflictBogo || $conflictOffer) {
+                            $conflictingIds[] = $bog->id;
+                            $targetDetails = $this->getTargetDetails($bog->product_type, $bog->brand_id, $bog->category_id, $bog->subcategory_id, $bog->product_id);
+                            $conflictMsgs[] = "BOGO #{$bog->id} ({$targetDetails['name']})";
+                        }
+                    }
+
+                    if (!empty($conflictingIds)) {
+                        $activatableIds = array_values(array_diff($ids, $conflictingIds));
+                        if (!empty($activatableIds)) {
+                            Bogo::whereIn('id', $activatableIds)->update(['status' => 1]);
+                            return response()->json([
+                                'success' => true,
+                                'msg' => count($activatableIds) . ' BOGO(s) activated successfully. ' . count($conflictingIds) . ' BOGO(s) (' . implode(', ', $conflictMsgs) . ') could not be activated due to active Offer/BOGO date conflicts or expiry.'
+                            ]);
+                        } else {
+                            return response()->json([
+                                'success' => false,
+                                'error' => 'Cannot activate: Selected BOGO(s) (' . implode(', ', $conflictMsgs) . ') conflict with already active Offer/BOGO on the same target or are expired.'
+                            ]);
+                        }
+                    }
+                }
 
                 Bogo::wherein('id', $ids)->update(['status' => $status]);
                 if ($status == 2) {
                     return response()->json(['success' => true, 'msg' => 'Record(s) deleted successfully']);
                 } else if ($status == 0) {
-                    return response()->json(['success' => true, 'msg' => 'Record(s) deactive successfully']);
+                    return response()->json(['success' => true, 'msg' => 'Record(s) deactivated successfully']);
                 } else {
-                    return response()->json(['success' => true, 'msg' => 'Record(s) active successfully']);
+                    return response()->json(['success' => true, 'msg' => 'Record(s) activated successfully']);
                 }
             }
             return response()->json(['success' => false, 'msg' => 'Something went wrong!!']);
         }
         abort(404);
     }
-
-    //  public function status_active(Request $request)
-    // {
-    //     $bogo_id = $request->id;
-    //     Bogo::where('id', $bogo_id)->update(['status' => 0]);
-    //     Alert::success('Success', "Bogo offer deactivated successfully");
-    //     return response()->json(['success' => 'true']);
-    // }
-
-    // public function status_inactive(Request $request)
-    // {
-    //     $bogo_id = $request->id;
-    //     Bogo::where('id', $bogo_id)->update(['status' => 1]);
-    //     Alert::success('Success', "Bogo offer activated successfully");
-    //     return response()->json(['success' => 'true']);
-    // }
 
     public function status_active(Request $request)
     {
@@ -346,7 +406,7 @@ class BogoController extends Controller
             $bogo->save();
 
             Alert::success('Success', "Bogo offer deactivated successfully");
-            return response()->json(['success' => 'true']);
+            return response()->json(['success' => true]);
         }
 
         return response()->json(['success' => false, 'msg' => 'Bogo offer is already deactivated.']);
@@ -367,18 +427,151 @@ class BogoController extends Controller
         }
 
         if ($bogo->status != 1) {
-            // ✅ Deactivate all others
-            Bogo::where('status', 1)->where('id', '!=', $bogo_id)->update(['status' => 0]);
+            // Check if BOGO is expired
+            if ($bogo->end_date && $bogo->end_date < date('Y-m-d')) {
+                return response()->json([
+                    'success' => false,
+                    'msg' => "This BOGO offer expired on " . date('d-m-Y', strtotime($bogo->end_date)) . "."
+                ]);
+            }
 
-            // ✅ Activate this one
+            // Check for conflict before activating
+            if ($bogo->start_date && $bogo->end_date) {
+                // 1. Conflict with active BOGO offer
+                $conflictBogo = $this->findConflictingBogo(
+                    $bogo->product_type,
+                    $bogo->brand_id,
+                    $bogo->category_id,
+                    $bogo->subcategory_id,
+                    $bogo->product_id,
+                    $bogo->start_date,
+                    $bogo->end_date,
+                    $bogo->id
+                );
+
+                if ($conflictBogo) {
+                    $targetDetails = $this->getTargetDetails($bogo->product_type, $bogo->brand_id, $bogo->category_id, $bogo->subcategory_id, $bogo->product_id);
+                    $startFmt = date('d-m-Y', strtotime($conflictBogo->start_date));
+                    $endFmt = date('d-m-Y', strtotime($conflictBogo->end_date));
+                    return response()->json([
+                        'success' => false,
+                        'msg' => "This {$targetDetails['type']} already has an active bogo offer from {$startFmt} to {$endFmt}."
+                    ]);
+                }
+
+                // 2. Conflict with active Discount Offer
+                $conflictOffer = $this->findConflictingOffer(
+                    $bogo->product_type,
+                    $bogo->brand_id,
+                    $bogo->category_id,
+                    $bogo->subcategory_id,
+                    $bogo->product_id,
+                    $bogo->start_date,
+                    $bogo->end_date
+                );
+
+                if ($conflictOffer) {
+                    $targetDetails = $this->getTargetDetails($bogo->product_type, $bogo->brand_id, $bogo->category_id, $bogo->subcategory_id, $bogo->product_id);
+                    $startFmt = $conflictOffer->start_date ? date('d-m-Y', strtotime($conflictOffer->start_date)) : 'N/A';
+                    $expiryFmt = date('d-m-Y', strtotime($conflictOffer->expiry_date));
+                    return response()->json([
+                        'success' => false,
+                        'msg' => "Discount offer for this {$targetDetails['type']} '{$targetDetails['name']}' is already active from {$startFmt} to {$expiryFmt}."
+                    ]);
+                }
+            }
+
+            // Activate this BOGO
             $bogo->status = 1;
             $bogo->save();
 
             Alert::success('Success', "Bogo offer activated successfully");
-            return response()->json(['success' => 'true']);
+            return response()->json(['success' => true]);
         }
 
         return response()->json(['success' => false, 'msg' => 'Bogo offer is already active.']);
+    }
+
+    public function findConflictingBogo($product_type, $brand_id, $category_id, $subcategory_id, $product_id, $start_date, $end_date, $ignore_id = null)
+    {
+        $query = Bogo::where('status', 1)
+            ->where('product_type', $product_type);
+
+        if ($ignore_id) {
+            $query->where('id', '!=', $ignore_id);
+        }
+
+        if ($product_type == 1 && $brand_id) {
+            $query->where('brand_id', $brand_id);
+        } elseif ($product_type == 2) {
+            if ($subcategory_id) {
+                $query->where('subcategory_id', $subcategory_id);
+            } else {
+                $query->where('category_id', $category_id)->whereNull('subcategory_id');
+            }
+        } elseif ($product_type == 3 && $product_id) {
+            $query->where('product_id', $product_id);
+        }
+
+        $query->where(function ($dateQ) use ($start_date, $end_date) {
+            $dateQ->where(function ($q) use ($start_date, $end_date) {
+                $q->where('start_date', '<=', $end_date)
+                  ->where('end_date', '>=', $start_date);
+            })->orWhere(function ($q) {
+                $q->whereNull('start_date')->orWhereNull('end_date');
+            });
+        });
+
+        return $query->first();
+    }
+
+    public function findConflictingOffer($product_type, $brand_id, $category_id, $subcategory_id, $product_id, $start_date, $end_date)
+    {
+        $query = Offers::where('status', 1)
+            ->where('product_type', $product_type);
+
+        if ($product_type == 1 && $brand_id) {
+            $query->where('brand_id', $brand_id);
+        } elseif ($product_type == 2) {
+            if ($subcategory_id) {
+                $query->where('subcategory_id', $subcategory_id);
+            } else {
+                $query->where('category_id', $category_id)->whereNull('subcategory_id');
+            }
+        } elseif ($product_type == 3 && $product_id) {
+            $query->where('product_id', $product_id);
+        }
+
+        $query->where(function ($dateQ) use ($start_date, $end_date) {
+            $dateQ->where(function ($q) use ($start_date, $end_date) {
+                $q->where(function ($sq) use ($end_date) {
+                    $sq->whereNull('start_date')->orWhere('start_date', '<=', $end_date);
+                })->where('expiry_date', '>=', $start_date);
+            });
+        });
+
+        return $query->first();
+    }
+
+    public function getTargetDetails($product_type, $brand_id, $category_id, $subcategory_id, $product_id)
+    {
+        if ($product_type == 1 && $brand_id) {
+            $brand = Brand::find($brand_id);
+            return ['type' => 'Brand', 'name' => $brand ? $brand->title : "ID: $brand_id"];
+        } elseif ($product_type == 2) {
+            if ($subcategory_id) {
+                $subcat = SubCategories::find($subcategory_id);
+                return ['type' => 'Subcategory', 'name' => $subcat ? $subcat->title : "ID: $subcategory_id"];
+            } elseif ($category_id) {
+                $cat = Categories::find($category_id);
+                return ['type' => 'Category', 'name' => $cat ? $cat->title : "ID: $category_id"];
+            }
+        } elseif ($product_type == 3 && $product_id) {
+            $product = Product::find($product_id);
+            return ['type' => 'Product', 'name' => $product ? $product->product_name : "ID: $product_id"];
+        }
+
+        return ['type' => 'Target', 'name' => 'N/A'];
     }
 
 

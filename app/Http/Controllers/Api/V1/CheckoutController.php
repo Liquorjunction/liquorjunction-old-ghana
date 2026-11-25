@@ -1328,19 +1328,11 @@ class CheckoutController extends Controller
                     // $discount_amount = $request->discount_amount ?? null;
                     // $offer_type = $request->offer_type ?? null;
 
-                    $is_offer = (int) filter_var($request->offer_status, FILTER_VALIDATE_BOOLEAN) ?? 0;
-                    $is_bogo  = (int) filter_var($request->bogo_status, FILTER_VALIDATE_BOOLEAN) ?? 0;
-
-                    $currentOffer = Offers::where('status', 1)
-                        ->whereDate('expiry_date', '>=', $today)
-                        ->first();
-                    $offer_type = null;
-                    $discount_amount = null;
-
-                    if ($currentOffer && $is_offer) {
-                        $offer_type = $currentOffer->offer_type;
-                        $discount_amount = $currentOffer->dis_amount;
-                    }
+                    $deal = \App\Helpers\Helper::resolveProductDeal($data->product_id);
+                    $is_bogo  = $deal['is_bogo'] ? 1 : 0;
+                    $is_offer = $deal['is_offer'] ? 1 : 0;
+                    $offer_type = $deal['offer_type'];
+                    $discount_amount = $deal['discount_amount'];
                 } else {
                     if ($isGuest) {
                         $cartInfo = Cart::select('*')->where(['uniqid' => $request->uniqid, 'product_variant_id' => $data->id])->where('status', 1)->first();
@@ -1780,16 +1772,8 @@ class CheckoutController extends Controller
 
         //************************** */ get Offer Details
         $today = Carbon::now()->toDateString();
-        $currentOffer = Offers::where('status', 1)
-            ->whereDate('expiry_date', '>=', $today)
-            ->first();
         $offer_type = null;
         $discount_amount = null;
-
-        if ($currentOffer) {
-            $offer_type = $currentOffer->offer_type;
-            $discount_amount = $currentOffer->dis_amount;
-        }
         // *******************************************************
 
         $giftRecipient = $request->giftRecipient;
@@ -2329,10 +2313,11 @@ class CheckoutController extends Controller
 
             if ($is_buy_now == 1) {
                 $cart_qty = $buy_quantity;
-                $bogoStatus = $bogo_status;
-                $is_offer = $offer_status;
-                $offer_type = $offer_type;
-                $discount_amount = $discount_amount;
+                $deal = \App\Helpers\Helper::resolveProductDeal($variant_product->product_id);
+                $bogoStatus = $deal['is_bogo'] ? 1 : 0;
+                $is_offer = $deal['is_offer'] ? 1 : 0;
+                $offer_type = $deal['offer_type'];
+                $discount_amount = $deal['discount_amount'];
                 $offer_type_store = $offer_type;
                 $discount_amount_store = $discount_amount;
 

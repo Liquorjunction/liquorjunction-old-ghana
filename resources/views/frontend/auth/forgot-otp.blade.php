@@ -188,31 +188,33 @@
     });
 
     function resendOtp() {
-        // alert()
         action_url = "{{ route('websiteforgotresendotp') }}";
         var csrf = "{{ csrf_token() }}";
 
-        $.ajax({
-            url: action_url,
-            data: {
-                'id': 1
-            },
-            headers: {
-                'X-CSRF-TOKEN': csrf
-            },
-            type: "POST",
+        window.getReCaptchaToken('forgot_resend_otp', function(recaptchaToken) {
+            $.ajax({
+                url: action_url,
+                data: {
+                    'id': 1,
+                    'g-recaptcha-response': recaptchaToken
+                },
+                headers: {
+                    'X-CSRF-TOKEN': csrf
+                },
+                type: "POST",
 
-            beforeSend: function() {
-                $(".loader").fadeIn();
-                $('.loader').css("visibility", "visible");
-            },
-            success: function(response) {
-                // console.log(response);
-                // return false;
-                // console.log('test'+response);
-                var url = "{{route('websiteforgototp')}}";
-                window.location.href = url;
-            },
+                beforeSend: function() {
+                    $(".loader").fadeIn();
+                    $('.loader').css("visibility", "visible");
+                },
+                success: function(response) {
+                    var url = "{{route('websiteforgototp')}}";
+                    window.location.href = url;
+                },
+                error: function() {
+                    $(".loader").fadeOut();
+                }
+            });
         });
     }
 </script>

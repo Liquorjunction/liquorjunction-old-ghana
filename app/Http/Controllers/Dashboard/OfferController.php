@@ -103,61 +103,77 @@ class OfferController extends Controller
                 $subcategory_id=null;
             }
 
-            if($request->dis_amount)
-            {
-                $discount_value=$request->dis_amount;
-            }
-            else if($request->dis_percentage)
+            $offerType = $request->input('offer_type');
+            $isPercentage = ($offerType === 'percentage');
 
-            {
-                $discount_value=$request->dis_percentage;
+            if ($request->dis_amount && $offerType == 'flat') {
+                $discount_value = $request->dis_amount;
+            } elseif ($request->dis_percentage && $offerType == 'percentage') {
+                $discount_value = $request->dis_percentage;
             }
             
-        $validator = \Validator::make(
-                    $request->all(),
-                    [
-                        'offer_type' => 'required|string',
-                        'dis_amount' => 'nullable|numeric|min:0',  
-                        'dis_percentage' => 'nullable|numeric|min:0', 
-                        // 'min_amount' => 'required|numeric|min:0',
-                        // 'max_amount' => 'required|numeric',
-                        'expiry_date' => 'required|date|after:today',
-                        // 'total_usage' => 'required|numeric|min:1',
-                        // 'max_users' => 'required|numeric|min:1',
-                        'template' => 'required|string',
-                        'custom_url' => 'required|string',
-                        'offer_images.*' => 'mimetypes:image/png,image/jpg,image/jpeg|max:2048', 
-                        'offer_images' => 'required|array|max:4',
-                    ]
-            );
+            $rules = [
+                'offer_type' => 'required|string',
+                'product_type' => 'required|in:1,2,3',
+                'start_date' => 'required|date|after_or_equal:today',
+                'expiry_date' => 'required|date|after_or_equal:start_date',
+                // 'total_usage' => 'required|numeric|min:1',
+                // 'max_users' => 'required|numeric|min:1',
+                'template' => 'required|string',
+                'custom_url' => 'required|string',
+                'offer_images.*' => 'mimetypes:image/png,image/jpg,image/jpeg|max:2048', 
+                'offer_images' => 'required|array|max:4',
+            ];
 
-            $validator->after(function ($validator) use ($request, $brand_id, $category_id, $subcategory_id, $product_id) {
-                // Custom Rule 1: Ensure at least one discount value
-                if (empty($request->dis_amount) && empty($request->dis_percentage)) {
-                    $validator->errors()->add('dis_amount', 'Either Discount Amount or Discount Percentage is required yolo.');
+            if ($isPercentage) {
+                $rules['dis_percentage'] = 'required|numeric|min:1|max:99';
+                $rules['dis_amount'] = 'nullable';
+            } else {
+                $rules['dis_amount'] = 'required|numeric|min:0.01';
+                $rules['dis_percentage'] = 'nullable';
+            }
+
+            $validator = \Validator::make($request->all(), $rules);
+
+            $validator->after(function ($validator) use ($request, $product_type, $brand_id, $category_id, $subcategory_id, $product_id) {
+                // Custom Rule 1: Validate discount value based on offer type
+                if ($request->offer_type == 'percentage') {
+                    if (empty($request->dis_percentage)) {
+                        $validator->errors()->add('dis_percentage', 'Discount Percentage is required.');
+                    } elseif ($request->dis_percentage < 1 || $request->dis_percentage > 99) {
+                        $validator->errors()->add('dis_percentage', 'Discount Percentage must be between 1% and 99%.');
+                    }
+                } elseif ($request->offer_type == 'flat') {
+                    if (empty($request->dis_amount)) {
+                        $validator->errors()->add('dis_amount', 'Discount Amount is required.');
+                    } elseif ($request->dis_amount <= 0) {
+                        $validator->errors()->add('dis_amount', 'Discount Amount must be greater than 0.');
+                    }
                 }
 
-                // Custom Rule 2: Check for conflict
-                $conflict = Bogo::where('status', 1)
-                    ->where(function ($query) use ($brand_id, $category_id, $subcategory_id, $product_id) {
-                        if ($brand_id) {
-                            $query->orWhere('brand_id', $brand_id);
-                        }
-                        if ($subcategory_id) {
-                            $query->orWhere('subcategory_id', $subcategory_id);
-                        } elseif ($category_id) {
-                            $query->orWhere(function ($q) use ($category_id) {
-                                $q->whereNull('subcategory_id')->where('category_id', $category_id);
-                            });
-                        }
-                        if ($product_id) {
-                            $query->orWhere('product_id', $product_id);
-                        }
-                    })
-                    ->exists();
+                $start_date = $request->input('start_date');
+                $expiry_date = $request->input('expiry_date');
 
-                if ($conflict) {
-                    $validator->errors()->add('conflict', 'A Bogo offer with the same product, brand, or category is already active.');
+                // Custom Rule 2: Check for date overlap conflict with other active Offers (within the same scope: Brand vs Brand, Category vs Category, Product vs Product)
+                if ($start_date && $expiry_date) {
+                    $conflictingOffer = $this->findConflictingOffer($product_type, $brand_id, $category_id, $subcategory_id, $product_id, $start_date, $expiry_date);
+                    if ($conflictingOffer) {
+                        $targetDetails = $this->getTargetDetails($product_type, $brand_id, $category_id, $subcategory_id, $product_id);
+                        $startFmt = date('d-m-Y', strtotime($conflictingOffer->start_date));
+                        $expiryFmt = date('d-m-Y', strtotime($conflictingOffer->expiry_date));
+                        $validator->errors()->add('conflict', "This {$targetDetails['type']} already has an active offer from {$startFmt} to {$expiryFmt}.");
+                    }
+                }
+
+                // Custom Rule 3: Check for conflict with active Bogo offer within the same scope & date range
+                if ($start_date && $expiry_date) {
+                    $conflictBogo = $this->findConflictingBogo($product_type, $brand_id, $category_id, $subcategory_id, $product_id, $start_date, $expiry_date);
+                    if ($conflictBogo) {
+                        $targetDetails = $this->getTargetDetails($product_type, $brand_id, $category_id, $subcategory_id, $product_id);
+                        $startFmt = $conflictBogo->start_date ? date('d-m-Y', strtotime($conflictBogo->start_date)) : 'N/A';
+                        $endFmt = $conflictBogo->end_date ? date('d-m-Y', strtotime($conflictBogo->end_date)) : 'N/A';
+                        $validator->errors()->add('conflict', "Conflict: A BOGO offer for this {$targetDetails['type']} '{$targetDetails['name']}' is already active from {$startFmt} to {$endFmt}.");
+                    }
                 }
             });
 
@@ -165,19 +181,14 @@ class OfferController extends Controller
                 return response()->json($validator->errors(), 422);
             }
 
-
             $newStatus = 1;
-
-            //  update all others to 0
-            if ($newStatus == 1) {
-                Offers::where('status', 1)->update(['status' => 0]);
-            }
 
             $offer = new Offers();
             $offer->offer_type = $request->input('offer_type');
             $offer->dis_amount = $discount_value;
             // $offer->min_amount = $request->input('min_amount');
             // $offer->max_amount = $request->input('max_amount');
+            $offer->start_date = $request->input('start_date');
             $offer->expiry_date = $request->input('expiry_date');
             // $offer->total_usage = $request->input('total_usage');
             // $offer->max_users = $request->input('max_users');
@@ -201,14 +212,19 @@ class OfferController extends Controller
                             9999
                         ) . '.' . $images->getClientOriginalExtension();
                         $path = $this->getUploadPath();
-                        // $images->move($path, $imagesAR);
 
-                        // resize the image
-                        $resizedImage = Image::make($images)->resize(480, null, function ($constraint) {
-                            $constraint->aspectRatio();
-                        });
-
-                        $resizedImage->save($path . '/' . $imagesAR);
+                        if (extension_loaded('gd')) {
+                            try {
+                                $resizedImage = Image::make($images)->resize(480, null, function ($constraint) {
+                                    $constraint->aspectRatio();
+                                });
+                                $resizedImage->save($path . '/' . $imagesAR);
+                            } catch (\Exception $e) {
+                                $images->move($path, $imagesAR);
+                            }
+                        } else {
+                            $images->move($path, $imagesAR);
+                        }
                     }
                     $offerImage = new OfferImage();
                     $offerImage->offer_id = $offer->id;
@@ -231,6 +247,72 @@ class OfferController extends Controller
                 return response()->json(['error' => 'Offer not found.'], 404);
             }
 
+            $usedCount = DB::table('offer_user')->where('offer_id', $offer->id)->count();
+
+            // When offer has already been used in orders (usedCount > 0):
+            // ONLY Expiry Date can be modified. All other fields are protected from changes.
+            if ($usedCount > 0) {
+                $validator = \Validator::make(
+                    $request->all(),
+                    [
+                        'offer_id' => 'required|exists:offers,id',
+                        'expiry_date' => 'required|date|after_or_equal:' . $offer->start_date,
+                    ],
+                    [
+                        'expiry_date.required' => 'Expiry Date is required.',
+                        'expiry_date.date' => 'Enter a valid date.',
+                        'expiry_date.after_or_equal' => 'Expiry date must be on or after start date (' . date('d-m-Y', strtotime($offer->start_date)) . ').',
+                    ]
+                );
+
+                $validator->after(function ($validator) use ($offer, $request, $id) {
+                    $expiry_date = $request->input('expiry_date');
+                    if ($expiry_date) {
+                        $conflictingOffer = $this->findConflictingOffer(
+                            $offer->product_type,
+                            $offer->brand_id,
+                            $offer->category_id,
+                            $offer->subcategory_id,
+                            $offer->product_id,
+                            $offer->start_date,
+                            $expiry_date,
+                            $id
+                        );
+                        if ($conflictingOffer) {
+                            $targetDetails = $this->getTargetDetails($offer->product_type, $offer->brand_id, $offer->category_id, $offer->subcategory_id, $offer->product_id);
+                            $startFmt = date('d-m-Y', strtotime($conflictingOffer->start_date));
+                            $expiryFmt = date('d-m-Y', strtotime($conflictingOffer->expiry_date));
+                            $validator->errors()->add('conflict', "This {$targetDetails['type']} already has an active offer from {$startFmt} to {$expiryFmt}.");
+                        }
+
+                        $conflictBogo = $this->findConflictingBogo(
+                            $offer->product_type,
+                            $offer->brand_id,
+                            $offer->category_id,
+                            $offer->subcategory_id,
+                            $offer->product_id,
+                            $offer->start_date,
+                            $expiry_date
+                        );
+                        if ($conflictBogo) {
+                            $targetDetails = $this->getTargetDetails($offer->product_type, $offer->brand_id, $offer->category_id, $offer->subcategory_id, $offer->product_id);
+                            $startFmt = $conflictBogo->start_date ? date('d-m-Y', strtotime($conflictBogo->start_date)) : 'N/A';
+                            $endFmt = $conflictBogo->end_date ? date('d-m-Y', strtotime($conflictBogo->end_date)) : 'N/A';
+                            $validator->errors()->add('conflict', "Conflict: A BOGO offer for this {$targetDetails['type']} '{$targetDetails['name']}' is already active from {$startFmt} to {$endFmt}.");
+                        }
+                    }
+                });
+
+                if ($validator->fails()) {
+                    return response()->json($validator->errors(), 422);
+                }
+
+                $offer->expiry_date = $request->input('expiry_date');
+                $offer->save();
+
+                Alert::success('Success', 'Offer expiry date updated successfully');
+                return response()->json(['success' => 'true']);
+            }
             
             $brand_id = $request->brand_id;
             $category_id = $request->category_ids;
@@ -258,88 +340,103 @@ class OfferController extends Controller
                 $subcategory_id=null;
             }
             
-            if($request->dis_amount && $request->input('offer_types')=='flat')
-            {
-                $discount_value=$request->dis_amount;
-            }
-            else if($request->dis_percentage && $request->input('offer_types')=='percentage')
+            $offerTypes = $request->input('offer_types');
+            $isPercentage = ($offerTypes === 'percentage');
 
-            {
-                $discount_value=$request->dis_percentage;
+            if ($request->dis_amount && $offerTypes == 'flat') {
+                $discount_value = $request->dis_amount;
+            } elseif ($request->dis_percentage && $offerTypes == 'percentage') {
+                $discount_value = $request->dis_percentage;
             }
             
-                $validator = \Validator::make(
-                    $request->all(),
-                    [
-                        'offer_id' => 'required|exists:offers,id',
-                        'offer_types' => 'required|string',
-                        'dis_amount' => 'nullable|numeric|min:0',  
-                        'dis_percentage' => 'nullable|numeric|min:0',  
-                        // 'min_amount' => 'required|numeric|min:0',
-                        // 'max_amount' => 'required|numeric',
-                        'expiry_date' => 'required|date|after:today',
-                        // 'total_usage' => 'required|numeric|min:1',
-                        // 'max_users' => 'required|numeric|min:1',
-                        'template' => 'required|string',
-                        'custom_url' => 'required|string',
-                        'offer_image.*' => 'mimetypes:image/png,image/jpg,image/jpeg|max:2048', 
-                    ]
-                );
+            $rules = [
+                'offer_id' => 'required|exists:offers,id',
+                'offer_types' => 'required|string',
+                'type' => 'required|in:1,2,3',
+                // 'min_amount' => 'required|numeric|min:0',
+                // 'max_amount' => 'required|numeric',
+                'start_date' => 'required|date',
+                'expiry_date' => 'required|date|after_or_equal:start_date',
+                // 'total_usage' => 'required|numeric|min:1',
+                // 'max_users' => 'required|numeric|min:1',
+                'template' => 'required|string',
+                'custom_url' => 'required|string',
+                'offer_image.*' => 'mimetypes:image/png,image/jpg,image/jpeg|max:2048', 
+            ];
 
-                $validator->after(function ($validator) use ($request, $brand_id, $category_id, $subcategory_id, $product_id) {
-                // Custom Rule 1: Ensure at least one discount value
-                if (empty($request->dis_amount) && empty($request->dis_percentage)) {
-                    $validator->errors()->add('dis_amount', 'Either Discount Amount or Discount Percentage is required yolo.');
-                }
-
-                // Custom Rule 2: Check for conflict
-                $conflict = Bogo::where('status', 1)
-                    ->where(function ($query) use ($brand_id, $category_id, $subcategory_id, $product_id) {
-                        if ($brand_id) {
-                            $query->orWhere('brand_id', $brand_id);
-                        }
-                        if ($subcategory_id) {
-                            $query->orWhere('subcategory_id', $subcategory_id);
-                        } elseif ($category_id) {
-                            $query->orWhere(function ($q) use ($category_id) {
-                                $q->whereNull('subcategory_id')->where('category_id', $category_id);
-                            });
-                        }
-                        if ($product_id) {
-                            $query->orWhere('product_id', $product_id);
-                        }
-                    })
-                    ->exists();
-
-                if ($conflict) {
-                    $validator->errors()->add('conflict', 'A Bogo offer with the same product, brand, or category is already active.');
-                }
-            });
-
-            if ($validator->fails()) {
-                return response()->json($validator->errors(), 422);
+            if ($isPercentage) {
+                $rules['dis_percentage'] = 'required|numeric|min:1|max:99';
+                $rules['dis_amount'] = 'nullable';
+            } else {
+                $rules['dis_amount'] = 'required|numeric|min:0.01';
+                $rules['dis_percentage'] = 'nullable';
             }
-        
 
+            $validator = \Validator::make($request->all(), $rules);
 
+                $validator->after(function ($validator) use ($request, $product_type, $brand_id, $category_id, $subcategory_id, $product_id, $id) {
+                    // Custom Rule 1: Validate discount value based on offer type
+                    if ($request->offer_types == 'percentage') {
+                        if (empty($request->dis_percentage)) {
+                            $validator->errors()->add('dis_percentage', 'Discount Percentage is required.');
+                        } elseif ($request->dis_percentage < 1 || $request->dis_percentage > 99) {
+                            $validator->errors()->add('dis_percentage', 'Discount Percentage must be between 1% and 99% (100% is not allowed).');
+                        }
+                    } elseif ($request->offer_types == 'flat') {
+                        if (empty($request->dis_amount)) {
+                            $validator->errors()->add('dis_amount', 'Discount Amount is required.');
+                        } elseif ($request->dis_amount <= 0) {
+                            $validator->errors()->add('dis_amount', 'Discount Amount must be greater than 0.');
+                        }
+                    }
 
+                    $start_date = $request->input('start_date');
+                    $expiry_date = $request->input('expiry_date');
 
-            $offer->offer_type = $request->input('offer_types');
-            $offer->dis_amount = $discount_value;
-            // $offer->min_amount = $request->input('min_amount');
-            // $offer->max_amount = $request->input('max_amount');
-            $offer->expiry_date = $request->input('expiry_date');
-            // $offer->total_usage = $request->input('total_usage');
-            // $offer->max_users = $request->input('max_users');
-            $offer->product_type = $product_type;
-            $offer->brand_id = $brand_id;
-            $offer->category_id = $category_id;
-            $offer->subcategory_id = $subcategory_id;
-            $offer->product_id = $product_id;
-            $offer->template = $request->input('template');
-            $offer->custom_url = $request->input('custom_url');
+                    // Custom Rule 2: Check for date overlap conflict with other active Offers (within the same scope: Brand vs Brand, Category vs Category, Product vs Product)
+                    if ($start_date && $expiry_date) {
+                        $conflictingOffer = $this->findConflictingOffer($product_type, $brand_id, $category_id, $subcategory_id, $product_id, $start_date, $expiry_date, $id);
+                        if ($conflictingOffer) {
+                            $targetDetails = $this->getTargetDetails($product_type, $brand_id, $category_id, $subcategory_id, $product_id);
+                            $startFmt = date('d-m-Y', strtotime($conflictingOffer->start_date));
+                            $expiryFmt = date('d-m-Y', strtotime($conflictingOffer->expiry_date));
+                            $validator->errors()->add('conflict', "This {$targetDetails['type']} already has an active offer from {$startFmt} to {$expiryFmt}.");
+                        }
+                    }
 
-            $offer->save();
+                    // Custom Rule 3: Check for conflict with active Bogo offer within the same scope & date range
+                    if ($start_date && $expiry_date) {
+                        $conflictBogo = $this->findConflictingBogo($product_type, $brand_id, $category_id, $subcategory_id, $product_id, $start_date, $expiry_date);
+                        if ($conflictBogo) {
+                            $targetDetails = $this->getTargetDetails($product_type, $brand_id, $category_id, $subcategory_id, $product_id);
+                            $startFmt = $conflictBogo->start_date ? date('d-m-Y', strtotime($conflictBogo->start_date)) : 'N/A';
+                            $endFmt = $conflictBogo->end_date ? date('d-m-Y', strtotime($conflictBogo->end_date)) : 'N/A';
+                            $validator->errors()->add('conflict', "Conflict: A BOGO offer for this {$targetDetails['type']} '{$targetDetails['name']}' is already active from {$startFmt} to {$endFmt}.");
+                        }
+                    }
+                });
+
+                if ($validator->fails()) {
+                    return response()->json($validator->errors(), 422);
+                }
+
+                $offer->offer_type = $request->input('offer_types');
+                $offer->dis_amount = $discount_value;
+                // $offer->min_amount = $request->input('min_amount');
+                // $offer->max_amount = $request->input('max_amount');
+                $offer->start_date = $request->input('start_date');
+                $offer->expiry_date = $request->input('expiry_date');
+                // $offer->total_usage = $request->input('total_usage');
+                // $offer->max_users = $request->input('max_users');
+                $offer->product_type = $product_type;
+                $offer->brand_id = $brand_id;
+                $offer->category_id = $category_id;
+                $offer->subcategory_id = $subcategory_id;
+                $offer->product_id = $product_id;
+                $offer->template = $request->input('template');
+                $offer->custom_url = $request->input('custom_url');
+
+                $offer->save();
 
             if (!empty($request->deleted_image)) {
                 foreach ($request->deleted_image as $delete) {
@@ -359,14 +456,19 @@ class OfferController extends Controller
                             9999
                         ) . '.' . $images->getClientOriginalExtension();
                         $path = $this->getUploadPath();
-                        // $images->move($path, $imagesAR);
 
-                        // resize the image
-                        $resizedImage = Image::make($images)->resize(480, null, function ($constraint) {
-                            $constraint->aspectRatio();
-                        });
-
-                         $resizedImage->save($path . '/' . $imagesAR);
+                        if (extension_loaded('gd')) {
+                            try {
+                                $resizedImage = Image::make($images)->resize(480, null, function ($constraint) {
+                                    $constraint->aspectRatio();
+                                });
+                                $resizedImage->save($path . '/' . $imagesAR);
+                            } catch (\Exception $e) {
+                                $images->move($path, $imagesAR);
+                            }
+                        } else {
+                            $images->move($path, $imagesAR);
+                        }
 
                     }
                     $offerImage = new OfferImage();
@@ -387,12 +489,23 @@ class OfferController extends Controller
 
     public function destroy($id)
     {
+        $usedCount = DB::table('offer_user')->where('offer_id', $id)->count();
+        if ($usedCount > 0) {
+            return redirect()->route('offer')
+                ->with('errorMessage', 'Cannot delete: This offer has already been used in orders (Total Used Count: ' . $usedCount . ').');
+        }
+
         $offer = Offers::find($id);
-        $offer->status = 2;
-        $offer->save();
+        if ($offer) {
+            $offer->status = 2;
+            $offer->save();
+
+            return redirect()->route('offer')
+                ->with('doneMessage', 'Record deleted successfully');
+        }
 
         return redirect()->route('offer')
-            ->with('doneMessage', 'Record deleted successfully');
+            ->with('errorMessage', 'Offer not found.');
     }
 
     public function sendMail(Request $request)
@@ -491,8 +604,16 @@ class OfferController extends Controller
                 $brand = Brand::where('status', 1)->orderby('title', 'ASC')->get();
                 $product = Product::where('status', 1)->orderby('product_name', 'ASC')->get();
                 $subcategories = SubCategories::where([['category_id', $editData->category_id], ['status', 1]])->orderby('title', 'ASC')->get();
+                $usedCount = DB::table('offer_user')->where('offer_id', $editData->id)->count();
 
-                $html = view('dashboard.offer.edit', ['editData' => $editData,'categories' => $categories,'brand' => $brand, 'product' => $product,'subcategories'=>$subcategories])->render();
+                $html = view('dashboard.offer.edit', [
+                    'editData' => $editData,
+                    'categories' => $categories,
+                    'brand' => $brand,
+                    'product' => $product,
+                    'subcategories' => $subcategories,
+                    'usedCount' => $usedCount
+                ])->render();
                
                 return response()->json(['success' => true, 'html' => $html]);
             }
@@ -510,10 +631,81 @@ class OfferController extends Controller
                 $ids = explode(",", $request->ids);
                 $status = $request->status;
 
+                // Check for delete action (status == 2)
+                if ($status == 2) {
+                    $usedOffers = DB::table('offer_user')
+                        ->whereIn('offer_id', $ids)
+                        ->pluck('offer_id')
+                        ->unique()
+                        ->toArray();
+
+                    if (!empty($usedOffers)) {
+                        $deletableIds = array_values(array_diff($ids, $usedOffers));
+
+                        if (!empty($deletableIds)) {
+                            Offers::whereIn('id', $deletableIds)->update(['status' => 2]);
+                            return response()->json([
+                                'success' => true,
+                                'msg' => count($deletableIds) . ' offer(s) deleted successfully. ' . count($usedOffers) . ' offer(s) could not be deleted because total used count is greater than 0.'
+                            ]);
+                        } else {
+                            return response()->json([
+                                'success' => false,
+                                'error' => 'Cannot delete: Selected offer(s) have already been used in orders (Total Used Count > 0).'
+                            ]);
+                        }
+                    }
+                }
+
+                // Check for activate action (status == 1)
+                if ($status == 1) {
+                    $offersToActivate = Offers::whereIn('id', $ids)->get();
+                    $conflictingIds = [];
+                    $conflictMsgs = [];
+                    foreach ($offersToActivate as $off) {
+                        if ($off->expiry_date && $off->expiry_date < date('Y-m-d')) {
+                            $conflictingIds[] = $off->id;
+                            $conflictMsgs[] = "Offer #{$off->id} (Expired)";
+                            continue;
+                        }
+                        $conflictOffer = $this->findConflictingOffer(
+                            $off->product_type, $off->brand_id, $off->category_id,
+                            $off->subcategory_id, $off->product_id, $off->start_date,
+                            $off->expiry_date, $off->id
+                        );
+                        $conflictBogo = $this->findConflictingBogo(
+                            $off->product_type, $off->brand_id, $off->category_id,
+                            $off->subcategory_id, $off->product_id, $off->start_date,
+                            $off->expiry_date
+                        );
+                        if ($conflictOffer || $conflictBogo) {
+                            $conflictingIds[] = $off->id;
+                            $targetDetails = $this->getTargetDetails($off->product_type, $off->brand_id, $off->category_id, $off->subcategory_id, $off->product_id);
+                            $conflictMsgs[] = "Offer #{$off->id} ({$targetDetails['name']})";
+                        }
+                    }
+
+                    if (!empty($conflictingIds)) {
+                        $activatableIds = array_values(array_diff($ids, $conflictingIds));
+                        if (!empty($activatableIds)) {
+                            Offers::whereIn('id', $activatableIds)->update(['status' => 1]);
+                            return response()->json([
+                                'success' => true,
+                                'msg' => count($activatableIds) . ' offer(s) activated successfully. ' . count($conflictingIds) . ' offer(s) (' . implode(', ', $conflictMsgs) . ') could not be activated due to active Offer/BOGO date conflicts or expiry.'
+                            ]);
+                        } else {
+                            return response()->json([
+                                'success' => false,
+                                'error' => 'Cannot activate: Selected offer(s) (' . implode(', ', $conflictMsgs) . ') conflict with already active Offer/BOGO on the same target or are expired.'
+                            ]);
+                        }
+                    }
+                }
+
                 Offers::wherein('id', $ids)->update(['status' => $status]);
 
                 if ($status == 2) {
-                    return response()->json(['success' => true, 'msg' => 'Record(s) delete successfully']);
+                    return response()->json(['success' => true, 'msg' => 'Record(s) deleted successfully']);
                 } else if ($status == 0) {
                     return response()->json(['success' => true, 'msg' => 'Record(s) deactivated successfully']);
                 } else {
@@ -637,7 +829,59 @@ class OfferController extends Controller
         }
 
         if ($offer->status != 1) {
-            Offers::where('status', 1)->where('id', '!=', $offer_id)->update(['status' => 0]);
+            // Check if offer is expired
+            if ($offer->expiry_date && $offer->expiry_date < date('Y-m-d')) {
+                return response()->json([
+                    'success' => false,
+                    'msg' => "This offer expired on " . date('d-m-Y', strtotime($offer->expiry_date)) . "."
+                ]);
+            }
+
+            // Check for conflict before activating (within same scope)
+            if ($offer->start_date && $offer->expiry_date) {
+                // 1. Conflict with active Offer
+                $conflict = $this->findConflictingOffer(
+                    $offer->product_type,
+                    $offer->brand_id,
+                    $offer->category_id,
+                    $offer->subcategory_id,
+                    $offer->product_id,
+                    $offer->start_date,
+                    $offer->expiry_date,
+                    $offer->id
+                );
+
+                if ($conflict) {
+                    $targetDetails = $this->getTargetDetails($offer->product_type, $offer->brand_id, $offer->category_id, $offer->subcategory_id, $offer->product_id);
+                    $startFmt = date('d-m-Y', strtotime($conflict->start_date));
+                    $expiryFmt = date('d-m-Y', strtotime($conflict->expiry_date));
+                    return response()->json([
+                        'success' => false,
+                        'msg' => "This {$targetDetails['type']} already has an active offer from {$startFmt} to {$expiryFmt}."
+                    ]);
+                }
+
+                // 2. Conflict with active BOGO offer
+                $conflictBogo = $this->findConflictingBogo(
+                    $offer->product_type,
+                    $offer->brand_id,
+                    $offer->category_id,
+                    $offer->subcategory_id,
+                    $offer->product_id,
+                    $offer->start_date,
+                    $offer->expiry_date
+                );
+
+                if ($conflictBogo) {
+                    $targetDetails = $this->getTargetDetails($offer->product_type, $offer->brand_id, $offer->category_id, $offer->subcategory_id, $offer->product_id);
+                    $startFmt = $conflictBogo->start_date ? date('d-m-Y', strtotime($conflictBogo->start_date)) : 'N/A';
+                    $endFmt = $conflictBogo->end_date ? date('d-m-Y', strtotime($conflictBogo->end_date)) : 'N/A';
+                    return response()->json([
+                        'success' => false,
+                        'msg' => "BOGO offer for this {$targetDetails['type']} '{$targetDetails['name']}' is already active from {$startFmt} to {$endFmt}."
+                    ]);
+                }
+            }
 
             $offer->status = 1;  
             $offer->save();
@@ -665,17 +909,13 @@ class OfferController extends Controller
     
         // Whitelist allowed columns for ordering (security)
         $validColumns = [
-            'offer_type', 'product_type','dis_amount', 'min_amount', 'max_amount',
-            'total_usage', 'max_users','created_at' ,'expiry_date', 'status'
+            'offer_type', 'product_type', 'dis_amount', 'start_date', 'expiry_date',
+            'created_at', 'min_amount', 'max_amount', 'total_usage', 'max_users', 'status'
         ];
     
         if (!in_array($columnName, $validColumns)) {
             $columnName = 'id';
         }
-
-        Offers::whereDate('expiry_date', '<=', Carbon::today())
-        ->where('status', 1)
-        ->update(['status' => 0]);
     
         $query = Offers::query()->where('status', '!=', 2);
     
@@ -684,11 +924,13 @@ class OfferController extends Controller
                 $q->orWhere('offer_type', 'like', "%$search%")
                   ->orWhere('product_type', 'like', "%$search%")
                   ->orWhere('dis_amount', 'like', "%$search%")
+                  ->orWhere('start_date', 'like', "%$search%")
+                  ->orWhere('expiry_date', 'like', "%$search%")
+                  ->orWhere('created_at', 'like', "%$search%")
                   ->orWhere('min_amount', 'like', "%$search%")
                   ->orWhere('max_amount', 'like', "%$search%")
                   ->orWhere('total_usage', 'like', "%$search%")
-                  ->orWhere('max_users', 'like', "%$search%")
-                  ->orWhere('created_at', 'like', "%$search%");
+                  ->orWhere('max_users', 'like', "%$search%");
             });
         }
     
@@ -719,28 +961,30 @@ class OfferController extends Controller
             $deleteBtn = '';
 
             
+            $offerCount = $usageCounts[$offer->id] ?? 0;
+
             if ($offer->expiry_date >= $today && $offer->status != 0 ) {
                 $mailBtn = '<button class="btn btn-sm warning send-offer" data-id="' . $offer->id . '" title="Publish"> <small><i class="material-icons">send</i> </small> </button>';
             }
 
             if ($offer->expiry_date >= $today) {
                 $editBtn = '<a class="btn btn-sm success paddingset edit-offer" data-id="' . $offer->id . '" title="Edit"> <small><i class="material-icons">&#xe3c9;</i> </small> </a>';
-                $deleteBtn = '<button class="btn btn-sm warning delete-school" title="Delete" data-id="'.$offer->id.'" style="margin-left: -4px;"> <small><i class="material-icons">&#xe872;</i> </small> </button>';
+                
+                if ($offerCount == 0) {
+                    $deleteBtn = '<button class="btn btn-sm warning delete-school" title="Delete" data-id="'.$offer->id.'" style="margin-left: -4px;"> <small><i class="material-icons">&#xe872;</i> </small> </button>';
+                } else {
+                    $deleteBtn = '<button class="btn btn-sm light disabled" title="Cannot delete: Total used count is '.$offerCount.'" disabled style="margin-left: -4px; opacity: 0.45; cursor: not-allowed;"> <small><i class="material-icons">&#xe872;</i> </small> </button>';
+                }
             }
-
-            $offerCount = $usageCounts[$offer->id] ?? 0;
     
             $data_arr[] = [
                 'offer' => ucfirst($offer->offer_type),
                 'product' => $this->mapProductType($offer->product_type), 
                 'discount' => $offer->dis_amount,
-                'minimum' => $offer->min_amount,
-                'maximum' => $offer->max_amount,
-                'use' => $offer->total_usage,
-                'users' => $offer->max_users,
-                "count" => $offerCount,
-                'created' => date('Y-m-d', strtotime($offer->created_at)),
+                'startDate' => !empty($offer->start_date) ? date('Y-m-d', strtotime($offer->start_date)) : '-',
                 'expiry' => date('Y-m-d', strtotime($offer->expiry_date)),
+                'created' => date('Y-m-d', strtotime($offer->created_at)),
+                'count' => $offerCount,
                 'status' => $statusIcon,
                 'options' => $showBtn . ' ' . $editBtn . ' ' . $deleteBtn . ' ' . $mailBtn
             ];
@@ -763,6 +1007,87 @@ class OfferController extends Controller
             case 3: return 'Product';
             default: return 'N/A';
         }
+    }
+
+    private function findConflictingOffer($product_type, $brand_id, $category_id, $subcategory_id, $product_id, $start_date, $expiry_date, $ignore_id = null)
+    {
+        $query = Offers::where('status', 1)
+            ->where('product_type', $product_type);
+
+        if ($ignore_id) {
+            $query->where('id', '!=', $ignore_id);
+        }
+
+        if ($product_type == 1) {
+            $query->where('brand_id', $brand_id);
+        } elseif ($product_type == 2) {
+            if ($subcategory_id) {
+                $query->where('subcategory_id', $subcategory_id);
+            } else {
+                $query->where('category_id', $category_id)->whereNull('subcategory_id');
+            }
+        } elseif ($product_type == 3) {
+            $query->where('product_id', $product_id);
+        }
+
+        $query->where(function ($dateQ) use ($start_date, $expiry_date) {
+            $dateQ->where('start_date', '<=', $expiry_date)
+                  ->where('expiry_date', '>=', $start_date);
+        });
+
+        return $query->first();
+    }
+
+    private function findConflictingBogo($product_type, $brand_id, $category_id, $subcategory_id, $product_id, $start_date = null, $expiry_date = null)
+    {
+        $query = Bogo::where('status', 1)
+            ->where('product_type', $product_type);
+
+        if ($product_type == 1 && $brand_id) {
+            $query->where('brand_id', $brand_id);
+        } elseif ($product_type == 2) {
+            if ($subcategory_id) {
+                $query->where('subcategory_id', $subcategory_id);
+            } else {
+                $query->where('category_id', $category_id)->whereNull('subcategory_id');
+            }
+        } elseif ($product_type == 3 && $product_id) {
+            $query->where('product_id', $product_id);
+        }
+
+        if ($start_date && $expiry_date) {
+            $query->where(function ($dateQ) use ($start_date, $expiry_date) {
+                $dateQ->where(function ($q) use ($start_date, $expiry_date) {
+                    $q->where('start_date', '<=', $expiry_date)
+                      ->where('end_date', '>=', $start_date);
+                })->orWhere(function ($q) {
+                    $q->whereNull('start_date')->orWhereNull('end_date');
+                });
+            });
+        }
+
+        return $query->first();
+    }
+
+    private function getTargetDetails($product_type, $brand_id, $category_id, $subcategory_id, $product_id)
+    {
+        if ($product_type == 1 && $brand_id) {
+            $brand = Brand::find($brand_id);
+            return ['type' => 'Brand', 'name' => $brand ? $brand->title : "ID: $brand_id"];
+        } elseif ($product_type == 2) {
+            if ($subcategory_id) {
+                $subcat = SubCategories::find($subcategory_id);
+                return ['type' => 'Subcategory', 'name' => $subcat ? $subcat->title : "ID: $subcategory_id"];
+            } elseif ($category_id) {
+                $cat = Categories::find($category_id);
+                return ['type' => 'Category', 'name' => $cat ? $cat->title : "ID: $category_id"];
+            }
+        } elseif ($product_type == 3 && $product_id) {
+            $product = Product::find($product_id);
+            return ['type' => 'Product', 'name' => $product ? $product->product_name : "ID: $product_id"];
+        }
+
+        return ['type' => 'Target', 'name' => 'N/A'];
     }
 
 

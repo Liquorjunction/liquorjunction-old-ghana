@@ -93,120 +93,25 @@ class CartController extends Controller
 
          // Top selling Product Bogo
 
-        if($top_products)
-        {
-             foreach ($top_products as $top) {
-             $bogo = Bogo::where('status', 1)
-                ->whereDate('start_date', '<=', $today)
-                ->whereDate('end_date', '>=', $today)
-                ->where(function ($query) use ($top) {
-                    $query->where('product_id', $top->id)
-                        ->orWhere(function ($q) use ($top) {
-                            $q->whereNotNull('subcategory_id')
-                                ->where('subcategory_id', $top->subcategory_id);
-                        })
-                        ->orWhere(function ($q) use ($top) {
-                            $q->whereNull('subcategory_id')
-                                ->where('category_id', $top->category_id);
-                        });
-
-                    if (!empty($top->brand_id)) {
-                        $query->orWhere('brand_id', $top->brand_id);
-                    }
-                })
-                ->first();
-
-                $top->bogo_status = $bogo ? true : false; 
-
-                // offer check
-                    $offer = Offers::where('status', 1)
-                        ->whereDate('expiry_date', '>=', $today)
-                        ->where(function ($query) use ($top) {
-                    $query->where('product_id', $top->id)
-                        ->orWhere(function ($q) use ($top) {
-                            $q->whereNotNull('subcategory_id')
-                                ->where('subcategory_id', $top->subcategory_id);
-                        })
-                        ->orWhere(function ($q) use ($top) {
-                            $q->whereNull('subcategory_id')
-                                ->where('category_id', $top->category_id);
-                        });
-
-                    if (!empty($top->brand_id)) {
-                        $query->orWhere('brand_id', $top->brand_id);
-                    }
-                })
-                ->first();
-
-                if ($offer) {
-                    $top->offer_status = true;
-                    $top->discount_amount = $offer->dis_amount;
-                    $top->offer_type = $offer->offer_type;
-                } else {
-                    $top->offer_status = false;
-                    $top->discount_amount = 0;
-                    $top->offer_type = null;
-                }
+        if ($top_products) {
+            foreach ($top_products as $top) {
+                $deal = Helper::resolveProductDeal($top->id, $top->category_id, $top->subcategory_id, $top->brand_id);
+                $top->bogo_status = $deal['is_bogo'];
+                $top->offer_status = $deal['is_offer'];
+                $top->discount_amount = $deal['discount_amount'];
+                $top->offer_type = $deal['offer_type'];
             }
         }
 
         // recent view product bogo
-        if($recent_view_products)
-        {
+        if ($recent_view_products) {
             foreach ($recent_view_products as $recent) {
-            $bogo = Bogo::where('status', 1)
-                ->whereDate('start_date', '<=', $today)
-                ->whereDate('end_date', '>=', $today)
-                ->where(function ($query) use ($recent) {
-                    $query->where('product_id', $recent->id)
-                        ->orWhere(function ($q) use ($recent) {
-                            $q->whereNotNull('subcategory_id')
-                                ->where('subcategory_id', $recent->subcategory_id);
-                        })
-                        ->orWhere(function ($q) use ($recent) {
-                            $q->whereNull('subcategory_id')
-                                ->where('category_id', $recent->category_id);
-                        });
-
-                    if (!empty($recent->brand_id)) {
-                        $query->orWhere('brand_id', $recent->brand_id);
-                    }
-                })
-                ->first();
-
-            $recent->bogo_status = $bogo ? true : false; 
-
-            // offer check
-            $offer = Offers::where('status', 1)
-                        ->whereDate('expiry_date', '>=', $today)
-                        ->where(function ($query) use ($recent) {
-                    $query->where('product_id', $recent->id)
-                        ->orWhere(function ($q) use ($recent) {
-                            $q->whereNotNull('subcategory_id')
-                                ->where('subcategory_id', $recent->subcategory_id);
-                        })
-                        ->orWhere(function ($q) use ($recent) {
-                            $q->whereNull('subcategory_id')
-                                ->where('category_id', $recent->category_id);
-                        });
-
-                    if (!empty($recent->brand_id)) {
-                        $query->orWhere('brand_id', $recent->brand_id);
-                    }
-                })
-                ->first();
-
-                if ($offer) {
-                    $recent->offer_status = true;
-                    $recent->discount_amount = $offer->dis_amount;
-                    $recent->offer_type = $offer->offer_type;
-                } else {
-                    $recent->offer_status = false;
-                    $recent->discount_amount = 0;
-                    $recent->offer_type = null;
-                }
-        }
-
+                $deal = Helper::resolveProductDeal($recent->id, $recent->category_id, $recent->subcategory_id, $recent->brand_id);
+                $recent->bogo_status = $deal['is_bogo'];
+                $recent->offer_status = $deal['is_offer'];
+                $recent->discount_amount = $deal['discount_amount'];
+                $recent->offer_type = $deal['offer_type'];
+            }
         }
         
         return view("frontend.cart.cart-list",compact('productData','user_id','top_products','recent_view_products'));
@@ -280,12 +185,6 @@ class CartController extends Controller
         $total_discount_price = 0;
         $is_product_discount = [];
 
-        $today = Carbon::now()->toDateString();
-        $currentOffer = Offers::where('status', 1)
-                        ->whereDate('expiry_date', '>=', $today)
-                        ->first(); 
-        $currentOfferType = $currentOffer ? $currentOffer->offer_type : null;
-        $currentOfferAmount = $currentOffer ? $currentOffer->dis_amount : null;
 
         foreach($productData as $result){
             if($user_id == ""){
@@ -484,19 +383,12 @@ class CartController extends Controller
         $is_product_discount[] = false;
 
 
-        // ✅ Get current Offer
-        $today = Carbon::now()->toDateString();
-        $currentOffer = Offers::where('status', 1)
-                        ->whereDate('expiry_date', '>=', $today)
-                        ->first(); 
-
-        $currentOfferType = null;
-        $currentOfferAmount = null;
-
-        if($currentOffer){
-            $currentOfferType = $currentOffer->offer_type;
-            $currentOfferAmount = $currentOffer->dis_amount;
-        }
+        // Resolve Deal for this product (BOGO > Offer, with Priority: Product > Subcat > Cat > Brand)
+        $deal = Helper::resolveProductDeal($product_id, null, null, null, $product_variant->variant_price);
+        $bogo_status = $deal['is_bogo'] ? 1 : 0;
+        $offer_status = $deal['is_offer'] ? 1 : 0;
+        $currentOfferType = $deal['offer_type'];
+        $currentOfferAmount = $deal['discount_amount'];
 
         if(Auth::guard('user')->user() == ""){
             // ✅ GUEST USER - SESSION CART
@@ -682,29 +574,30 @@ class CartController extends Controller
 
     public function buyNowSession(Request $request)
     {
-        // Get current Offer
-        $today = Carbon::now()->toDateString();
-        $currentOffer = Offers::where('status', 1)
-                        ->whereDate('expiry_date', '>=', $today)
-                        ->first(); 
-        $currentOfferType=null;
-        $currentOfferAmount=null;
-
-        if($currentOffer)
-        {
-             $currentOfferType=$currentOffer->offer_type;
-             $currentOfferAmount=$currentOffer->dis_amount;
-        }
-
         // resetting
         Session::forget('checkout_in_progress');
         Session::forget('buy_now_info');
 
-        $bogo_status = (int) $request->bogo_status;
-        $offer_status = (int) $request->offer_status;
-        $quantity = (int) $request->quantity;
+        $raw_product_id = $request->product_id;
+        if (!is_numeric($raw_product_id)) {
+            $decoded = Helper::decodeUrl($raw_product_id);
+            if (!empty($decoded) && is_numeric($decoded)) {
+                $raw_product_id = $decoded;
+            }
+        }
 
         $variant_check = ProductVariants::find($request->variantId);
+        $variantPrice = $variant_check->variant_price ?? null;
+
+        // Resolve Deal for this product (BOGO > Offer, with Priority: Product > Subcat > Cat > Brand)
+        $deal = Helper::resolveProductDeal($raw_product_id, null, null, null, $variantPrice);
+        $bogo_status = $deal['is_bogo'] ? 1 : 0;
+        $offer_status = $deal['is_offer'] ? 1 : 0;
+        $currentOfferType = $deal['offer_type'];
+        $currentOfferAmount = $deal['discount_amount'];
+
+        $quantity = (int) $request->quantity;
+
         if ($variant_check && $variant_check->available_qty > 0 && $quantity > $variant_check->available_qty) {
             $quantity = (int) $variant_check->available_qty;
         }

@@ -121,6 +121,9 @@ class WebmasterSettingsController extends Controller
                 'POPULAR_DANCE_CATEGORY' => isset($request->popular_dance_category) ? $request->popular_dance_category : 0,
                 'POPULAR_DANCE_CLASS' => isset($request->popular_dance_class) ? $request->popular_dance_class : 0,
                 'POPULAR_INSTRUCTOR' => isset($request->popular_instructor) ? $request->popular_instructor : 0,
+                'RECAPTCHA_STATUS' => isset($request->nocaptcha_status) ? ($request->nocaptcha_status ? 1 : 0) : env('RECAPTCHA_STATUS', 1),
+                'RECAPTCHA_SITE_KEY' => isset($request->nocaptcha_sitekey) ? trim($request->nocaptcha_sitekey) : env('RECAPTCHA_SITE_KEY', ''),
+                'RECAPTCHA_SECRET_KEY' => isset($request->nocaptcha_secret) ? trim($request->nocaptcha_secret) : env('RECAPTCHA_SECRET_KEY', ''),
                 'PAGINATION_LIMIT' => isset($request->pagination_limit) ? $request->pagination_limit : 4,
                                
             ]);

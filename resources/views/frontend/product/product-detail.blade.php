@@ -256,6 +256,12 @@ video::-webkit-media-controls-timeline {
                                 @endif
 
                                 @if ($offerDetails && !$bogoStatus)
+                                    @php
+                                        $variant0 = $product_info->get_product_variants[0] ?? null;
+                                        $var0_price = $variant0 ? floatval($variant0->variant_price) : 0;
+                                        $showOfferBadge = ($offerDetails['offer_type'] !== 'flat' || $var0_price > floatval($offerDetails['discount_amount']));
+                                    @endphp
+                                    @if ($showOfferBadge)
                                     <span class="offer" id="offer">
                                             @if ($offerDetails['offer_type'] === 'flat')
                                                 Flat {{ intval($offerDetails['discount_amount']) }} {{ Helper::Settings('currency_symbol') }} Off
@@ -263,6 +269,7 @@ video::-webkit-media-controls-timeline {
                                                 {{ intval($offerDetails['discount_amount']) }}% Off
                                             @endif
                                     </span>
+                                    @endif
                                 @endif
 
                             </div>
@@ -359,9 +366,11 @@ video::-webkit-media-controls-timeline {
                                 //Offer
                                 if ($offerDetails && !$bogoStatus) {
                                     if ($offerDetails['offer_type'] === 'flat') {
-                                        $final_price = max(0, $original_price - intval($offerDetails['discount_amount']));
+                                        if ($original_price > floatval($offerDetails['discount_amount'])) {
+                                            $final_price = max(0, $original_price - floatval($offerDetails['discount_amount']));
+                                        }
                                     } elseif ($offerDetails['offer_type'] === 'percentage') {
-                                        $final_price = max(0, $original_price - ($original_price * intval($offerDetails['discount_amount']) / 100));
+                                        $final_price = max(0, $original_price - ($original_price * floatval($offerDetails['discount_amount']) / 100));
                                     }
                                 }
                             @endphp
@@ -640,7 +649,7 @@ video::-webkit-media-controls-timeline {
                                                 </div>
                                             @endif
 
-                                            @if ($result->offer_status && !$result->bogo_status)
+                                            @if ($result->offer_status && !$result->bogo_status && ($result->offer_type !== 'flat' || ($product_variant && $product_variant->variant_price > floatval($result->discount_amount))))
                                                 <div class="mb-1 mt-1">
                                                     <span class="offer" id="offer">
                                                         @if ($result->offer_type === 'flat')
@@ -685,9 +694,11 @@ video::-webkit-media-controls-timeline {
 
                                                         if ($result->offer_status && !$result->bogo_status) {
                                                             if ($result->offer_type === 'flat') {
-                                                                $final_price = max(0, $original_price - $result->discount_amount);
+                                                                if ($original_price > floatval($result->discount_amount)) {
+                                                                    $final_price = max(0, $original_price - floatval($result->discount_amount));
+                                                                }
                                                             } elseif ($result->offer_type === 'percentage') {
-                                                                $final_price = max(0, $original_price - ($original_price * $result->discount_amount / 100));
+                                                                $final_price = max(0, $original_price - ($original_price * floatval($result->discount_amount) / 100));
                                                             }
                                                         }
                                                     @endphp
@@ -816,7 +827,7 @@ video::-webkit-media-controls-timeline {
                                                     </div>
                                                 @endif
 
-                                                @if ($result->offer_status && !$result->bogo_status)
+                                                @if ($result->offer_status && !$result->bogo_status && ($result->offer_type !== 'flat' || ($product_variant && $product_variant->variant_price > floatval($result->discount_amount))))
                                                     <div class="mb-1 mt-1">
                                                         <span class="offer" id="offer">
                                                             @if ($result->offer_type === 'flat')
@@ -863,9 +874,11 @@ video::-webkit-media-controls-timeline {
 
                                                         if ($result->offer_status && !$result->bogo_status) {
                                                             if ($result->offer_type === 'flat') {
-                                                                $final_price = max(0, $original_price - $result->discount_amount);
+                                                                if ($original_price > floatval($result->discount_amount)) {
+                                                                    $final_price = max(0, $original_price - floatval($result->discount_amount));
+                                                                }
                                                             } elseif ($result->offer_type === 'percentage') {
-                                                                $final_price = max(0, $original_price - ($original_price * $result->discount_amount / 100));
+                                                                $final_price = max(0, $original_price - ($original_price * floatval($result->discount_amount) / 100));
                                                             }
                                                         }
                                                     @endphp

@@ -25,6 +25,14 @@ href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/boot
         <div class="tab-content clear b-t">
             <div class="tab-pane active" id="tab_details">
                 <div class="box-body">
+                    @if ($errors->has('conflict') || session('errorMessage') || $errors->any())
+                        <div class="alert alert-danger" id="conflict-alert" role="alert" style="margin-bottom: 20px;">
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            <i class="fa fa-exclamation-triangle m-r-xs"></i> {{ $errors->first('conflict') ?: session('errorMessage') ?: $errors->first() }}
+                        </div>
+                    @endif
                     {{ Form::open(['route' => ['bogo.update', $Bogo->id], 'method' => 'POST', 'id' => 'bogo-form', 'files' => true, 'onsubmit' =>"return dateCheck(event)"]) }}
                     <div class="form-group row">
                         <label class="col-sm-2 form-control-label">Applicable On<span class="valid_field">*</span></label>
@@ -280,6 +288,12 @@ href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/boot
 <script>
     $(document).ready(function() {
         showHide();
+        var $alert = $('#conflict-alert');
+        if ($alert.length) {
+            $('html, body').animate({
+                scrollTop: $alert.offset().top - 100
+            }, 400);
+        }
     });
 
     function showHide() {

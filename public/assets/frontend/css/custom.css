@@ -243,22 +243,62 @@ textarea {
 }
 
 /* 5. Cart & Order List Product Images */
+/* Ensure the outer product-img flex item NEVER shrinks or clips child image */
 .product-img,
-.product-img a,
-.product-img img,
-.cart-item-lists .product-img a,
-.cart-item-lists .product-img img,
 .cart-product-item .product-img,
-.cart-product-item .product-img a,
-.cart-product-item .product-img img,
 .single-product .product-img,
+.cart-item-lists .product-img,
+.cart-item-list .product-img,
+.order-list .product-img,
+.recent-order .product-img,
+.mini-product-list .product-img {
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    max-width: fit-content !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+}
+
+/* Rounded corners and clip applied to the actual card link wrapper */
+.product-img a,
+.cart-item-lists .product-img a,
+.cart-product-item .product-img a,
 .single-product .product-img a,
-.single-product .product-img img,
 .cart-item-list .product-img a,
 .order-list .product-img a,
-.recent-order .product-img a {
+.recent-order .product-img a,
+.mini-product-list .product-img a {
     border-radius: 20px !important;
-    overflow: hidden;
+    overflow: hidden !important;
+}
+
+/* Rounded image inside card */
+.product-img img,
+.product-img a img,
+.cart-item-lists .product-img img,
+.cart-item-lists .product-img a img,
+.cart-product-item .product-img img,
+.cart-product-item .product-img a img,
+.single-product .product-img img,
+.single-product .product-img a img,
+.cart-item-list .product-img img,
+.cart-item-list .product-img a img,
+.order-list .product-img img,
+.order-list .product-img a img,
+.recent-order .product-img img,
+.recent-order .product-img a img,
+.mini-product-list .product-img img,
+.mini-product-list .product-img a img {
+    border-radius: 16px !important;
+}
+
+/* Ensure product detail flex child fills available space without squeezing image */
+.cart-item-lists .single-product .product-detail,
+.cart-item-list .product-detail,
+.order-list .product-detail,
+.recent-order .product-detail {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 /* 6. Increment / Decrement Counter Buttons & Container */

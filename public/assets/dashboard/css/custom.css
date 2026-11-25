@@ -1836,3 +1836,9 @@ background-size:
 background-repeat: no-repeat;
 outline: 0;
 } */
+
+/* Ensure modal backdrop covers sidebar when modals are open across admin */
+body.modal-open #aside.app-aside {
+    z-index: 1030 !important;
+}
+

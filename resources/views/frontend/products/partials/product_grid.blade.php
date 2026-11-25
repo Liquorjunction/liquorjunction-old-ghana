@@ -17,7 +17,11 @@
 
             if ($result->offer_status && !$result->bogo_status) {
                 if ($result->offer_type === 'flat') {
-                    $final_price = max(0, $original_price - $result->discount_amount);
+                    if ($original_price > $result->discount_amount) {
+                        $final_price = max(0, $original_price - $result->discount_amount);
+                    } else {
+                        $final_price = $original_price;
+                    }
                 } elseif ($result->offer_type === 'percentage') {
                     $final_price = max(0, $original_price - ($original_price * $result->discount_amount / 100));
                 }
@@ -75,7 +79,7 @@
                         </div>
                     @endif
 
-                    @if ($result->offer_status && !$result->bogo_status)
+                    @if ($result->offer_status && !$result->bogo_status && ($result->offer_type !== 'flat' || $original_price > $result->discount_amount))
                         <div class="mb-1 mt-1">
                             <span class="offer" id="offer">
                                 @if ($result->offer_type === 'flat')

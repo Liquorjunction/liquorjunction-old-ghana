@@ -708,6 +708,7 @@ class ProductCatalogController extends Controller
         $activeBogos = Bogo::where('status', 1)
             ->whereDate('start_date', '<=', $today)
             ->whereDate('end_date', '>=', $today)
+            ->orderByDesc('id')
             ->get();
 
         $bogoPids = [];
@@ -734,7 +735,12 @@ class ProductCatalogController extends Controller
 
         // 2. Get active offers
         $activeOffers = Offers::where('status', 1)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
             ->whereDate('expiry_date', '>=', $today)
+            ->orderByDesc('dis_amount')
+            ->orderByDesc('id')
             ->get();
 
         if ($activeOffers->isEmpty()) {
@@ -799,17 +805,18 @@ class ProductCatalogController extends Controller
             $disAmount = floatval($offer->dis_amount);
 
             if ($offer->offer_type === 'flat') {
-                $expr = "GREATEST(0, {$priceCol} - {$disAmount})";
+                // Flat discount cannot exceed or equal product price (price must be strictly greater than discount)
+                $expr = "({$priceCol} - {$disAmount})";
+                $whenBranches[] = "WHEN {$condStr} AND {$priceCol} > {$disAmount} THEN {$expr}";
             } elseif ($offer->offer_type === 'percentage') {
                 $factor = (100.0 - $disAmount) / 100.0;
                 if ($factor < 0) $factor = 0;
                 $factorStr = number_format($factor, 4, '.', '');
                 $expr = "GREATEST(0, ROUND({$priceCol} * {$factorStr}, 2))";
+                $whenBranches[] = "WHEN {$condStr} THEN {$expr}";
             } else {
                 continue;
             }
-
-            $whenBranches[] = "WHEN {$condStr} THEN {$expr}";
         }
 
         if (empty($whenBranches)) {
@@ -836,6 +843,9 @@ class ProductCatalogController extends Controller
             ->get();
 
         $activeOffers = Offers::where('status', 1)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
             ->whereDate('expiry_date', '>=', $today)
             ->get();
 
@@ -867,6 +877,16 @@ class ProductCatalogController extends Controller
 
         foreach ($activeOffers as $offer) {
             $q = DB::table('product as p')->where('p.status', 1);
+            if ($offer->offer_type === 'flat') {
+                $dis = floatval($offer->dis_amount);
+                $q->whereExists(function($sq) use ($dis) {
+                    $sq->select(DB::raw(1))
+                       ->from('product_variants as pv_chk')
+                       ->whereColumn('pv_chk.product_id', 'p.id')
+                       ->where('pv_chk.status', 1)
+                       ->where('pv_chk.variant_price', '>', $dis);
+                });
+            }
             if (!empty($offer->product_id)) {
                 $q->where('p.id', $offer->product_id);
             } elseif (!empty($offer->subcategory_id)) {
@@ -899,11 +919,17 @@ class ProductCatalogController extends Controller
         $activeBogos = Bogo::where('status', 1)
             ->whereDate('start_date', '<=', $today)
             ->whereDate('end_date', '>=', $today)
+            ->orderByDesc('id')
             ->get();
 
         // 2. Bulk Active Offers
         $activeOffers = Offers::where('status', 1)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
             ->whereDate('expiry_date', '>=', $today)
+            ->orderByDesc('dis_amount')
+            ->orderByDesc('id')
             ->get();
 
         foreach ($productData as $product) {
@@ -912,26 +938,44 @@ class ProductCatalogController extends Controller
             $sid = $product->subcategory_id;
             $bid = $product->brand_id;
 
-            // Check BOGO
-            $isBogo = false;
+            // Check BOGO (Priority: Product > Subcategory > Category > Brand)
+            $productBogo = null;
+            $subcatBogo = null;
+            $catBogo = null;
+            $brandBogo = null;
             foreach ($activeBogos as $bogo) {
-                if ($bogo->product_id && $bogo->product_id == $pid) { $isBogo = true; break; }
-                if ($bogo->subcategory_id && $bogo->subcategory_id == $sid) { $isBogo = true; break; }
-                if ($bogo->category_id && empty($bogo->subcategory_id) && $bogo->category_id == $cid) { $isBogo = true; break; }
-                if ($bogo->brand_id && $bogo->brand_id == $bid) { $isBogo = true; break; }
+                if ($bogo->product_id && $bogo->product_id == $pid) { $productBogo = $bogo; break; }
+                if ($bogo->subcategory_id && $bogo->subcategory_id == $sid && !$subcatBogo) { $subcatBogo = $bogo; }
+                if ($bogo->category_id && empty($bogo->subcategory_id) && $bogo->category_id == $cid && !$catBogo) { $catBogo = $bogo; }
+                if ($bogo->brand_id && $bogo->brand_id == $bid && !$brandBogo) { $brandBogo = $bogo; }
             }
+            $isBogo = !empty($productBogo ?? $subcatBogo ?? $catBogo ?? $brandBogo);
             $product->bogo_status = $isBogo;
 
-            // Check Offer
-            $matchedOffer = null;
+            // Check Offer (Priority: Product > Subcategory > Category > Brand)
+            $productPrice = floatval($product->final_price ?? $product->variant_price ?? $product->product_price ?? 0);
+            $productOffer = null;
+            $subcatOffer = null;
+            $catOffer = null;
+            $brandOffer = null;
             foreach ($activeOffers as $offer) {
-                if ($offer->product_id && $offer->product_id == $pid) { $matchedOffer = $offer; break; }
-                if ($offer->subcategory_id && $offer->subcategory_id == $sid) { $matchedOffer = $offer; break; }
-                if ($offer->category_id && empty($offer->subcategory_id) && $offer->category_id == $cid) { $matchedOffer = $offer; break; }
-                if ($offer->brand_id && $offer->brand_id == $bid) { $matchedOffer = $offer; break; }
+                // Flat discount cannot exceed or equal product price
+                if ($offer->offer_type === 'flat' && $productPrice > 0 && floatval($offer->dis_amount) >= $productPrice) {
+                    continue;
+                }
+                if ($offer->product_id && $offer->product_id == $pid) { $productOffer = $offer; break; }
+                if ($offer->subcategory_id && $offer->subcategory_id == $sid && !$subcatOffer) { $subcatOffer = $offer; }
+                if ($offer->category_id && empty($offer->subcategory_id) && $offer->category_id == $cid && !$catOffer) { $catOffer = $offer; }
+                if ($offer->brand_id && $offer->brand_id == $bid && !$brandOffer) { $brandOffer = $offer; }
             }
+            $matchedOffer = $productOffer ?? $subcatOffer ?? $catOffer ?? $brandOffer;
 
-            if ($matchedOffer) {
+            // Deal Precedence: BOGO > Offer (No discount stacking)
+            if ($isBogo) {
+                $product->offer_status = false;
+                $product->offer_type = null;
+                $product->discount_amount = 0;
+            } elseif ($matchedOffer) {
                 $product->offer_status = true;
                 $product->offer_type = $matchedOffer->offer_type;
                 $product->discount_amount = $matchedOffer->dis_amount;

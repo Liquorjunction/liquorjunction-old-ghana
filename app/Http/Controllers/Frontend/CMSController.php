@@ -246,7 +246,8 @@ class CMSController extends Controller
 
         $request->validate(
             [
-                'order_number' => 'required'
+                'order_number' => 'required',
+                'g-recaptcha-response' => [new \App\Rules\ReCaptchaRule('track_order')]
             ],
             [
                 'order_number.required' => \Helper::language('the_order_number_field_is_required.')
@@ -348,6 +349,7 @@ class CMSController extends Controller
                 'message_title' => 'required|max:60',
                 'message_description' => 'required|max:750',
                 'reason' => 'required',
+                'g-recaptcha-response' => [new \App\Rules\ReCaptchaRule('contact_us')],
             ],
             [
                 'name.required' => \Helper::language('the_name_field_is_required'),

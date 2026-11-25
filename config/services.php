@@ -69,4 +69,10 @@ return [
         'base_url' => env('MOJO_BASE_URL', 'https://omni.mojo-pay.com/v1'),
     ],
 
+    'recaptcha' => [
+        'status' => env('RECAPTCHA_STATUS', 1),
+        'site_key' => env('RECAPTCHA_SITE_KEY', env('NOCAPTCHA_SITEKEY')),
+        'secret_key' => env('RECAPTCHA_SECRET_KEY', env('NOCAPTCHA_SECRET')),
+    ],
+
 ];

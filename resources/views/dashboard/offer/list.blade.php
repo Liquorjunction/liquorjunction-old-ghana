@@ -8,14 +8,60 @@
     <!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script> -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css" type="text/css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css" />
 
     <style>
-        .model {
+        .sweet-alert, .sweet-overlay {
+            z-index: 99999 !important;
+        }
+
+        .datepicker {
+            z-index: 99999 !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.18) !important;
+            border: 1px solid #ddd !important;
+            padding: 8px !important;
+        }
+
+        .datepicker table tr th.prev,
+        .datepicker table tr th.next,
+        .datepicker table tr th.datepicker-switch {
+            cursor: pointer !important;
+            height: 32px !important;
+            line-height: 32px !important;
+        }
+
+        .datepicker table tr th.prev:hover,
+        .datepicker table tr th.next:hover,
+        .datepicker table tr th.datepicker-switch:hover {
+            background-color: #f0f0f0 !important;
+            border-radius: 4px !important;
+        }
+
+        #aside.app-aside {
+            z-index: 1030 !important;
+        }
+
+        .modal:not(#aside), .model {
             z-index: 1050 !important;
         }
 
-        .model-backdrop {
+        .modal-backdrop, .model-backdrop {
             z-index: 1040 !important;
+        }
+
+        .manage-space {
+            white-space: nowrap !important;
+        }
+
+        .manage-space th,
+        .manage-space td {
+            white-space: nowrap !important;
+            vertical-align: middle !important;
+        }
+
+        .table-responsive {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
         }
 
         table.dataTable tbody td:last-child {
@@ -23,11 +69,22 @@
         }
 
         #option_width {
-            width: 160px !important;
+            width: 170px !important;
+            min-width: 170px !important;
         }
 
         .btn {
             padding: 7px 10px;
+        }
+
+        /* Remove number spinner arrows across all browsers */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none !important;
+            margin: 0 !important;
+        }
+        input[type=number] {
+            -moz-appearance: textfield !important;
         }
     </style>
     <div class="loader" id="loader"></div>
@@ -60,19 +117,20 @@
 
             {{ Form::open(['route' => 'offerUpdateAll', 'method' => 'post', 'id' => 'updateAll']) }}
             <div class="table-responsive">
-                <table class="table table-bordered m-a-0" id="label">
+                <table class="table table-bordered m-a-0 manage-space" id="label">
                     <thead class="dker">
                         <tr>
                             <th id="offer">Offer Type</th>
                             <th id="product">Applicable On</th>
                             <th id="amount">Discount Amount/ Percentage(%)</th>
-                            <th id="count">Total Used Count</th>
+                            <th id="start_date">Start Date</th>
+                            <th id="expiry">Expiry Date</th>
                             <th id="created">Created On</th>
+                            <th id="count">Total Used Count</th>
                             {{-- <th id="minimum">Minimum Amount</th> --}}
                             {{-- <th id="maximum">Maximum Amount</th> --}}
                             {{-- <th id="use">Usage Limit</th> --}}
                             {{-- <th id="users">Max User</th> --}}
-                            <th id="expiry">Expiry Date</th>
                             <th>{{ __('backend.status') }}</th>
                             <th id="option_width">{{ __('backend.options') }}</th>
                         </tr>
@@ -125,7 +183,10 @@
                 <div class="modal-header">
                     <h4 class="modal-title">Add New Offer</h4>
                 </div>
-            <div id="conflictError" class="alert alert-danger" style="display:none;"></div>
+                <div id="conflictError" class="alert alert-danger" style="display:none; margin: 15px 20px 0 20px; border-left: 4px solid #d9534f; background-color: #fdf2f2; color: #a94442; padding: 12px 15px; border-radius: 4px; font-weight: 500;">
+                    <i class="material-icons" style="vertical-align: middle; font-size: 20px; margin-right: 6px;">&#xe000;</i>
+                    <span class="conflict-msg"></span>
+                </div>
                 <form class="cmxform" id="offerForm" method="post" enctype="multipart/form-data" autocomplete="off">
                     @csrf
                     <div class="modal-body">
@@ -208,7 +269,7 @@
                             <label class="col-sm-5 form-control-label">Discount Amount<span
                                     class="valid_field">*</span></label>
                             <div class="col-sm-7">
-                                <input type="number" name="dis_amount" id="dis_amount" class="form-control" placeholder="100" value="{{ old('dis_amount') }}" required>
+                                <input type="number" step="any" min="0.01" name="dis_amount" id="dis_amount" class="form-control" placeholder="100" value="{{ old('dis_amount') }}" required onkeydown="return blockInvalidNumberKeys(event)" oninput="sanitizeAmount(this)">
                                 <span style="color: red;display: none;" id="errorMsgAmount" class='validate'></span>
                             </div>
                         </div>
@@ -216,7 +277,8 @@
                             <label class="col-sm-5 form-control-label">Discount Percentage(%)<span
                                     class="valid_field">*</span></label>
                             <div class="col-sm-7">
-                                <input type="number" name="dis_percentage" id="dis_percentage" class="form-control" placeholder="100" value="{{ old('dis_percentage') }}" required>
+                                <input type="number" step="any" name="dis_percentage" id="dis_percentage" class="form-control" placeholder="10" min="1" max="99" value="{{ old('dis_percentage') }}" required onkeydown="return blockInvalidNumberKeys(event)" oninput="sanitizePercentage(this)">
+                                <small class="text-muted"><i class="material-icons" style="font-size: 14px; vertical-align: middle;">&#xe8fd;</i> Enter percentage between 1% and 99% (100% is not allowed).</small>
                                 <span style="color: red;display: none;" id="errorMsgPercentage" class='validate'></span>
                             </div>
                         </div>
@@ -242,12 +304,21 @@
                         </div> --}}
 
                         <div class="form-group row">
+                            <label class="col-sm-5 form-control-label">Start Date<span
+                                    class="valid_field">*</span></label>
+                            <div class="col-sm-7">
+                                <input type="text" name="start_date" id="start_date" class="form-control"
+                                    placeholder="YYYY-MM-DD" value="{{ old('start_date') }}" required readonly style="background-color: #fff; cursor: pointer;">
+                                <span style="color: red;display: none;" id="errorMsgStartDate" class='validate'></span>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
                             <label class="col-sm-5 form-control-label">Expiry Date<span
                                     class="valid_field">*</span></label>
                             <div class="col-sm-7">
-                                <input type="date"  name="expiry_date"  id="expiry_date" class="form-control"
-                                 placeholder="200"
-                                    value="{{ old('expiry_date') }}" required>
+                                <input type="text" name="expiry_date" id="expiry_date" class="form-control"
+                                    placeholder="YYYY-MM-DD" value="{{ old('expiry_date') }}" required readonly style="background-color: #fff; cursor: pointer;">
                                 <span style="color: red;display: none;" id="errorMsgExpiry" class='validate'></span>
                             </div>
                         </div>
@@ -392,7 +463,7 @@
     </div>
 
 
-    <div class="modal fade" id="editOffer" role="dialog">
+    <div class="modal fade" id="editOffer" role="dialog" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog">
             <!-- Modal content-->
             <div class="modal-content add-offer-data">
@@ -400,7 +471,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="showoffer" role="dialog">
+    <div class="modal fade" id="showoffer" role="dialog" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog">
             <!-- Modal content-->
             <div class="modal-content show-offer-data">
@@ -415,6 +486,7 @@
     <script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/additional-methods.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert-dev.js"></script>
     <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
 
 
     <script>
@@ -445,17 +517,18 @@
                     },
                     dis_amount: {
                         required: function () {
-                            return $("#dis_percentage").val() === "";
+                            return $("#offer_type").val() === "flat";
                         },
                         number: true,
-                        min: 0
+                        min: 0.01
                     },
                     dis_percentage: {
                         required: function () {
-                            return $("#dis_amount").val() === "";
+                            return $("#offer_type").val() === "percentage";
                         },
                         number: true,
-                        min: 0
+                        min: 1,
+                        max: 99
                     },
                     // min_amount: {
                     //     required: true,
@@ -468,10 +541,15 @@
                     //     min: 0,
                     //     greaterThan: true // no param passed
                     // },
+                    start_date: {
+                        required: true,
+                        date: true,
+                        notPastDate: true
+                    },
                     expiry_date: {
                         required: true,
                         date: true,
-                        futureDate: true
+                        greaterThanOrEqualToDate: "#start_date"
                     },
                     // total_usage: {
                     //     required: true,
@@ -515,12 +593,13 @@
                     dis_amount: {
                         required: "Discount Amount Field is required.",
                         number: "Please enter a valid number.",
-                        min: "Amount must be greater than or equal to 0."
+                        min: "Amount must be greater than 0."
                     },
                     dis_percentage: {
                         required: "Discount Percentage Field is required.",
                         number: "Please enter a valid number.",
-                        min: "Amount must be greater than or equal to 0."
+                        min: "Discount percentage must be at least 1%.",
+                        max: "Discount percentage cannot exceed 99% (100% is not allowed)."
                     },
                     // min_amount: {
                     //     required: "Minimum Amount Field is required.",
@@ -533,10 +612,15 @@
                     //     min: "Amount must be greater than or equal to 0.",
                     //     greaterThan: "Maximum amount must be greater than minimum amount."
                     // },
+                    start_date: {
+                        required: "Start Date Field is required.",
+                        date: "Enter a valid date.",
+                        notPastDate: "Start date cannot be in the past."
+                    },
                     expiry_date: {
                         required: "Expiry Date Field is required.",
                         date: "Enter a valid date.",
-                        futureDate: "Expiry date must be in the future."
+                        greaterThanOrEqualToDate: "Expiry date must be on or after start date."
                     },
                     // total_usage: {
                     //     required: "Total Usage Field is required.",
@@ -601,17 +685,35 @@
 
                             // Clear any previous errors
                             $('.validate').text('').hide(); // Hide all validation error spans
-                            $('#conflictError').hide().html(''); // Hide the conflict error div
+                            $('#conflictError').hide().find('.conflict-msg').html(''); // Hide the conflict error div
 
                             let erroJson = errors.responseJSON;
+
+                            function capitalizeFirstLetter(string) {
+                                if (!string) return '';
+                                return string.charAt(0).toUpperCase() + string.slice(1);
+                            }
+
+                            var hasConflict = false;
+                            var conflictMsg = '';
 
                             // Loop through each field error
                             $.each(erroJson, function(field, messages) {
                                 const message = messages[0];
 
                                 if (field === 'conflict') {
-                                    // Show the conflict error in a special div
-                                    $('#conflictError').html(message).show();
+                                    hasConflict = true;
+                                    conflictMsg = message;
+                                    $('#conflictError .conflict-msg').text(message);
+                                    $('#conflictError').show();
+                                } else if (field === 'expiry_date') {
+                                    $('#errorMsgExpiry').text(message).show();
+                                } else if (field === 'start_date') {
+                                    $('#errorMsgStartDate').text(message).show();
+                                } else if (field === 'dis_amount') {
+                                    $('#errorMsgAmount').text(message).show();
+                                } else if (field === 'dis_percentage') {
+                                    $('#errorMsgPercentage').text(message).show();
                                 } else {
                                     // Show other errors in their corresponding <span id="errorMsg<Field>">
                                     let errorSpan = $(`#errorMsg${capitalizeFirstLetter(field)}`);
@@ -622,6 +724,19 @@
                                     }
                                 }
                             });
+
+                            if (hasConflict) {
+                                // Smoothly scroll modal to top to show the alert banner
+                                $('#myModal, .modal').animate({ scrollTop: 0 }, 400);
+                            } else {
+                                // Scroll modal to the first visible validation error
+                                var firstVisible = $('#myModal .validate:visible').first();
+                                if (firstVisible.length) {
+                                    $('#myModal, .modal').animate({
+                                        scrollTop: firstVisible.offset().top - $('#myModal').offset().top + $('#myModal').scrollTop() - 80
+                                    }, 400);
+                                }
+                            }
                         }
                     });
                 }
@@ -658,10 +773,63 @@
                 return inputDate > now;
             }, "Date must be in the future.");
 
+            $.validator.addMethod("notPastDate", function(value, element) {
+                if (!value) return true;
+                var now = new Date();
+                now.setHours(0,0,0,0);
+                var inputDate = new Date(value + 'T00:00:00');
+                return inputDate >= now;
+            }, "Start date cannot be in the past.");
+
+            $.validator.addMethod("greaterThanOrEqualToDate", function(value, element, param) {
+                var startDateVal = $(param).val();
+                if (!startDateVal || !value) return true;
+                var startDate = new Date(startDateVal + 'T00:00:00');
+                var expiryDate = new Date(value + 'T00:00:00');
+                return expiryDate >= startDate;
+            }, "Expiry date must be on or after start date.");
+
+            $('#myModal #start_date').datepicker({
+                format: 'yyyy-mm-dd',
+                startDate: '+0d',
+                todayHighlight: true,
+                autoclose: true,
+                orientation: "bottom auto",
+                templates: {
+                    leftArrow: '<i class="fa fa-chevron-left"></i>',
+                    rightArrow: '<i class="fa fa-chevron-right"></i>'
+                }
+            }).on('changeDate', function(selected) {
+                if (selected.date) {
+                    var minDate = new Date(selected.date.valueOf());
+                    $('#myModal #expiry_date').datepicker('setStartDate', minDate);
+                    $('#myModal #start_date').valid();
+                }
+            });
+
+            $('#myModal #expiry_date').datepicker({
+                format: 'yyyy-mm-dd',
+                startDate: '+0d',
+                todayHighlight: true,
+                autoclose: true,
+                orientation: "bottom auto",
+                templates: {
+                    leftArrow: '<i class="fa fa-chevron-left"></i>',
+                    rightArrow: '<i class="fa fa-chevron-right"></i>'
+                }
+            }).on('changeDate', function(selected) {
+                if (selected.date) {
+                    $('#myModal #expiry_date').valid();
+                }
+            });
+
             $('#myModal').on('hidden.bs.modal', function() {
                 offerform.resetForm();
                 $('#myModal form')[0].reset();
-            })
+                $('#myModal #start_date').datepicker('update', '');
+                $('#myModal #expiry_date').datepicker('update', '');
+                $('#myModal #expiry_date').datepicker('setStartDate', '+0d');
+            });
 
 
             $.validator.addMethod("maxFileSize", function(value, element, param) {
@@ -689,9 +857,6 @@
 
 
         $(document).on('click', '.edit-offer', function(e) {
-            $("#editOffer").modal({
-                backdrop: false
-            });
             var offer_id = $(this).attr('data-id');
             $(document).find('#editOffer').find(".add-offer-data").empty();
             $.ajax({
@@ -704,10 +869,12 @@
                 success: function(response) {
                     $(document).find('#editOffer').find(".add-offer-data").append(response.html);
                     $('.selectpicker').selectpicker();
-                    $(document).find('#editOffer').modal('show');
+                    $(document).find('#editOffer').modal({
+                        backdrop: 'static',
+                        keyboard: false
+                    }).modal('show');
                 },
                 error: function(response) {
-
                     alert(response.responseText);
                 }
             });
@@ -715,9 +882,6 @@
 
 
         $(document).on('click', '.show-offer', function(e) {
-            $("#showoffer").modal({
-                backdrop: false
-            });
             var offer_id = $(this).attr('data-id');
             $(document).find('#showoffer').find(".show-offer-data").empty();
             $.ajax({
@@ -729,7 +893,10 @@
                 data: 'id=' + offer_id,
                 success: function(response) {
                     $(document).find('#showoffer').find(".show-offer-data").append(response.html);
-                    $(document).find('#showoffer').modal('show');
+                    $(document).find('#showoffer').modal({
+                        backdrop: 'static',
+                        keyboard: false
+                    }).modal('show');
                 },
                 error: function(response) {
                     alert(response.responseText);
@@ -751,8 +918,17 @@
                     $('.loader').css("visibility", "visible");
                 },
                 success: function (response) {
-                    $('.loader').css("visibility", "visible");
-                    window.location.href = "{{ route('offer')}}";
+                    $('.loader').css("visibility", "hidden");
+                    if (response.success) {
+                        window.location.href = "{{ route('offer')}}";
+                    } else {
+                        swal({
+                            title: "Cannot Activate",
+                            text: response.msg,
+                            type: "warning",
+                            confirmButtonColor: "#fbb516"
+                        });
+                    }
                 },
                 error: function (response) {
                 alert(response.responseText);
@@ -774,8 +950,17 @@
                     $('.loader').css("visibility", "visible");
                 },
                 success: function (response) {
-                    $('.loader').css("visibility", "visible");
-                    window.location.href = "{{ route('offer')}}";
+                    $('.loader').css("visibility", "hidden");
+                    if (response.success) {
+                        window.location.href = "{{ route('offer')}}";
+                    } else {
+                        swal({
+                            title: "Cannot Activate",
+                            text: response.msg,
+                            type: "warning",
+                            confirmButtonColor: "#fbb516"
+                        });
+                    }
                 },
                 error: function (response) {
                 alert(response.responseText);
@@ -785,6 +970,63 @@
     </script>
 
     <script type="text/javascript">
+        function blockInvalidNumberKeys(e) {
+            // Block '-' (minus), '+' (plus), 'e' / 'E' (scientific notation)
+            if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
+                e.preventDefault();
+                return false;
+            }
+        }
+
+        function sanitizeAmount(el) {
+            // Allow only digits and at most one decimal point
+            el.value = el.value.replace(/[^0-9.]/g, '');
+            var parts = el.value.split('.');
+            if (parts.length > 2) {
+                el.value = parts[0] + '.' + parts.slice(1).join('');
+            }
+        }
+
+        function sanitizePercentage(el) {
+            // Allow only digits and at most one decimal point
+            el.value = el.value.replace(/[^0-9.]/g, '');
+            var parts = el.value.split('.');
+            if (parts.length > 2) {
+                el.value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            // Maximum allowed is 99%
+            if (parseFloat(el.value) > 99) {
+                el.value = 99;
+            }
+        }
+
+        // Delegated listeners for amount and percentage inputs across all modals
+        $(document).on('keydown', 'input[name="dis_amount"], input[name="dis_percentage"]', function (e) {
+            if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        $(document).on('input paste', 'input[name="dis_amount"]', function () {
+            var self = this;
+            setTimeout(function() {
+                sanitizeAmount(self);
+            }, 0);
+        });
+
+        $(document).on('input paste', 'input[name="dis_percentage"]', function () {
+            var self = this;
+            setTimeout(function() {
+                sanitizePercentage(self);
+            }, 0);
+        });
+
+        // Prevent mouse wheel from incrementing/decrementing number inputs
+        $(document).on('wheel', 'input[type=number]', function () {
+            $(this).blur();
+        });
+
         function isNumberKey(evt) {
             var keyCode = (evt.which) ? evt.which : evt.keyCode;
             if ((keyCode < 65 || keyCode > 90) && (keyCode < 97 || keyCode > 123) && keyCode != 32)
@@ -811,6 +1053,11 @@
                     serverSide: true,
                     responsive: true,
                     ordering: true,
+                    autoWidth: false,
+                    lengthMenu: [
+                        [10, 25, 50, 100, 250, 500],
+                        [10, 25, 50, 100, 250, 500]
+                    ],
                     ajax: {
                         url: action_url,
                         type: 'POST'
@@ -819,13 +1066,10 @@
                         { data: 'offer', name: 'offer_type' },
                         { data: 'product', name: 'product_type' },
                         { data: 'discount', name: 'dis_amount' },
-                        // { data: 'minimum', name: 'min_amount' },
-                        // { data: 'maximum', name: 'max_amount' },
-                        // { data: 'use', name: 'total_usage' },
-                        // { data: 'users', name: 'max_users' },
-                        { data: 'count', name: 'count' },
-                        { data: 'created', name: 'created_at' },
+                        { data: 'startDate', name: 'start_date' },
                         { data: 'expiry', name: 'expiry_date' },
+                        { data: 'created', name: 'created_at' },
+                        { data: 'count', name: 'count' },
                         { data: 'status', name: 'status' },
                         { data: 'options', orderable: false, searchable: false }
                     ],
@@ -1015,11 +1259,17 @@
 
                     } else {
                         $('.loader').css("visibility", "hidden");
-                        $('#success_file_popup').append(messages('alert-danger', data.error));
+                        $('#success_file_popup').append(messages('alert-danger', data.error || data.msg));
 
                         setTimeout(function() {
                             $('#success_file_popup').empty();
-                        }, 5000);
+                        }, 6000);
+
+                        $(document).find('#default_confirm').modal('hide');
+                        var tabe = $('#label').DataTable();
+                        $(document).find('#action').prop('selectedIndex', 0);
+                        tabe.ajax.reload(null, false);
+                        $("#checkAll").prop('checked', false);
                     }
                 },
                 error: function(data) {
@@ -1105,11 +1355,15 @@
             var offerType = $('#offer_type').val();
 
             if (offerType === 'percentage') {
-                document.getElementById('discountPercentageDiv').style.display="block"
-                document.getElementById('discountAmountDiv').style.display="none"
+                document.getElementById('discountPercentageDiv').style.display="block";
+                document.getElementById('discountAmountDiv').style.display="none";
+                $('#dis_percentage').prop('disabled', false);
+                $('#dis_amount').prop('disabled', true);
             } else if (offerType === 'flat') {
-                document.getElementById('discountPercentageDiv').style.display="none"
-                document.getElementById('discountAmountDiv').style.display="block"
+                document.getElementById('discountPercentageDiv').style.display="none";
+                document.getElementById('discountAmountDiv').style.display="block";
+                $('#dis_percentage').prop('disabled', true);
+                $('#dis_amount').prop('disabled', false);
             }
         }
     });

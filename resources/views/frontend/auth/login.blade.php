@@ -16,6 +16,7 @@
                     <div class="registration-card">
                         <form action="#" class="row registration-form" method="POST" enctype="multipart/form-data"
                             id="login_form">
+                            <input type="hidden" name="g-recaptcha-response" class="g-recaptcha-response">
                             <div class="col-12">
                                 <div class="form-group">
 
@@ -208,12 +209,16 @@
 
             },
             submitHandler: function() {
-                var form_data = new FormData($('#login_form')[0]);
-                action_url = "{{ route('websiteloginpost') }}";
-                var csrf = "{{ csrf_token() }}";
-                $.ajax({
-                    url: action_url,
-                    data: form_data,
+                var proceedLogin = function(token) {
+                    var form_data = new FormData($('#login_form')[0]);
+                    if (token) {
+                        form_data.set('g-recaptcha-response', token);
+                    }
+                    action_url = "{{ route('websiteloginpost') }}";
+                    var csrf = "{{ csrf_token() }}";
+                    $.ajax({
+                        url: action_url,
+                        data: form_data,
                     headers: {
                         'X-CSRF-TOKEN': csrf
                     },
@@ -316,7 +321,14 @@
 
                     }
                 });
+            };
+
+            if (typeof withReCaptcha === 'function') {
+                withReCaptcha('login', '#login_form', proceedLogin);
+            } else {
+                proceedLogin('');
             }
+        }
         });
         //onclick in login for price
         //      function getproduct_id(product_id){

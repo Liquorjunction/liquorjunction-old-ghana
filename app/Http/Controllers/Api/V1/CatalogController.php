@@ -844,11 +844,17 @@ class CatalogController extends Controller
         $activeBogos = Bogo::where('status', 1)
             ->whereDate('start_date', '<=', $today)
             ->whereDate('end_date', '>=', $today)
+            ->orderByDesc('id')
             ->get();
 
         // Check active Offers
         $activeOffers = Offers::where('status', 1)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
             ->whereDate('expiry_date', '>=', $today)
+            ->orderByDesc('dis_amount')
+            ->orderByDesc('id')
             ->get();
 
         // User Favorites & Cart
@@ -878,30 +884,44 @@ class CatalogController extends Controller
             $p['is_favourite'] = in_array($pid, $favPids);
             $p['in_cart'] = in_array($pid, $cartPids);
 
-            // BOGO Check
-            $isBogo = false;
+            // BOGO Check (Priority: Product > Subcategory > Category > Brand)
+            $productBogo = null;
+            $subcatBogo = null;
+            $catBogo = null;
+            $brandBogo = null;
             foreach ($activeBogos as $bogo) {
-                if ($bogo->product_id && $bogo->product_id == $pid) { $isBogo = true; break; }
-                if ($bogo->subcategory_id && $bogo->subcategory_id == $scid) { $isBogo = true; break; }
-                if ($bogo->category_id && empty($bogo->subcategory_id) && $bogo->category_id == $cid) { $isBogo = true; break; }
-                if ($bogo->brand_id && $bogo->brand_id == $bid) { $isBogo = true; break; }
+                if ($bogo->product_id && $bogo->product_id == $pid) { $productBogo = $bogo; break; }
+                if ($bogo->subcategory_id && $bogo->subcategory_id == $scid && !$subcatBogo) { $subcatBogo = $bogo; }
+                if ($bogo->category_id && empty($bogo->subcategory_id) && $bogo->category_id == $cid && !$catBogo) { $catBogo = $bogo; }
+                if ($bogo->brand_id && $bogo->brand_id == $bid && !$brandBogo) { $brandBogo = $bogo; }
             }
+            $isBogo = !empty($productBogo ?? $subcatBogo ?? $catBogo ?? $brandBogo);
 
             if ($isBogo) {
                 $p['bogo_status'] = true;
                 $p['bogo_label'] = 'BOGO';
             }
 
-            // Special Offer Check
-            $matchedOffer = null;
+            // Special Offer Check (Priority: Product > Subcategory > Category > Brand)
+            $productOffer = null;
+            $subcatOffer = null;
+            $catOffer = null;
+            $brandOffer = null;
             foreach ($activeOffers as $offer) {
-                if ($offer->product_id && $offer->product_id == $pid) { $matchedOffer = $offer; break; }
-                if ($offer->subcategory_id && $offer->subcategory_id == $scid) { $matchedOffer = $offer; break; }
-                if ($offer->category_id && empty($offer->subcategory_id) && $offer->category_id == $cid) { $matchedOffer = $offer; break; }
-                if ($offer->brand_id && $offer->brand_id == $bid) { $matchedOffer = $offer; break; }
+                if ($offer->product_id && $offer->product_id == $pid) { $productOffer = $offer; break; }
+                if ($offer->subcategory_id && $offer->subcategory_id == $scid && !$subcatOffer) { $subcatOffer = $offer; }
+                if ($offer->category_id && empty($offer->subcategory_id) && $offer->category_id == $cid && !$catOffer) { $catOffer = $offer; }
+                if ($offer->brand_id && $offer->brand_id == $bid && !$brandOffer) { $brandOffer = $offer; }
             }
+            $matchedOffer = $productOffer ?? $subcatOffer ?? $catOffer ?? $brandOffer;
 
-            if ($matchedOffer) {
+            // Deal Precedence: BOGO > Offer (No discount stacking)
+            if ($isBogo) {
+                $p['offer_status'] = false;
+                $p['offer_type'] = null;
+                $p['discount_amount'] = '0';
+                $p['offer_label'] = null;
+            } elseif ($matchedOffer) {
                 $p['offer_status'] = true;
                 $p['offer_type'] = $matchedOffer->offer_type;
                 $p['discount_amount'] = (string)$matchedOffer->dis_amount;
@@ -913,19 +933,21 @@ class CatalogController extends Controller
                 }
 
                 // EXACT Frontend Price Calculation (matches product_grid.blade.php lines 18-24)
-                // Offer discount only applies if NOT in BOGO
-                if (!$isBogo) {
-                    $orig = floatval($p['original_price']);
-                    $calculatedFinal = $orig;
-                    if ($matchedOffer->offer_type === 'flat') {
-                        $calculatedFinal = max(0, $orig - floatval($matchedOffer->dis_amount));
-                    } elseif ($matchedOffer->offer_type === 'percentage') {
-                        $calculatedFinal = max(0, $orig - ($orig * floatval($matchedOffer->dis_amount) / 100));
-                    }
-                    $p['final_price'] = number_format($calculatedFinal, 2, '.', '');
-                    $p['sell_price'] = number_format($calculatedFinal, 2, '.', '');
-                    $p['has_discount'] = $calculatedFinal < $orig;
+                $orig = floatval($p['original_price']);
+                $calculatedFinal = $orig;
+                if ($matchedOffer->offer_type === 'flat') {
+                    $calculatedFinal = max(0, $orig - floatval($matchedOffer->dis_amount));
+                } elseif ($matchedOffer->offer_type === 'percentage') {
+                    $calculatedFinal = max(0, $orig - ($orig * floatval($matchedOffer->dis_amount) / 100));
                 }
+                $p['final_price'] = number_format($calculatedFinal, 2, '.', '');
+                $p['sell_price'] = number_format($calculatedFinal, 2, '.', '');
+                $p['has_discount'] = $calculatedFinal < $orig;
+            } else {
+                $p['offer_status'] = false;
+                $p['offer_type'] = null;
+                $p['discount_amount'] = '0';
+                $p['offer_label'] = null;
             }
         }
     }
@@ -1106,6 +1128,7 @@ class CatalogController extends Controller
         $activeBogos = Bogo::where('status', 1)
             ->whereDate('start_date', '<=', $today)
             ->whereDate('end_date', '>=', $today)
+            ->orderByDesc('id')
             ->get();
 
         $bogoPids = [];
@@ -1132,7 +1155,12 @@ class CatalogController extends Controller
 
         // 2. Get active offers
         $activeOffers = Offers::where('status', 1)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
             ->whereDate('expiry_date', '>=', $today)
+            ->orderByDesc('dis_amount')
+            ->orderByDesc('id')
             ->get();
 
         if ($activeOffers->isEmpty()) {
@@ -1352,10 +1380,16 @@ class CatalogController extends Controller
         $activeBogos = Bogo::where('status', 1)
             ->whereDate('start_date', '<=', $today)
             ->whereDate('end_date', '>=', $today)
+            ->orderByDesc('id')
             ->get();
 
         $activeOffers = Offers::where('status', 1)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
             ->whereDate('expiry_date', '>=', $today)
+            ->orderByDesc('dis_amount')
+            ->orderByDesc('id')
             ->get();
 
         if ($activeBogos->isEmpty() && $activeOffers->isEmpty()) {

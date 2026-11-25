@@ -62,6 +62,14 @@
         </div>
     </div> --}}
     <div class="form-group row">
+        <label class="col-sm-4 form-control-label">Start Date</label>
+        <div class="col-sm-8">
+            <div class="show_blade_div">
+                {{ @$offerData->start_date ? $offerData->start_date : '-' }}
+            </div>
+        </div>
+    </div>
+    <div class="form-group row">
         <label class="col-sm-4 form-control-label">Expiry Date</label>
         <div class="col-sm-8">
             <div class="show_blade_div">

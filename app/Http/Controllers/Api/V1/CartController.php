@@ -252,27 +252,22 @@ class CartController extends Controller
 
 
        
-            // Get current Offer
-            $today = Carbon::now()->toDateString();
-            $currentOffer = Offers::where('status', 1)
-                            ->whereDate('expiry_date', '>=', $today)
-                            ->first(); 
-            $currentOfferType=null;
-            $currentOfferAmount=null;
+            /*-- Get product variant details---*/
+            $product_variant_details = DB::table('product')->leftjoin('product_variants', 'product_variants.product_id', '=', 'product.id')->where('product.id', $product_id)->where('product_variants.id', $variant_id)->select('product_variants.*')->first();
+            $varPrice = $product_variant_details->variant_price ?? null;
 
-            if($currentOffer)
-            {
-                $currentOfferType=$currentOffer->offer_type;
-                $currentOfferAmount=$currentOffer->dis_amount;
-            }
+            // Resolve Deal for this product (BOGO > Offer)
+            $deal = \App\Helpers\Helper::resolveProductDeal($product_id, null, null, null, $varPrice);
+            $bogo_status = $deal['is_bogo'] ? 1 : 0;
+            $offer_status = $deal['is_offer'] ? 1 : 0;
+            $currentOfferType = $deal['offer_type'];
+            $currentOfferAmount = $deal['discount_amount'];
 
             $response = \App\Helpers\ResponseHelper::userCheckStatus($request->uniqid,$request->token);            
             if ($response['code'] != 1) {
                 $mainResult   =   $response;
                 return response ()->json(new \App\Http\Resources\V1\SettingResource($mainResult));
             }
-               /*-- Get product variant details---*/
-            $product_variant_details = DB::table('product')->leftjoin('product_variants', 'product_variants.product_id', '=', 'product.id')->where('product.id', $product_id)->where('product_variants.id', $variant_id)->select('product_variants.*')->first();
             
             if (empty($product_variant_details)) {
                 $result['code']     =  strval(0);
@@ -446,19 +441,12 @@ class CartController extends Controller
 
         logger()->info('offer_status: ' . json_encode($offer_status));
 
-        // ✅ Get current Offer
-        $today = Carbon::now()->toDateString();
-        $currentOffer = Offers::where('status', 1)
-                        ->whereDate('expiry_date', '>=', $today)
-                        ->first(); 
-
-        $currentOfferType = null;
-        $currentOfferAmount = null;
-
-        if($currentOffer){
-            $currentOfferType = $currentOffer->offer_type;
-            $currentOfferAmount = $currentOffer->dis_amount;
-        }
+        // Resolve Deal for this product (BOGO > Offer)
+        $deal = \App\Helpers\Helper::resolveProductDeal($product_id);
+        $bogo_status = $deal['is_bogo'] ? 1 : 0;
+        $offer_status = $deal['is_offer'] ? 1 : 0;
+        $currentOfferType = $deal['offer_type'];
+        $currentOfferAmount = $deal['discount_amount'];
 
          $response = \App\Helpers\ResponseHelper::userCheckStatus($request->uniqid,$request->token);
          if ($response['code'] != 1) {
@@ -596,19 +584,12 @@ class CartController extends Controller
 
         logger()->info('offer_status: ' . json_encode($offer_status));
 
-        // ✅ Get current Offer
-        $today = Carbon::now()->toDateString();
-        $currentOffer = Offers::where('status', 1)
-                        ->whereDate('expiry_date', '>=', $today)
-                        ->first(); 
-
-        $currentOfferType = null;
-        $currentOfferAmount = null;
-
-        if($currentOffer){
-            $currentOfferType = $currentOffer->offer_type;
-            $currentOfferAmount = $currentOffer->dis_amount;
-        }
+        // Resolve Deal for this product (BOGO > Offer)
+        $deal = \App\Helpers\Helper::resolveProductDeal($product_id);
+        $bogo_status = $deal['is_bogo'] ? 1 : 0;
+        $offer_status = $deal['is_offer'] ? 1 : 0;
+        $currentOfferType = $deal['offer_type'];
+        $currentOfferAmount = $deal['discount_amount'];
 
 
          $response = \App\Helpers\ResponseHelper::userCheckStatus($request->uniqid,$request->token);

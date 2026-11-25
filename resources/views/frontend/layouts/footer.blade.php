@@ -138,6 +138,7 @@
     </a>
     <!-- Floating Cart Icon -->
     @include('frontend.partials.floating-cart')
+    @include('frontend.partials.recaptcha')
     <!-- End Footer -->
 
 

@@ -24,6 +24,7 @@
     <div class="bs-box">
         <div class="bs-image">
 
+            @if ($result->offer_type !== 'flat' || $result->variant_price > $result->discount_amount)
             <div class="mb-1 mt-1">
                 <span class="offer" id="offer">
                     @if ($result->offer_type === 'flat')
@@ -33,6 +34,7 @@
                     @endif
                 </span>
             </div>
+            @endif
 
 
             <a href="{{route('productdetails',['id'=>Helper::encodeUrl($result->product_id)])}}" >
@@ -61,7 +63,11 @@
 
                     if ($result->offer_status) {
                         if ($result->offer_type === 'flat') {
-                            $final_price = max(0, $original_price - $result->discount_amount);
+                            if ($original_price > $result->discount_amount) {
+                                $final_price = max(0, $original_price - $result->discount_amount);
+                            } else {
+                                $final_price = $original_price;
+                            }
                         } elseif ($result->offer_type === 'percentage') {
                             $final_price = max(0, $original_price - ($original_price * $result->discount_amount / 100));
                         }

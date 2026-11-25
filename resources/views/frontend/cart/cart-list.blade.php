@@ -169,6 +169,14 @@
         }
 
         /* Cart Product Image & Increment/Decrement Counter Rounded */
+        .product-img,
+        .cart-item-lists .product-img {
+            flex-shrink: 0 !important;
+            flex-grow: 0 !important;
+            max-width: fit-content !important;
+            overflow: visible !important;
+            border-radius: 0 !important;
+        }
         .product-img a,
         .cart-item-lists .product-img a {
             border-radius: 20px !important;
@@ -177,6 +185,10 @@
         .product-img a img,
         .cart-item-lists .product-img a img {
             border-radius: 16px !important;
+        }
+        .cart-item-lists .single-product .product-detail {
+            flex: 1 1 auto;
+            min-width: 0;
         }
         .counter {
             border-radius: 20px !important;
@@ -266,12 +278,15 @@
 
                                             if ($is_offer) {
                                                 if ($offer_type == 'flat') {
-                                                    // Multiply flat discount per item
-                                                    $discount_price = max(0, $org_price - ($discount_amount * $qty));
+                                                    if ($result->variant_price > $discount_amount) {
+                                                        // Multiply flat discount per item
+                                                        $discount_price = max(0, $org_price - ($discount_amount * $qty));
+                                                        $is_product_discount = true;
+                                                    }
                                                 } elseif ($offer_type == 'percentage') {
                                                     $discount_price = max(0, $org_price - ($org_price * $discount_amount / 100));
+                                                    $is_product_discount = true;
                                                 }
-                                                $is_product_discount = true;
                                             } elseif ($result->variant_discounted_price && $result->variant_discounted_price != 0) {
                                                 $discount_price = $result->variant_discounted_price * $qty;
                                                 $is_product_discount = true;
@@ -301,12 +316,15 @@
 
                                             if ($is_offer) {
                                                 if ($offer_type == 'flat') {
-                                                    // Multiply flat discount per item
-                                                    $discount_price = max(0, $org_price - ($discount_amount * $qty));
+                                                    if ($result->variant_price > $discount_amount) {
+                                                        // Multiply flat discount per item
+                                                        $discount_price = max(0, $org_price - ($discount_amount * $qty));
+                                                        $is_product_discount = true;
+                                                    }
                                                 } elseif ($offer_type == 'percentage') {
                                                     $discount_price = max(0, $org_price - ($org_price * $discount_amount / 100));
+                                                    $is_product_discount = true;
                                                 }
-                                                $is_product_discount = true;
                                             } elseif ($result->variant_discounted_price && $result->variant_discounted_price != 0) {
                                                 $discount_price = $result->variant_discounted_price * $qty;
                                                 $is_product_discount = true;
@@ -334,7 +352,7 @@
                                             <div class="product-detail">
                                                 @if ($is_bogo)<h6 class="bogo-cart">{{@Helper::language('bogo')}}</h6>@endif
 
-                                                @if($is_offer && !$is_bogo)
+                                                @if($is_offer && !$is_bogo && ($offer_type !== 'flat' || $result->variant_price > $discount_amount))
                                                     <h6 class="offer-cart">
                                                             @if ($offer_type === 'flat')
                                                                 Flat {{ intval($discount_amount) }} {{ Helper::Settings('currency_symbol') }} Off
@@ -368,7 +386,9 @@
 
                                                             if ($is_offer) {
                                                                 if ($offer_type === 'flat') {
-                                                                    $final_price = max(0, $single_original_price - $discount_amount);
+                                                                    if ($single_original_price > $discount_amount) {
+                                                                        $final_price = max(0, $single_original_price - $discount_amount);
+                                                                    }
                                                                 } elseif ($offer_type === 'percentage') {
                                                                     $final_price = max(0, $single_original_price - ($single_original_price * $discount_amount / 100));
                                                                 }
@@ -606,7 +626,7 @@
                                                     </div>
                                                 @endif
 
-                                                @if ($result->offer_status && !$result->bogo_status)
+                                                @if ($result->offer_status && !$result->bogo_status && ($result->offer_type !== 'flat' || ($product_variant && $product_variant->variant_price > $result->discount_amount)))
                                                     <div class="mb-1 mt-1">
                                                         <span class="offer" id="offer">
                                                             @if ($result->offer_type === 'flat')
@@ -649,7 +669,9 @@
 
                                                     if ($result->offer_status && !$result->bogo_status) {
                                                         if ($result->offer_type === 'flat') {
-                                                            $final_price = max(0, $original_price - $result->discount_amount);
+                                                            if ($original_price > $result->discount_amount) {
+                                                                $final_price = max(0, $original_price - $result->discount_amount);
+                                                            }
                                                         } elseif ($result->offer_type === 'percentage') {
                                                             $final_price = max(0, $original_price - ($original_price * $result->discount_amount / 100));
                                                         }
@@ -777,7 +799,7 @@
                                                     </div>
                                                 @endif
 
-                                                @if ($result->offer_status && !$result->bogo_status)
+                                                @if ($result->offer_status && !$result->bogo_status && ($result->offer_type !== 'flat' || ($product_variant && $product_variant->variant_price > $result->discount_amount)))
                                                     <div class="mb-1 mt-1">
                                                         <span class="offer" id="offer">
                                                             @if ($result->offer_type === 'flat')
@@ -820,7 +842,9 @@
 
                                                     if ($result->offer_status && !$result->bogo_status) {
                                                         if ($result->offer_type === 'flat') {
-                                                            $final_price = max(0, $original_price - $result->discount_amount);
+                                                            if ($original_price > $result->discount_amount) {
+                                                                $final_price = max(0, $original_price - $result->discount_amount);
+                                                            }
                                                         } elseif ($result->offer_type === 'percentage') {
                                                             $final_price = max(0, $original_price - ($original_price * $result->discount_amount / 100));
                                                         }

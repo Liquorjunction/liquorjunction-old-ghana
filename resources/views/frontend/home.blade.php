@@ -301,7 +301,9 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                     $product_image_name = is_string($product_image) ? $product_image : ($product_image->image ?? '');
                     $product_variant = $offer_result;
                     $product_unit = Helper::getUnitById($product_variant->variant_uof);
-                    $fav_data = Helper::userFavoriteProduct($offer_result->id);
+                    $product_id = $offer_result->product_id ?? $offer_result->id;
+                    $variant_id = $offer_result->variant_id ?? $product_variant->variant_id ?? $product_variant->id;
+                    $fav_data = Helper::userFavoriteProduct($product_id);
 
 
                     // Cart
@@ -309,8 +311,6 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                     $adisplay = 'flex';
                     $is_in_cart = false;
                     $user_id = auth()->guard('user')->id();
-                    $product_id = $offer_result->id;
-                    $variant_id = $product_variant->variant_id ?? $product_variant->id;
                     $available_qty = $product_variant->available_qty ?? 0;
 
                     $get_cart_array = Session::get('cart_info');
@@ -347,7 +347,11 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
 
                     if ($offer_result->offer_status && !$offer_result->bogo_status) {
                         if ($offer_result->offer_type === 'flat') {
-                            $final_price = max(0, $original_price - $offer_result->discount_amount);
+                            if ($original_price > $offer_result->discount_amount) {
+                                $final_price = max(0, $original_price - $offer_result->discount_amount);
+                            } else {
+                                $final_price = $original_price;
+                            }
                         } elseif ($offer_result->offer_type === 'percentage') {
                             $final_price = max(0, $original_price - ($original_price * $offer_result->discount_amount / 100));
                         }
@@ -369,7 +373,7 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                                         </div>
                                     @endif
 
-                                    @if ($offer_result->offer_status && !$offer_result->bogo_status)
+                                    @if ($offer_result->offer_status && !$offer_result->bogo_status && ($offer_result->offer_type !== 'flat' || $original_price > $offer_result->discount_amount))
                                         <div class="mb-1 mt-1">
                                             <span class="offer" id="offer">
                                                 @if ($offer_result->offer_type === 'flat')
@@ -440,7 +444,7 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                                     </div>
                                 @endif
 
-                                @if ($offer_result->offer_status && !$offer_result->bogo_status)
+                                @if ($offer_result->offer_status && !$offer_result->bogo_status && ($offer_result->offer_type !== 'flat' || $original_price > $offer_result->discount_amount))
                                     <div class="mb-1 mt-1">
                                         <span class="offer" id="offer">
                                             @if ($offer_result->offer_type === 'flat')
@@ -452,7 +456,7 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                                     </div>
                                 @endif
 
-                                <a href="{{route('productdetails',['id'=>Helper::encodeUrl($offer_result->id)])}}" >
+                                <a href="{{route('productdetails',['id'=>Helper::encodeUrl($product_id)])}}" >
                                     @if (!empty($product_image_name) && file_exists(public_path() . '/uploads/product/'.$product_image_name))					
                                     <img src="{{ asset('uploads/product/'.$product_image_name) }}" title="{{$product_title}}" />
                                     @else
@@ -462,7 +466,7 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                             </div>
                             <div class="offers-content">
                                 <h6>
-                                    <a href="{{route('productdetails',['id'=>Helper::encodeUrl($offer_result->id)])}}" class="heading-six">{{@ucfirst($product_title)?: ''}} </a>
+                                    <a href="{{route('productdetails',['id'=>Helper::encodeUrl($product_id)])}}" class="heading-six">{{@ucfirst($product_title)?: ''}} </a>
                                 </h6>
                                 <span class="text-sm grey-text">{{@$product_variant->variant_size? $product_variant->variant_size.' '.$product_unit :''}}</span>
 
@@ -492,7 +496,7 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                                     <a style="display: <?php echo $adisplay ; ?>;" title="{{Helper::language('add_to_cart')}}"  data-product-id="{{ Helper::encodeUrl($product_id) }}"  data-variant-id="{{ $variant_id }}" data-bogo_status="{{ $offer_result->bogo_status}}" data-offer_status="{{ $offer_result->offer_status}}"  class="add-bucket"  href="javascript:void(0);"><i class="icon-bucket"></i></a>
                                 @endif
                             </div>
-                            <input class="fav-icon checked_box" type="checkbox" id="fav-item1{{$key1}}" value="{{ (isset($fav_data) && $fav_data != false) ? '1' : "0" }}" {{ (isset($fav_data) && $fav_data != false) ? 'checked' : "" }} onclick="return productFavTest({{$offer_result->id}},{{ (isset($fav_data) && $fav_data != false) ? '1' : "0" }})" />
+                            <input class="fav-icon checked_box" type="checkbox" id="fav-item1{{$key1}}" value="{{ (isset($fav_data) && $fav_data != false) ? '1' : "0" }}" {{ (isset($fav_data) && $fav_data != false) ? 'checked' : "" }} onclick="return productFavTest({{$product_id}},{{ (isset($fav_data) && $fav_data != false) ? '1' : "0" }})" />
                                 <label class="fav-button" title="{{Helper::language('add_to_favourite')}}" for="fav-item1{{$key1}}"></label>
                         </div>
                     </div>
@@ -652,7 +656,7 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
                                     </div>
                                 @endif
 
-                                @if ($best_result->offer_status && !$best_result->bogo_status)
+                                @if ($best_result->offer_status && !$best_result->bogo_status && ($best_result->offer_type !== 'flat' || $original_price > $best_result->discount_amount))
                                     <div class="mb-1 mt-1">
                                         <span class="offer" id="offer">
                                             @if ($best_result->offer_type === 'flat')
@@ -692,7 +696,11 @@ $boffer_title = $banners_offer->title; $boffer_description = $banners_offer->des
 
                                             if ($best_result->offer_status && !$best_result->bogo_status) {
                                                 if ($best_result->offer_type === 'flat') {
-                                                    $final_price = max(0, $original_price - $best_result->discount_amount);
+                                                    if ($original_price > $best_result->discount_amount) {
+                                                        $final_price = max(0, $original_price - $best_result->discount_amount);
+                                                    } else {
+                                                        $final_price = $original_price;
+                                                    }
                                                 } elseif ($best_result->offer_type === 'percentage') {
                                                     $final_price = max(0, $original_price - ($original_price * $best_result->discount_amount / 100));
                                                 }

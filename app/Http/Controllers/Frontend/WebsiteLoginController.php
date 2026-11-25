@@ -421,6 +421,7 @@ class WebsiteLoginController extends Controller
                     ],
                 ];
             }
+            $rules['g-recaptcha-response'] = [new \App\Rules\ReCaptchaRule('register')];
             $messages = [
                 'first_name.required' => \Helper::language('first_name_required'),
                 'first_name.min' => \Helper::language('first_name_min_valiadation_msg'),
@@ -588,8 +589,7 @@ class WebsiteLoginController extends Controller
         $validator = \Validator::make(
             $request->all(),
             [
-                // 'email' => 'email',
-                // 'phone' =>['phone:main_users','phone'],
+                'g-recaptcha-response' => [new \App\Rules\ReCaptchaRule('login')],
             ],
             [
                 // 'email.exists' =>  \Helper::language('these_credentials_do_not_match_our_records'),
@@ -910,6 +910,9 @@ class WebsiteLoginController extends Controller
 
     public function websiteResendOtpForm(Request $request)
     {
+        $request->validate([
+            'g-recaptcha-response' => [new \App\Rules\ReCaptchaRule('resend_otp')]
+        ]);
         // dd($request->all());
         // echo "<pre>";print_r($request->toArray());exit();
         $id = Session::get('id');
@@ -1050,6 +1053,17 @@ class WebsiteLoginController extends Controller
 
     public function forgotPasswordForm(Request $request)
     {
+        $validator = \Validator::make($request->all(), [
+            'email' => 'required|email',
+            'g-recaptcha-response' => [new \App\Rules\ReCaptchaRule('forgot_password')],
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error_forgot_password',
+                'errors' => $validator->errors()->first('g-recaptcha-response') ?: $validator->errors()->first()
+            ], 422);
+        }
+
         Session::forget('otp_phone');
         $userDataCount = MainUser::where('email', '=', $request->email)->latest()->first();
         // echo "<pre>";print_r($exists);exit();
@@ -1090,6 +1104,9 @@ class WebsiteLoginController extends Controller
 
     public function websiteForgotResendOtpForm(Request $request)
     {
+        $request->validate([
+            'g-recaptcha-response' => [new \App\Rules\ReCaptchaRule('forgot_resend_otp')]
+        ]);
         //  dd($request->all());
         // echo "<pre>";print_r($request->toArray());exit();
         $id = Session::get('id');
@@ -1374,6 +1391,11 @@ class WebsiteLoginController extends Controller
 
     public function changePasswordForm(Request $request)
     {
+        $request->validate([
+            'new_password' => 'required|min:6',
+            'confirm_password' => 'required',
+            'g-recaptcha-response' => [new \App\Rules\ReCaptchaRule('change_password')]
+        ]);
         // echo "<pre>";print_r($request->toArray());exit();
         $new_password = $request->input('new_password');
         $confirm_password = $request->input('confirm_password');

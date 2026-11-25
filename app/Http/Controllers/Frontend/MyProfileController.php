@@ -227,58 +227,11 @@ class MyProfileController extends Controller
         if($favourite_Product)
         {
             foreach ($favourite_Product as $favour) {
-                    $bogo = Bogo::where('status', 1)
-                        ->whereDate('start_date', '<=', $today)
-                        ->whereDate('end_date', '>=', $today)
-                        ->where(function ($query) use ($favour) {
-                            $query->where('product_id', $favour->id)
-                                ->orWhere(function ($q) use ($favour) {
-                                    $q->whereNotNull('subcategory_id')
-                                        ->where('subcategory_id', $favour->subcategory_id);
-                                })
-                                ->orWhere(function ($q) use ($favour) {
-                                    $q->whereNull('subcategory_id')
-                                        ->where('category_id', $favour->category_id);
-                                });
-
-                            if (!empty($favour->brand_id)) {
-                                $query->orWhere('brand_id', $favour->brand_id);
-                            }
-                        })
-                        ->first();
-
-                    $favour->bogo_status = $bogo ? true : false; 
-
-
-                    // offer check
-                     $offer = Offers::where('status', 1)
-                        ->whereDate('expiry_date', '>=', $today)
-                        ->where(function ($query) use ($favour) {
-                    $query->where('product_id', $favour->id)
-                        ->orWhere(function ($q) use ($favour) {
-                            $q->whereNotNull('subcategory_id')
-                                ->where('subcategory_id', $favour->subcategory_id);
-                        })
-                        ->orWhere(function ($q) use ($favour) {
-                            $q->whereNull('subcategory_id')
-                                ->where('category_id', $favour->category_id);
-                        });
-
-                    if (!empty($favour->brand_id)) {
-                        $query->orWhere('brand_id', $favour->brand_id);
-                    }
-                })
-                ->first();
-
-                if ($offer) {
-                    $favour->offer_status = true;
-                    $favour->discount_amount = $offer->dis_amount;
-                    $favour->offer_type = $offer->offer_type;
-                } else {
-                    $favour->offer_status = false;
-                    $favour->discount_amount = 0;
-                    $favour->offer_type = null;
-                }
+                $deal = \Helper::resolveProductDeal($favour->id, $favour->category_id, $favour->subcategory_id, $favour->brand_id);
+                $favour->bogo_status = $deal['is_bogo'];
+                $favour->offer_status = $deal['is_offer'];
+                $favour->discount_amount = $deal['discount_amount'];
+                $favour->offer_type = $deal['offer_type'];
             }
         }
 

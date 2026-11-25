@@ -1,15 +1,60 @@
+@php
+    $isUsed = (isset($usedCount) && $usedCount > 0);
+@endphp
+<style>
+    /* Remove number spinner arrows */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none !important;
+        margin: 0 !important;
+    }
+    input[type=number] {
+        -moz-appearance: textfield !important;
+    }
+
+    .datepicker {
+        z-index: 99999 !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.18) !important;
+        border: 1px solid #ddd !important;
+        padding: 8px !important;
+    }
+
+    .datepicker table tr th.prev,
+    .datepicker table tr th.next,
+    .datepicker table tr th.datepicker-switch {
+        cursor: pointer !important;
+        height: 32px !important;
+        line-height: 32px !important;
+    }
+
+    .datepicker table tr th.prev:hover,
+    .datepicker table tr th.next:hover,
+    .datepicker table tr th.datepicker-switch:hover {
+        background-color: #f0f0f0 !important;
+        border-radius: 4px !important;
+    }
+</style>
 <div class="modal-header">
     <h4 class="modal-title">Edit Offer</h4>
 </div>
 
-<div id="editConflictError" class="alert alert-danger" style="display:none;"></div>
+<div id="editConflictError" class="alert alert-danger" style="display:none; margin: 15px 20px 0 20px; border-left: 4px solid #d9534f; background-color: #fdf2f2; color: #a94442; padding: 12px 15px; border-radius: 4px; font-weight: 500;">
+    <i class="material-icons" style="vertical-align: middle; font-size: 20px; margin-right: 6px;">&#xe000;</i>
+    <span class="conflict-msg"></span>
+</div>
+@if($isUsed)
+    <div class="alert alert-warning" style="margin-bottom: 15px; border-left: 4px solid #f0ad4e; background-color: #fcf8e3; color: #8a6d3b; padding: 12px 15px; border-radius: 4px;">
+        <i class="material-icons" style="vertical-align: middle; font-size: 20px; margin-right: 6px;">&#xe002;</i>
+        <strong>Notice:</strong> This offer has already been used in <strong>{{ $usedCount }}</strong> order(s). To protect existing order history and transaction integrity, all parameters are locked and only the <strong>Expiry Date</strong> can be updated.
+    </div>
+@endif
 <form class="cmxform" id="offerEditForm" method="post" action="" autocomplete="off">
     <div class="modal-body">
         <div class="form-group row">
             <label class="col-sm-5 form-control-label">Offer Type<span
                     class="valid_field">*</span></label>
             <div class="col-sm-7">
-                <select name="offer_types" id="offer_types" class="form-control">
+                <select name="offer_types" id="offer_types" class="form-control" {{ $isUsed ? 'disabled style=background-color:#e9ecef;cursor:not-allowed;pointer-events:none;' : '' }}>
                     <option value="percentage" {{ (isset($editData->offer_type) && $editData->offer_type == 'percentage') ? 'selected' : '' }}>Percentage</option>
                     <option value="flat" {{ (isset($editData->offer_type) && $editData->offer_type == 'flat') ? 'selected' : '' }}>Flat</option>
                 </select>                
@@ -19,13 +64,13 @@
         <div class="form-group row">
             <label class="col-sm-5 form-control-cms">Applicable On<span class="valid_field">*</span></label>
             <div class="col-sm-7">
-                <select name="type" id="type" onchange="showHide()" class="form-control" value="">
+                <select name="type" id="type" onchange="showHide()" class="form-control" value="" {{ $isUsed ? 'disabled style=background-color:#e9ecef;cursor:not-allowed;pointer-events:none;' : '' }}>
                     <option value="">Select type</option>
                     <option {{ (isset($editData->product_type) && $editData->product_type == 1) || old('product_type') == 1 ? 'selected' : '' }} value="1">Brand</option>
                     <option  {{ (isset($editData->product_type) && $editData->product_type == 2)  || old('product_type') == 2 ? 'selected' : '' }} value="2">Category</option>
                     <option {{ (isset($editData->product_type) && $editData->product_type == 3)  || old('product_type') == 3 ? 'selected' : '' }}  value="3">Product</option>
                 </select>
-                @if ($errors->has('type'))
+                @if (!empty($errors) && $errors->has('type'))
                 <span class="help-block">
                     <span style="color: red;" class='validate'>{{ $errors->first('type') }}</span>
                 </span>
@@ -35,7 +80,7 @@
         <div class="form-group row brand">
             <div class="col-sm-5 form-control-cms ">Select Brand<span class="valid_field">*</span></div>
             <div class="col-sm-7">
-                <select name="brand_id" id="brand_id" class="form-control" value="">
+                <select name="brand_id" id="brand_id" class="form-control" value="" {{ $isUsed ? 'disabled style=background-color:#e9ecef;cursor:not-allowed;pointer-events:none;' : '' }}>
                     <option value="">Select Brand</option>
                     @foreach ($brand as $key => $value)
                     <option value="{{ $value->id }}" {{ ($editData->brand_id == $value->id) ? 'selected' : ''}}>
@@ -48,7 +93,7 @@
         <div class="form-group row category">
             <div class="col-sm-5 form-control-cms ">Select {{ __('backend.category') }}<span class="valid_field">*</span></div>
             <div class="col-sm-7">
-                <select name="category_ids" id="category_ids" class="form-control" value="{{ old('category_ids', @$editData->category_id ?: '') }}" onchange="getSubCatList(this)" >
+                <select name="category_ids" id="category_ids" class="form-control" value="{{ old('category_ids', @$editData->category_id ?: '') }}" onchange="getSubCatList(this)" {{ $isUsed ? 'disabled style=background-color:#e9ecef;cursor:not-allowed;pointer-events:none;' : '' }}>
                     <option value="">Select category</option>
                     @foreach ($categories as $key => $value)
                     <option value="{{ $value->id }}" {{ ($editData->category_id == $value->id) ? 'selected' : ''}}>
@@ -61,7 +106,7 @@
         <div class="form-group row subcategory" style="display: none;">
             <div class="col-sm-5 form-control-cms">Select Subcategory </div>
             <div class="col-sm-7">
-                <select name="subcategory_ids" id="subcategory_ids" class="form-control" value="{{ old('subcategory_ids', @$editData->subcategory_id) }}">
+                <select name="subcategory_ids" id="subcategory_ids" class="form-control" value="{{ old('subcategory_ids', @$editData->subcategory_id) }}" {{ $isUsed ? 'disabled style=background-color:#e9ecef;cursor:not-allowed;pointer-events:none;' : '' }}>
                     <option value="">Select Subcategory</option>
                     @if(!empty($subcategories))
                     @foreach($subcategories as $key => $value)
@@ -69,7 +114,7 @@
                     @endforeach
                     @endif
                 </select>
-                @if ($errors->has('subcategory_ids'))
+                @if (!empty($errors) && $errors->has('subcategory_ids'))
                     <span class="help-block">
                         <span style="color: red;"
                             class='validate'>{{ $errors->first('subcategory_ids') }}</span>
@@ -80,7 +125,7 @@
         <div class="form-group row product">
                 <div class="col-sm-5 form-control-cms ">Select Product<span class="valid_field">*</span></div>
                 <div class="col-sm-7">
-                    <select name="product_id" id="product_id" class="form-control" value="">
+                    <select name="product_id" id="product_id" class="form-control" value="" {{ $isUsed ? 'disabled style=background-color:#e9ecef;cursor:not-allowed;pointer-events:none;' : '' }}>
                         <option value="">Select product</option>
                         @foreach ($product as $key => $value)
                         <option value="{{ $value->id }}"  {{ ($editData->product_id == $value->id) ? 'selected' : ''}}>
@@ -94,7 +139,7 @@
             <label class="col-sm-5 form-control-label">Discount Amount<span
                     class="valid_field">*</span></label>
             <div class="col-sm-7">
-                <input type="number" name="dis_amount" id="dis_amount" class="form-control" placeholder="100" value="{{ $editData->dis_amount }}" required>
+                <input type="number" step="any" min="0.01" name="dis_amount" id="dis_amount" class="form-control" placeholder="100" value="{{ (isset($editData->offer_type) && $editData->offer_type == 'flat') ? $editData->dis_amount : '' }}" required onkeydown="return blockInvalidNumberKeys(event)" oninput="sanitizeAmount(this)" {{ $isUsed ? 'readonly style=background-color:#e9ecef;cursor:not-allowed;' : '' }}>
                 <span style="color: red;display: none;" id="errorMsgAmount" class='validate'></span>
             </div>
         </div>
@@ -102,7 +147,8 @@
             <label class="col-sm-5 form-control-label">Discount Percentage(%)<span
                     class="valid_field">*</span></label>
             <div class="col-sm-7">
-                <input type="number" name="dis_percentage" id="dis_percentage" class="form-control" placeholder="100" value="{{ $editData->dis_amount }}" required>
+                <input type="number" step="any" name="dis_percentage" id="dis_percentage" class="form-control" placeholder="10" min="1" max="99" value="{{ (isset($editData->offer_type) && $editData->offer_type == 'percentage') ? $editData->dis_amount : '' }}" required onkeydown="return blockInvalidNumberKeys(event)" oninput="sanitizePercentage(this)" {{ $isUsed ? 'readonly style=background-color:#e9ecef;cursor:not-allowed;' : '' }}>
+                <small class="text-muted"><i class="material-icons" style="font-size: 14px; vertical-align: middle;">&#xe8fd;</i> Enter percentage between 1% and 99% (100% is not allowed).</small>
                 <span style="color: red;display: none;" id="errorMsgPercentage" class='validate'></span>
             </div>
         </div>
@@ -128,12 +174,23 @@
         </div> --}}
 
         <div class="form-group row">
+            <label class="col-sm-5 form-control-label">Start Date<span
+                    class="valid_field">*</span></label>
+            <div class="col-sm-7">
+                <input type="text" name="start_date" id="start_date" class="form-control"
+                    placeholder="YYYY-MM-DD"
+                    value="{{ $editData->start_date }}" required {{ $isUsed ? 'readonly style=background-color:#e9ecef;cursor:not-allowed;pointer-events:none;' : 'readonly style=background-color:#fff;cursor:pointer;' }}>
+                <span style="color: red;display: none;" id="errorMsgStartDate" class='validate'></span>
+            </div>
+        </div>
+
+        <div class="form-group row">
             <label class="col-sm-5 form-control-label">Expiry Date<span
                     class="valid_field">*</span></label>
             <div class="col-sm-7">
-                <input type="date"  name="expiry_date"  id="expiry_date" class="form-control"
-                 placeholder="200"
-                    value="{{$editData->expiry_date }}" required>
+                <input type="text" name="expiry_date" id="expiry_date" class="form-control"
+                    placeholder="YYYY-MM-DD"
+                    value="{{$editData->expiry_date }}" required readonly style="background-color: #fff; cursor: pointer;">
                 <span style="color: red;display: none;" id="errorMsgExpiry" class='validate'></span>
             </div>
         </div>
@@ -172,7 +229,7 @@
             <label class="col-sm-5 form-control-cms">Button Template<span
                 class="valid_field">*</span></label>
             <div class="col-sm-7">
-                <input type="text" name="template" id="template" class="form-control" placeholder="Button Template Text" value="{{$editData->template }}">
+                <input type="text" name="template" id="template" class="form-control" placeholder="Button Template Text" value="{{$editData->template }}" {{ $isUsed ? 'readonly style=background-color:#e9ecef;cursor:not-allowed;' : '' }}>
                 <span style="color: red;display: none;" id="errorMsgTemplate" class='validate'></span>
             </div>
         </div>
@@ -181,7 +238,7 @@
             <label class="col-sm-5 form-control-cms">Custom URL<span
                 class="valid_field">*</span></label>
             <div class="col-sm-7">
-                <input type="text" name="custom_url" id="custom_url" class="form-control" placeholder="Custom Url" value="{{$editData->custom_url }}">
+                <input type="text" name="custom_url" id="custom_url" class="form-control" placeholder="Custom Url" value="{{$editData->custom_url }}" {{ $isUsed ? 'readonly style=background-color:#e9ecef;cursor:not-allowed;' : '' }}>
                 <span style="color: red;display: none;" id="errorMsgUrl" class='validate'></span>
             </div>
         </div>
@@ -196,14 +253,19 @@
         <div class="form-group row">
             <label class="col-sm-5 form-control-label">Images <span class="valid_field">*</span></label>
             <div class="col-sm-7">
-                <input type="file" name="offer_image[]" id="offer_image" class="form-control" accept="image/*" placeholder="Offer Images" multiple>
+                <input type="file" name="offer_image[]" id="offer_image" class="form-control" accept="image/*" placeholder="Offer Images" multiple {{ $isUsed ? 'disabled style=background-color:#e9ecef;cursor:not-allowed;' : '' }}>
+                @if($isUsed)
+                    <span class="text-muted" style="font-size: 12px; display: block; margin-top: 5px;">
+                        <i class="material-icons" style="font-size: 14px; vertical-align: middle;">&#xe8fd;</i> Images cannot be modified for used offers.
+                    </span>
+                @endif
                 <span class="help-block" id="offer_image_input_error">
 
                     @if (!empty(@$errors) && @$errors->has('offer_image.*'))
                     <span style="color: red;" class='validate'>{{ is_string($errors->first('offer_image.*'))?$errors->first('offer_image.*'):@$errors->first('offer_image.*')[0] }}
                     </span>
                     @endif
-                    <span style="color: red;" class='validate'>{{ $errors->first('offer_image') }}</span>
+                    <span style="color: red;" class='validate'>{{ (!empty($errors) && $errors->has('offer_image')) ? $errors->first('offer_image') : '' }}</span>
                 </span>
                 <div>
                     <small>
@@ -238,9 +300,11 @@
                                         <img src="{{ asset('uploads/offers/' . $image->image) }}" alt="Offer Image" style="height:100px; width:100px;padding-right: 10px;">
                                         <br>
                                         <br>
+                                    @if(!$isUsed)
                                     <div class="delete m-t-xs" style="margin-top: 10px !important;margin-bottom: 10px !important;">
                                         <a onclick="deleteImage(this)" data-image_id="{{ $image->id }}" class="btn btn-sm btn-default btndeleteprofile">{!! __('backend.delete') !!}</a>
                                     </div>
+                                    @endif
                                 </div>
                                 <div id="undo_{{ $image->id }}" class="col-sm-4 p-a-xs" style="display: none">
                                     <a onclick="undoDeleteImage(this)" data-image_id="{{ $image->id }}">
@@ -277,7 +341,7 @@
     </div>
     <div class="modal-footer">
         <input type="hidden" name="offer_id" id="offer_id" value="{{$editData->id}}">
-        <button type="submit" class="btn btn-default btn btn-primary"><i class="material-icons">&#xe31b;</i> Update</button>
+        <button type="submit" class="btn btn-default btn btn-primary"><i class="material-icons">&#xe31b;</i> {{ $isUsed ? 'Update Expiry Date' : 'Update' }}</button>
         <button type="button" class="btn btn-default" data-dismiss="modal"><i class="material-icons">&#xe5cd;</i> Close</button>
     </div>
 {{Form::close()}}
@@ -286,7 +350,33 @@
 <script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/additional-methods.min.js"></script>
 
 <script>
-       $(document).ready(function() {
+    function blockInvalidNumberKeys(e) {
+        if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
+            e.preventDefault();
+            return false;
+        }
+    }
+
+    function sanitizeAmount(el) {
+        el.value = el.value.replace(/[^0-9.]/g, '');
+        var parts = el.value.split('.');
+        if (parts.length > 2) {
+            el.value = parts[0] + '.' + parts.slice(1).join('');
+        }
+    }
+
+    function sanitizePercentage(el) {
+        el.value = el.value.replace(/[^0-9.]/g, '');
+        var parts = el.value.split('.');
+        if (parts.length > 2) {
+            el.value = parts[0] + '.' + parts.slice(1).join('');
+        }
+        if (parseFloat(el.value) > 99) {
+            el.value = 99;
+        }
+    }
+
+    $(document).ready(function() {
         showHide();
     });
 
@@ -319,9 +409,28 @@
 
 <script>
       $(document).ready(function(e) {
-            var offerform = $("#offerEditForm").validate({
-            
-                rules: {
+            var isOfferUsed = {{ $isUsed ? 'true' : 'false' }};
+
+            var editRules = {};
+            var editMessages = {};
+
+            if (isOfferUsed) {
+                editRules = {
+                    expiry_date: {
+                        required: true,
+                        date: true,
+                        greaterThanOrEqualToDate: "#offerEditForm #start_date"
+                    }
+                };
+                editMessages = {
+                    expiry_date: {
+                        required: "Expiry Date Field is required.",
+                        date: "Enter a valid date.",
+                        greaterThanOrEqualToDate: "Expiry date must be on or after start date."
+                    }
+                };
+            } else {
+                editRules = {
                     offer_types: {
                         required: true,
                     },
@@ -345,44 +454,28 @@
                     },
                     dis_amount: {
                         required: function () {
-                            return $("#dis_percentage").val() === "";
+                            return $("#offer_types").val() === "flat";
                         },
                         number: true,
-                        min: 0
+                        min: 0.01
                     },
                     dis_percentage: {
                         required: function () {
-                            return $("#dis_amount").val() === "";
+                            return $("#offer_types").val() === "percentage";
                         },
                         number: true,
-                        min: 0
+                        min: 1,
+                        max: 99
                     },
-                    // min_amount: {
-                    //     required: true,
-                    //     number: true,
-                    //     min: 0
-                    // },
-                    // max_amount: {
-                    //     required: true,
-                    //     number: true,
-                    //     min: 0,
-                    //     greaterThan: true // no param passed
-                    // },
+                    start_date: {
+                        required: true,
+                        date: true
+                    },
                     expiry_date: {
                         required: true,
                         date: true,
-                        futureDate: true
+                        greaterThanOrEqualToDate: "#offerEditForm #start_date"
                     },
-                    // total_usage: {
-                    //     required: true,
-                    //     number: true,
-                    //     min: 1
-                    // },
-                    // max_users: {
-                    //     required: true,
-                    //     number: true,
-                    //     min: 1
-                    // },
                     template: {
                         required: true
                     },
@@ -395,8 +488,8 @@
                         mimetypes: ["image/jpeg", "image/png", "image/jpg"], 
                         maxImages: 4 
                     }
-                },
-                messages: {
+                };
+                editMessages = {
                     offer_types: {
                         required: "Offer Type Field is required.",
                     },
@@ -415,39 +508,23 @@
                     dis_amount: {
                         required: "Discount Amount Field is required.",
                         number: "Please enter a valid number.",
-                        min: "Amount must be greater than or equal to 0."
+                        min: "Amount must be greater than 0."
                     },
                     dis_percentage: {
                         required: "Discount Percentage Field is required.",
                         number: "Please enter a valid number.",
-                        min: "Amount must be greater than or equal to 0."
+                        min: "Discount percentage must be at least 1%.",
+                        max: "Discount percentage cannot exceed 99% (100% is not allowed)."
                     },
-                    // min_amount: {
-                    //     required: "Minimum Amount Field is required.",
-                    //     number: "Please enter a valid number.",
-                    //     min: "Amount must be greater than or equal to 0."
-                    // },
-                    // max_amount: {
-                    //     required: "Maximum Amount Field is required.",
-                    //     number: "Please enter a valid number.",
-                    //     min: "Amount must be greater than or equal to 0.",
-                    //     greaterThan: "Maximum amount must be greater than minimum amount."
-                    // },
+                    start_date: {
+                        required: "Start Date Field is required.",
+                        date: "Enter a valid date."
+                    },
                     expiry_date: {
                         required: "Expiry Date Field is required.",
                         date: "Enter a valid date.",
-                        futureDate: "Expiry date must be in the future."
+                        greaterThanOrEqualToDate: "Expiry date must be on or after start date."
                     },
-                    // total_usage: {
-                    //     required: "Total Usage Field is required.",
-                    //     number: "Please enter a valid number.",
-                    //     min: "Must be at least 1"
-                    // },
-                    // max_users: {
-                    //     required: "Maximum User Field is required.",
-                    //     number: "Please enter a valid number.",
-                    //     min: "Must be at least 1"
-                    // },
                     template: {
                         required: "Button Template Field is required.",
                     },
@@ -460,9 +537,14 @@
                         mimetypes: "The images must be in .png, .jpg or .jpeg format.",
                         maxImages: "You can upload a maximum of 4 images."
                     }
-                },
+                };
+            }
+
+            var offerform = $("#offerEditForm").validate({
+                rules: editRules,
+                messages: editMessages,
                 submitHandler: function() {
-                    if (!validateImageUpload()) {
+                    if (!isOfferUsed && !validateImageUpload()) {
                         return false;
                     }
 
@@ -490,30 +572,38 @@
                         },
                         error: function(errors) {
                             $('.loader').css("visibility", "hidden");
-                            // var erroJson = JSON.parse(errors.responseText);
-                            // for (var err in erroJson) {
-                            //     console.log(erroJson);
-                            //     for (var errstr of erroJson[err])
-                            //     $("span#errorMessage").css("display", "block");
-                            //     $("span#errorMsgTitle").css("display", "block");
-                            //     $("span#errorMsgTitle").html(erroJson.title);
 
-                            // }
-
-
-                             // Clear any previous errors
+                            // Clear any previous errors
                             $('.validate').text('').hide(); // Hide all validation error spans
-                            $('#editConflictError').hide().html(''); // Hide the conflict error div
+                            $('#editConflictError').hide().find('.conflict-msg').html(''); // Hide the conflict error div
 
                             let erroJson = errors.responseJSON;
+
+                            function capitalizeFirstLetter(string) {
+                                if (!string) return '';
+                                return string.charAt(0).toUpperCase() + string.slice(1);
+                            }
+
+                            var hasConflict = false;
+                            var conflictMsg = '';
 
                             // Loop through each field error
                             $.each(erroJson, function(field, messages) {
                                 const message = messages[0];
 
                                 if (field === 'conflict') {
-                                    // Show the conflict error in a special div
-                                    $('#editConflictError').html(message).show();
+                                    hasConflict = true;
+                                    conflictMsg = message;
+                                    $('#editConflictError .conflict-msg').text(message);
+                                    $('#editConflictError').show();
+                                } else if (field === 'expiry_date') {
+                                    $('#errorMsgExpiry').text(message).show();
+                                } else if (field === 'start_date') {
+                                    $('#errorMsgStartDate').text(message).show();
+                                } else if (field === 'dis_amount') {
+                                    $('#errorMsgAmount').text(message).show();
+                                } else if (field === 'dis_percentage') {
+                                    $('#errorMsgPercentage').text(message).show();
                                 } else {
                                     // Show other errors in their corresponding <span id="errorMsg<Field>">
                                     let errorSpan = $(`#errorMsg${capitalizeFirstLetter(field)}`);
@@ -524,6 +614,28 @@
                                     }
                                 }
                             });
+
+                            if (hasConflict) {
+                                // Smoothly scroll modal to top to show the alert banner
+                                $('#editOffer, .modal').animate({ scrollTop: 0 }, 400);
+
+                                // Trigger prominent SweetAlert popup right in front of user
+                                swal({
+                                    title: "Offer Conflict!",
+                                    text: conflictMsg,
+                                    type: "warning",
+                                    confirmButtonColor: "#fbb516",
+                                    confirmButtonText: "I Understand"
+                                });
+                            } else {
+                                // Scroll modal to the first visible validation error
+                                var firstVisible = $('#editOffer .validate:visible').first();
+                                if (firstVisible.length) {
+                                    $('#editOffer, .modal').animate({
+                                        scrollTop: firstVisible.offset().top - $('#editOffer').offset().top + $('#editOffer').scrollTop() - 80
+                                    }, 400);
+                                }
+                            }
                         }
                     });
                 }
@@ -560,10 +672,54 @@
                 return inputDate > now;
             }, "Date must be in the future.");
 
-            $('#myModal').on('hidden.bs.modal', function() {
-                offerform.resetForm();
-                $('#myModal form')[0].reset();
-            })
+            if (!$.validator.methods.greaterThanOrEqualToDate) {
+                $.validator.addMethod("greaterThanOrEqualToDate", function(value, element, param) {
+                    var startDateVal = $(param).val();
+                    if (!startDateVal || !value) return true;
+                    var startDate = new Date(startDateVal + 'T00:00:00');
+                    var expiryDate = new Date(value + 'T00:00:00');
+                    return expiryDate >= startDate;
+                }, "Expiry date must be on or after start date.");
+            }
+
+            @if(!$isUsed)
+            $('#offerEditForm #start_date').datepicker({
+                format: 'yyyy-mm-dd',
+                startDate: '+0d',
+                todayHighlight: true,
+                autoclose: true,
+                orientation: "bottom auto",
+                templates: {
+                    leftArrow: '<i class="fa fa-chevron-left"></i>',
+                    rightArrow: '<i class="fa fa-chevron-right"></i>'
+                }
+            }).on('changeDate', function(selected) {
+                if (selected.date) {
+                    var minDate = new Date(selected.date.valueOf());
+                    $('#offerEditForm #expiry_date').datepicker('setStartDate', minDate);
+                    $('#offerEditForm #start_date').valid();
+                }
+            });
+            @endif
+
+            var currentStartVal = $('#offerEditForm #start_date').val();
+            var editMinDate = currentStartVal ? new Date(currentStartVal + 'T00:00:00') : '+0d';
+
+            $('#offerEditForm #expiry_date').datepicker({
+                format: 'yyyy-mm-dd',
+                startDate: editMinDate,
+                todayHighlight: true,
+                autoclose: true,
+                orientation: "bottom auto",
+                templates: {
+                    leftArrow: '<i class="fa fa-chevron-left"></i>',
+                    rightArrow: '<i class="fa fa-chevron-right"></i>'
+                }
+            }).on('changeDate', function(selected) {
+                if (selected.date) {
+                    $('#offerEditForm #expiry_date').valid();
+                }
+            });
 
             $.validator.addMethod("maxFileSize", function(value, element, param) {
                 var file = element.files[0];
@@ -601,16 +757,17 @@
     function toggleFieldsBasedOnOfferType() {
         var offerType = $('#offer_types').val();
 
-        $('.discountAmount').hide();
-        $('.discountPercentage').hide();
-
         if (offerType == 'percentage') {
             $('.discountAmount').hide();
+            $('#dis_amount').prop('disabled', true);
             $('.discountPercentage').show();
+            $('#dis_percentage').prop('disabled', false);
 
         } else if (offerType =='flat') {
             $('.discountAmount').show();
+            $('#dis_amount').prop('disabled', false);
             $('.discountPercentage').hide();
+            $('#dis_percentage').prop('disabled', true);
         }
     }
 

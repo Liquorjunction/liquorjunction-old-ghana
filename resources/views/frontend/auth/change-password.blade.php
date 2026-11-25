@@ -109,54 +109,58 @@
             confirm_password: validation_confirm_password_required,
         },
         submitHandler: function() {
-            var form_data = new FormData($('#change_password_form')[0]);
-            action_url = "{{ route('changepasswordpost') }}";
-            var csrf = "{{ csrf_token() }}";
-            $.ajax({
-                url: action_url,
-                data: form_data,
-                headers: {
-                    'X-CSRF-TOKEN': csrf
-                },
-                processData: false,
-                contentType: false,
-                type: "POST",
-                dataType: 'json',
-                beforeSend: function() {
-                    $(".loader").fadeIn();
-                    $('.loader').css("visibility", "visible");
-                },
-                success: function(response) {
-                    // console.log('test'+response);
+            window.getReCaptchaToken('change_password', function(recaptchaToken) {
+                var form_data = new FormData($('#change_password_form')[0]);
+                form_data.append('g-recaptcha-response', recaptchaToken);
+                action_url = "{{ route('changepasswordpost') }}";
+                var csrf = "{{ csrf_token() }}";
+                $.ajax({
+                    url: action_url,
+                    data: form_data,
+                    headers: {
+                        'X-CSRF-TOKEN': csrf
+                    },
+                    processData: false,
+                    contentType: false,
+                    type: "POST",
+                    dataType: 'json',
+                    beforeSend: function() {
+                        $(".loader").fadeIn();
+                        $('.loader').css("visibility", "visible");
+                    },
+                    success: function(response) {
+                        $('.loader').css("visibility", "visible");
+                        var url = "{{route('websitelogin')}}";
+                        window.location.href = url;
+                    },
+                    error: function(errors) {
+                        $('.loader').css("visibility", "hidden");
+                        var erroJson = JSON.parse(errors.responseText);
+                        console.log(erroJson.status);
+                        if (erroJson.status == "error_password_match") {
+                            $("span#errorMessagecommon1").css("display", "none");
+                            $("span#errorMsgcommon1").css("display", "none");
+                            $("span#errorMessagecommon").css("display", "block");
+                            $("span#errorMsgcommon").css("display", "block");
 
-                    $('.loader').css("visibility", "visible");
-                    var url = "{{route('websitelogin')}}";
-                    window.location.href = url;
-                },
-                error: function(errors) {
-                    // alert(errors);
-                    // console.log(response)
-                    $('.loader').css("visibility", "hidden");
-                    var erroJson = JSON.parse(errors.responseText);
-                    console.log(erroJson.status);
-                    if (erroJson.status == "error_password_match") {
-                        $("span#errorMessagecommon1").css("display", "none");
-                        $("span#errorMsgcommon1").css("display", "none");
-                        $("span#errorMessagecommon").css("display", "block");
-                        $("span#errorMsgcommon").css("display", "block");
+                            $("span#errorMsgcommon").html(erroJson.errors);
+                        } else if (erroJson.errors) {
+                            var firstErr = Array.isArray(erroJson.errors) ? erroJson.errors[0] : (typeof erroJson.errors === 'object' ? Object.values(erroJson.errors).flat()[0] : erroJson.errors);
+                            $("span#errorMessagecommon").css("display", "block");
+                            $("span#errorMsgcommon").css("display", "block");
+                            $("span#errorMsgcommon").html(firstErr);
+                        }
+                        if(erroJson.status =="errorMessageCurrentPassword"){
+                            $("span#errorMessagecommon").css("display", "none");
+                            $("span#errorMsgcommon").css("display", "none");
+                            $("span#errorMessagecommon1").css("display", "block");
+                            $("span#errorMsgcommon1").css("display", "block");
 
-                        $("span#errorMsgcommon").html(erroJson.errors);
+                            $("span#errorMsgcommon1").html(erroJson.errors);
+                        }
+
                     }
-                    if(erroJson.status =="errorMessageCurrentPassword"){
-                        $("span#errorMessagecommon").css("display", "none");
-                        $("span#errorMsgcommon").css("display", "none");
-                        $("span#errorMessagecommon1").css("display", "block");
-                        $("span#errorMsgcommon1").css("display", "block");
-
-                        $("span#errorMsgcommon1").html(erroJson.errors);
-                    }
-
-                }
+                });
             });
         }
     });

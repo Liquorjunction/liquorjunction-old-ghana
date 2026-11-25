@@ -30,15 +30,23 @@ href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/boot
         <div class="tab-content clear b-t">
             <div class="tab-pane active" id="tab_details">
                 <div class="box-body">
+                    @if ($errors->has('conflict') || session('errorMessage') || $errors->any())
+                        <div class="alert alert-danger" id="conflict-alert" role="alert" style="margin-bottom: 20px;">
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            <i class="fa fa-exclamation-triangle m-r-xs"></i> {{ $errors->first('conflict') ?: session('errorMessage') ?: $errors->first() }}
+                        </div>
+                    @endif
                     {{ Form::open(['route' => ['bogo.store'], 'method' => 'POST', 'id' => 'bogo-form', 'files' => true]) }}
                     <div class="form-group row">
                             <label class="col-sm-2 form-control-label">Applicable On<span class="valid_field">*</span></label>
                             <div class="col-sm-10"  style="position:relative;">
                                 <select name="product_type" id="product_type" onchange="showHide()" class="form-control" value="">
                                     <option value="">Select Type</option>
-                                    <option value="1">Brand</option>
-                                    <option value="2">Category</option>
-                                    <option value="3">Product</option>
+                                    <option value="1" {{ old('product_type') == '1' ? 'selected' : '' }}>Brand</option>
+                                    <option value="2" {{ old('product_type') == '2' ? 'selected' : '' }}>Category</option>
+                                    <option value="3" {{ old('product_type') == '3' ? 'selected' : '' }}>Product</option>
                                 </select>
                                  @error('product_type')
                                     <div class="valid_field"> {{ $message }} </div>
@@ -51,7 +59,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/boot
                                 <select name="brand_id" id="brand_id" class="form-control" value="">
                                     <option value="">Select Brand</option>
                                     @foreach ($brand as $key => $value)
-                                    <option value="{{ $value->id }}">
+                                    <option value="{{ $value->id }}" {{ old('brand_id') == $value->id ? 'selected' : '' }}>
                                         {{ ucfirst($value->title) }}
                                     </option>
                                     @endforeach
@@ -64,7 +72,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/boot
                                 <select name="category_id" id="category_id" class="form-control" value="">
                                     <option value="">Select Category</option>
                                     @foreach ($categories as $key => $value)
-                                    <option value="{{ $value->id }}">
+                                    <option value="{{ $value->id }}" {{ old('category_id') == $value->id ? 'selected' : '' }}>
                                         {{ ucfirst($value->title) }}
                                     </option>
                                     @endforeach
@@ -86,7 +94,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/boot
                                 <select name="product_id" id="product_id" class="form-control" value="">
                                     <option value="">Select Product</option>
                                     @foreach ($product as $key => $value)
-                                    <option value="{{ $value->id }}" >
+                                    <option value="{{ $value->id }}" {{ old('product_id') == $value->id ? 'selected' : '' }}>
                                         {{ ucfirst($value->product_name) }}
                                     </option>
                                     @endforeach
@@ -261,7 +269,13 @@ href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/boot
 
 <script>
     $(document).ready(function() {
-                 showHide();
+        showHide();
+        var $alert = $('#conflict-alert');
+        if ($alert.length) {
+            $('html, body').animate({
+                scrollTop: $alert.offset().top - 100
+            }, 400);
+        }
     });
 
     function showHide() {
