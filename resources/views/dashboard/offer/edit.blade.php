@@ -548,6 +548,15 @@
                         return false;
                     }
 
+                    var offerTypeVal = $('#offerEditForm #offer_types').val();
+                    if (offerTypeVal === 'flat') {
+                        $('#offerEditForm #dis_percentage').prop('disabled', true);
+                        $('#offerEditForm #dis_amount').prop('disabled', false);
+                    } else if (offerTypeVal === 'percentage') {
+                        $('#offerEditForm #dis_amount').prop('disabled', true);
+                        $('#offerEditForm #dis_percentage').prop('disabled', false);
+                    }
+
                     var form_data = new FormData($('#offerEditForm')[0]);
                     action_url = "{{ route('offerstore') }}";
                     var csrf = "{{ csrf_token() }}";
@@ -746,31 +755,33 @@
 </script>
 
 <script>
-     $(document).ready(function() {
-            toggleFieldsBasedOnOfferType();
-     });
-
-    $('#offer_types').change(function() {
-        toggleFieldsBasedOnOfferType();
-    });
-
     function toggleFieldsBasedOnOfferType() {
-        var offerType = $('#offer_types').val();
+        var offerType = $('#offerEditForm #offer_types').val();
 
         if (offerType == 'percentage') {
-            $('.discountAmount').hide();
-            $('#dis_amount').prop('disabled', true);
-            $('.discountPercentage').show();
-            $('#dis_percentage').prop('disabled', false);
+            $('#offerEditForm .discountAmount').hide();
+            $('#offerEditForm #dis_amount').prop('disabled', true);
+            $('#offerEditForm .discountPercentage').show();
+            $('#offerEditForm #dis_percentage').prop('disabled', false);
 
-        } else if (offerType =='flat') {
-            $('.discountAmount').show();
-            $('#dis_amount').prop('disabled', false);
-            $('.discountPercentage').hide();
-            $('#dis_percentage').prop('disabled', true);
+        } else if (offerType == 'flat') {
+            $('#offerEditForm .discountAmount').show();
+            $('#offerEditForm #dis_amount').prop('disabled', false);
+            $('#offerEditForm .discountPercentage').hide();
+            $('#offerEditForm #dis_percentage').prop('disabled', true);
         }
     }
 
+    $(document).ready(function() {
+        toggleFieldsBasedOnOfferType();
+    });
+
+    $(document).on('change', '#offerEditForm #offer_types', function() {
+        toggleFieldsBasedOnOfferType();
+    });
+
+    // Execute immediately when modal HTML is injected
+    toggleFieldsBasedOnOfferType();
 </script>
 
 <script>

@@ -271,7 +271,8 @@
                                             // }
                                             // $total_discount_price += ($org_price - $discount_price);
 
-                                            $qty = Helper::getCartQuantity($result->id);
+                                            $qty = (int) Helper::getCartQuantity($result->id);
+                                            if ($qty <= 0) { $qty = 1; }
                                             $org_price = $result->variant_price ? ($result->variant_price * $qty) : 0;
                                             $original_price += $org_price;
                                             $discount_price = $org_price;
@@ -309,7 +310,8 @@
                                             // $total_discount_price += ($org_price - $discount_price);
 
 
-                                            $qty = Helper::getUserCartQuantity($result->id, $user_id);
+                                            $qty = (int) Helper::getUserCartQuantity($result->id, $user_id);
+                                            if ($qty <= 0) { $qty = 1; }
                                             $org_price = $result->variant_price ? ($result->variant_price * $qty) : 0;
                                             $original_price += $org_price;
                                             $discount_price = $org_price;
@@ -407,17 +409,23 @@
                                                     </li>
 
                                                     @php
-                                                        $qty = ""; 
-                                                        if (Session::get('cart_info') != '' && $user_id==""){
-                                                            $qty = Helper::getCartQuantity($result->id);
-                                                        }elseif ($user_id!="") {
-                                                            $qty = Helper::getUserCartQuantity($result->id,$user_id);
+                                                        $qty = 0; 
+                                                        if (!empty(Session::get('cart_info')) && empty($user_id)){
+                                                            $qty = (int) Helper::getCartQuantity($result->id);
+                                                        } elseif (!empty($user_id)) {
+                                                            $qty = (int) Helper::getUserCartQuantity($result->id, $user_id);
+                                                        } else {
+                                                            $qty = (int) Helper::getUserCartQuantity($result->id, $user_id);
                                                         } 
 
-                                                    // Update total quantity logic
+                                                        if ($qty <= 0) {
+                                                            $qty = 1;
+                                                        }
+
+                                                        // Update total quantity logic
                                                         // $effective_qty = $is_bogo ? ($qty * 2) : $qty;
                                                         // $total_quantity += $effective_qty;
-                                                        $total_quantity += $qty;
+                                                        $total_quantity += (int) $qty;
                                                         
                                                     @endphp
                                                     <li class="border-top-0">

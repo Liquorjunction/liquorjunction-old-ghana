@@ -1436,14 +1436,18 @@
                                 <p class="quantity"> {{@Helper::language('volume')}}<span>: {{ @$result->variant_size ? $result->variant_size . ' ' . $product_unit : '' }}</span></p>
                                 @php
                                 if(empty($variant_quantity)){
-                                    $qty = Helper::getUserCartQuantity($result->id,$user_id);
+                                    $qty = (int) Helper::getUserCartQuantity($result->id,$user_id);
                                 }else{
-                                    $qty =$variant_quantity;
+                                    $qty = (int) $variant_quantity;
+                                }
+
+                                if ($qty <= 0) {
+                                    $qty = 1;
                                 }
 
                                 // Update total quantity logic
                                 $effective_qty = $is_bogo ? ($qty * 2) : $qty;
-                                $total_quantity += $effective_qty;
+                                $total_quantity += (int) $effective_qty;
 
                                 @endphp
                                  <span class="counters mb-0">

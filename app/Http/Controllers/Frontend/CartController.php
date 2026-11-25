@@ -47,23 +47,22 @@ class CartController extends Controller
         $setting = $this->setting;        
         
         $cart_info = Session::get('cart_info');
-        //When user not login
-        if($cart_info!="" && $user_id==""){
-            $variantIds = array();
+        $variantIds = array();
+
+        // When user not login
+        if(!empty($cart_info) && empty($user_id)){
             foreach($cart_info as $result){
                 foreach($result as $keys => $value){
                     $variantIds[] = $keys;
                 }               
             }  
-        }else{
-             //When user login
+        } elseif(!empty($user_id)) {
+            // When user login
             $cartData = Cart::select(DB::raw('group_concat(product_variant_id) as variantIds'))->where('user_id', $user_id)->groupBy('user_id')->where('status', 1)->first();
             
             if(!empty($cartData)){
                 $variantIds = explode(',', $cartData->variantIds);
-            }else{
             }
-
         }
         $productData = "";
         if(!empty($variantIds)){               
