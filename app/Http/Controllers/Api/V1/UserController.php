@@ -252,6 +252,12 @@ class UserController extends Controller
                         $variant = ProductVariants::find($variantId);
                         if (!$variant) continue;
 
+                        $deal = \App\Helpers\Helper::resolveProductDeal($productId, null, null, null, $variant->variant_price);
+                        $bogo_status = $deal['is_bogo'] ? 1 : 0;
+                        $offer_status = $deal['is_offer'] ? 1 : 0;
+                        $offer_type = (!$bogo_status && $offer_status) ? $deal['offer_type'] : null;
+                        $discount_amount = (!$bogo_status && $offer_status) ? $deal['discount_amount'] : null;
+
                         $price = $variant->variant_discounted_price ?: $variant->variant_price;
 
                         Cart::create([
@@ -263,6 +269,10 @@ class UserController extends Controller
                             'product_price' => $variant->variant_price,
                             'offer_price' => $variant->variant_discounted_price,
                             'total_price' => $price * $qty,
+                            'is_bogo' => $bogo_status,
+                            'is_offer' => $offer_status,
+                            'offer_type' => $offer_type,
+                            'discount_amount' => $discount_amount,
                             'status' => 1,
                             'order_type' => 1,
                         ]);

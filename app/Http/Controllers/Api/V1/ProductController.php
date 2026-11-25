@@ -1028,7 +1028,7 @@ class ProductController extends Controller
                     $discounted_price = ($data->variant_discounted_price!='' && $data->variant_discounted_price!=0.00)? $data->variant_discounted_price :NULL;
 
                     // Deal resolution (BOGO > Offer, with Product > Subcategory > Category > Brand)
-                    $deal = Helper::resolveProductDeal($data->productId, $data->category_id, $data->subcategory_id, $data->brand_id);
+                    $deal = Helper::resolveProductDeal($data->productId, $data->category_id, $data->subcategory_id, $data->brand_id, $original_price);
 
                     $final_bogo_status = $deal['is_bogo'];
                     $final_bogo_label = $deal['is_bogo'] ? 'BOGO' : '';
@@ -1125,7 +1125,8 @@ class ProductController extends Controller
         if($products)
         {
             foreach ($products as $related) {
-                $deal = Helper::resolveProductDeal($related->id, $related->category_id, $related->subcategory_id, $related->brand_id);
+                $varPrice = $related->get_product_variants->first()->variant_price ?? null;
+                $deal = Helper::resolveProductDeal($related->id, $related->category_id, $related->subcategory_id, $related->brand_id, $varPrice);
                 $related->bogo_status = $deal['is_bogo'];
                 $related->offer_status = $deal['is_offer'];
                 $related->discount_amount = $deal['discount_amount'];
@@ -1400,7 +1401,7 @@ class ProductController extends Controller
 
 
                 // === Resolve Deal (BOGO > Offer, with Product > Subcategory > Category > Brand) ===
-                $deal = Helper::resolveProductDeal($data->id, $data->category_id, $data->subcategory_id, $data->brand_id);
+                $deal = Helper::resolveProductDeal($data->id, $data->category_id, $data->subcategory_id, $data->brand_id, $original_price);
                 $bogo_status = $deal['is_bogo'];
                 $bogo_label = $bogo_status ? 'BOGO' : '';
 
@@ -1485,7 +1486,8 @@ class ProductController extends Controller
         if($products)
         {
             foreach ($products as $recent) {
-                $deal = Helper::resolveProductDeal($recent->id, $recent->category_id, $recent->subcategory_id, $recent->brand_id);
+                $varPrice = $recent->get_product_variants->first()->variant_price ?? null;
+                $deal = Helper::resolveProductDeal($recent->id, $recent->category_id, $recent->subcategory_id, $recent->brand_id, $varPrice);
                 $recent->bogo_status = $deal['is_bogo'];
                 $recent->offer_status = $deal['is_offer'];
                 $recent->discount_amount = $deal['discount_amount'];
@@ -1560,6 +1562,7 @@ class ProductController extends Controller
                         $offer_label = 'Flat ' . $formatted_discount  . ' GH₵ off';
                     } elseif ($offer_type == 'percentage') {
                         $offer_label = $formatted_discount  . '% off';
+                        $discount_amount = max(0, $original_price * $formatted_discount / 100);
                     }
                 }
 
@@ -1665,7 +1668,8 @@ class ProductController extends Controller
 
             $bogoStatus=false;
 
-            $deal = Helper::resolveProductDeal($product_info->id, $product_info->category_id, $product_info->subcategory_id, $product_info->brand_id);
+            $mainPrice = $product_info->get_product_variants->first()->variant_price ?? null;
+            $deal = Helper::resolveProductDeal($product_info->id, $product_info->category_id, $product_info->subcategory_id, $product_info->brand_id, $mainPrice);
             $bogoStatus = $deal['is_bogo'];
             $offerDetails = (object)[];
 
@@ -1767,7 +1771,7 @@ class ProductController extends Controller
                 $product_brand_id = $product_info->brand_id;
 
                 // Deal resolution (BOGO > Offer, with Product > Subcategory > Category > Brand)
-                $deal = Helper::resolveProductDeal($variant->product_id, $product_category_id, $product_subcategory_id, $product_brand_id);
+                $deal = Helper::resolveProductDeal($variant->product_id, $product_category_id, $product_subcategory_id, $product_brand_id, $variant->variant_price);
                 $discounted_price = 0;
                 $offer_status = false;
                 $offer_type = null;
@@ -1779,7 +1783,12 @@ class ProductController extends Controller
                     $discount_amount = $deal['discount_amount'];
 
                     if ($offer_type == 'flat') {
-                        $discounted_price = max(0, $variant->variant_price - $discount_amount);
+                        if ($variant->variant_price > $discount_amount) {
+                            $discounted_price = max(0, $variant->variant_price - $discount_amount);
+                        } else {
+                            $discounted_price = 0;
+                            $offer_status = false;
+                        }
                     } elseif ($offer_type == 'percentage') {
                         $discounted_price = max(0, $variant->variant_price - ($variant->variant_price * $discount_amount / 100));
                     }
@@ -1793,7 +1802,10 @@ class ProductController extends Controller
                     'variant_unit'=>strval(@$variant->variant_uof),
                     'variant_price'=>strval(@$variant->variant_price),
                     // 'variant_discount_price'=> strval(@$variant->variant_discounted_price),
-                    'variant_discount_price'=> strval((int)$discounted_price)
+                    'variant_discount_price'=> ($discounted_price > 0) ? strval(round($discounted_price, 2)) : '0',
+                    'offer_status' => (bool)$offer_status,
+                    'offer_type' => $offer_type,
+                    'discount_amount' => strval($discount_amount),
                 ];
             }          
             $result['code']     =    strval(1);
@@ -2298,7 +2310,8 @@ class ProductController extends Controller
             if($products)
             {
                 foreach ($products as $favour) {
-                    $deal = Helper::resolveProductDeal($favour->id, $favour->category_id, $favour->subcategory_id, $favour->brand_id);
+                    $varPrice = $favour->get_product_variants->first()->variant_price ?? null;
+                    $deal = Helper::resolveProductDeal($favour->id, $favour->category_id, $favour->subcategory_id, $favour->brand_id, $varPrice);
                     $favour->bogo_status = $deal['is_bogo'];
                     $favour->offer_status = $deal['is_offer'];
                     $favour->discount_amount = $deal['discount_amount'];
@@ -3130,7 +3143,12 @@ class ProductController extends Controller
                                 $formatted_discount = rtrim(rtrim(number_format($discount_amount, 2, '.', ''), '0'), '.');
 
                                 if ($offer_type == 'flat') {
-                                    $display_discount_price = max(0, $display_price - $discount_amount);
+                                    if ($display_price > $discount_amount) {
+                                        $display_discount_price = max(0, $display_price - $discount_amount);
+                                    } else {
+                                        $display_discount_price = $display_price;
+                                        $is_offer = false;
+                                    }
                                 } elseif ($offer_type == 'percentage') {
                                     $display_discount_price = max(0, $display_price - ($display_price * $discount_amount / 100));
                                     $display_discount_amount = max(0, $display_price * $formatted_discount / 100);
@@ -3146,11 +3164,16 @@ class ProductController extends Controller
                             // ✅ Apply offer or variant discount
                             if (!$is_bogo && $is_offer) {
                                 if ($offer_type == 'flat') {
-                                    $discount_price = max(0, $original_price - ($discount_amount * $get_qty));
+                                    if ($data->variant_price > $discount_amount) {
+                                        $discount_price = max(0, $original_price - ($discount_amount * $get_qty));
+                                        $is_product_discount = true;
+                                    } else {
+                                        $discount_price = $original_price;
+                                    }
                                 } elseif ($offer_type == 'percentage') {
                                     $discount_price = max(0, $original_price - ($original_price * $discount_amount / 100));
+                                    $is_product_discount = true;
                                 }
-                                $is_product_discount = true;
                             } elseif ($data->variant_discounted_price && $data->variant_discounted_price != 0) {
                                 $discount_price = $data->variant_discounted_price * $get_qty;
                                 $is_product_discount = true;

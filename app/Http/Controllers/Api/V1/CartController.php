@@ -441,8 +441,15 @@ class CartController extends Controller
 
         logger()->info('offer_status: ' . json_encode($offer_status));
 
+        $variant_id = $request->product_variant_id ?? $request->variant_id ?? $request->variantId;
+        $varPrice = null;
+        if ($variant_id) {
+            $varObj = ProductVariants::find($variant_id);
+            $varPrice = $varObj ? $varObj->variant_price : null;
+        }
+
         // Resolve Deal for this product (BOGO > Offer)
-        $deal = \App\Helpers\Helper::resolveProductDeal($product_id);
+        $deal = \App\Helpers\Helper::resolveProductDeal($product_id, null, null, null, $varPrice);
         $bogo_status = $deal['is_bogo'] ? 1 : 0;
         $offer_status = $deal['is_offer'] ? 1 : 0;
         $currentOfferType = $deal['offer_type'];
@@ -584,8 +591,15 @@ class CartController extends Controller
 
         logger()->info('offer_status: ' . json_encode($offer_status));
 
+        $variant_id = $request->product_variant_id ?? $request->variant_id ?? $request->variantId;
+        $varPrice = null;
+        if ($variant_id) {
+            $varObj = ProductVariants::find($variant_id);
+            $varPrice = $varObj ? $varObj->variant_price : null;
+        }
+
         // Resolve Deal for this product (BOGO > Offer)
-        $deal = \App\Helpers\Helper::resolveProductDeal($product_id);
+        $deal = \App\Helpers\Helper::resolveProductDeal($product_id, null, null, null, $varPrice);
         $bogo_status = $deal['is_bogo'] ? 1 : 0;
         $offer_status = $deal['is_offer'] ? 1 : 0;
         $currentOfferType = $deal['offer_type'];

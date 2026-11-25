@@ -1328,7 +1328,7 @@ class CheckoutController extends Controller
                     // $discount_amount = $request->discount_amount ?? null;
                     // $offer_type = $request->offer_type ?? null;
 
-                    $deal = \App\Helpers\Helper::resolveProductDeal($data->product_id);
+                    $deal = \App\Helpers\Helper::resolveProductDeal($data->product_id, null, null, null, $data->variant_price);
                     $is_bogo  = $deal['is_bogo'] ? 1 : 0;
                     $is_offer = $deal['is_offer'] ? 1 : 0;
                     $offer_type = $deal['offer_type'];
@@ -1373,7 +1373,12 @@ class CheckoutController extends Controller
                     $formatted_discount = rtrim(rtrim(number_format($discount_amount, 2, '.', ''), '0'), '.');
 
                     if ($offer_type == 'flat') {
-                        $display_discount_price = max(0, $display_price - $discount_amount);
+                        if ($display_price > $discount_amount) {
+                            $display_discount_price = max(0, $display_price - $discount_amount);
+                        } else {
+                            $display_discount_price = $display_price;
+                            $is_offer = false;
+                        }
                     } elseif ($offer_type == 'percentage') {
                         $display_discount_price = max(0, $display_price - ($display_price * $discount_amount / 100));
                         $display_discount_amount = max(0, $display_price * $formatted_discount / 100);
@@ -1389,13 +1394,19 @@ class CheckoutController extends Controller
 
                 // ✅ Apply offer or variant discount
                 if (!$is_bogo && $is_offer) {
-                    $offerCheck = true;
                     if ($offer_type == 'flat') {
-                        $discount_price = max(0, $original_price - ($discount_amount * $get_qty));
+                        if ($data->variant_price > $discount_amount) {
+                            $discount_price = max(0, $original_price - ($discount_amount * $get_qty));
+                            $offerCheck = true;
+                            $is_product_discount = true;
+                        } else {
+                            $discount_price = $original_price;
+                        }
                     } elseif ($offer_type == 'percentage') {
                         $discount_price = max(0, $original_price - ($original_price * $discount_amount / 100));
+                        $offerCheck = true;
+                        $is_product_discount = true;
                     }
-                    $is_product_discount = true;
                 } elseif ($data->variant_discounted_price && $data->variant_discounted_price != 0) {
                     $discount_price = $data->variant_discounted_price * $get_qty;
                     $is_product_discount = true;
@@ -2313,7 +2324,7 @@ class CheckoutController extends Controller
 
             if ($is_buy_now == 1) {
                 $cart_qty = $buy_quantity;
-                $deal = \App\Helpers\Helper::resolveProductDeal($variant_product->product_id);
+                $deal = \App\Helpers\Helper::resolveProductDeal($variant_product->product_id, null, null, null, $buy_org_price ?? $variant_product->variant_price);
                 $bogoStatus = $deal['is_bogo'] ? 1 : 0;
                 $is_offer = $deal['is_offer'] ? 1 : 0;
                 $offer_type = $deal['offer_type'];
@@ -2329,7 +2340,12 @@ class CheckoutController extends Controller
 
                 if ($is_offer) {
                     if ($offer_type == 'flat') {
-                        $variant_offer_price = max(0, $variant_orginal_price - ($discount_amount));
+                        if ($variant_orginal_price > $discount_amount) {
+                            $variant_offer_price = max(0, $variant_orginal_price - ($discount_amount));
+                        } else {
+                            $variant_offer_price = '0';
+                            $is_offer = false;
+                        }
                     } elseif ($offer_type == 'percentage') {
                         $variant_offer_price = max(0, $variant_orginal_price - ($variant_orginal_price * $discount_amount / 100));
                     }
@@ -2348,7 +2364,20 @@ class CheckoutController extends Controller
                     $variant_orginal_price = $cart_info ? $cart_info->product_price : $variant_product->variant_price;
                     $offer_type_store = $cart_info ? $cart_info->offer_type : null;
                     $discount_amount_store = $cart_info ? $cart_info->discount_amount : 0;
-                    $variant_offer_price = $variant_product->variant_discounted_price ?: '0';
+
+                    if ($cart_info && $cart_info->is_offer) {
+                        if ($cart_info->offer_type == 'flat') {
+                            if ($variant_orginal_price > $cart_info->discount_amount) {
+                                $variant_offer_price = max(0, $variant_orginal_price - ($cart_info->discount_amount));
+                            } else {
+                                $variant_offer_price = '0';
+                            }
+                        } elseif ($cart_info->offer_type == 'percentage') {
+                            $variant_offer_price = max(0, $variant_orginal_price - ($variant_orginal_price * $cart_info->discount_amount / 100));
+                        }
+                    } else {
+                        $variant_offer_price = $variant_product->variant_discounted_price ?: '0';
+                    }
                 } else {
                     $cart_qty = Helper::getUserCartQuantity($variant_product->id, $user_id);
 
@@ -2364,7 +2393,11 @@ class CheckoutController extends Controller
 
                     if ($cart_info && $cart_info->is_offer) {
                         if ($cart_info->offer_type == 'flat') {
-                            $variant_offer_price = max(0, $variant_orginal_price - ($cart_info->discount_amount));
+                            if ($variant_orginal_price > $cart_info->discount_amount) {
+                                $variant_offer_price = max(0, $variant_orginal_price - ($cart_info->discount_amount));
+                            } else {
+                                $variant_offer_price = '0';
+                            }
                         } elseif ($cart_info->offer_type == 'percentage') {
                             $variant_offer_price = max(0, $variant_orginal_price - ($variant_orginal_price * $cart_info->discount_amount / 100));
                         }

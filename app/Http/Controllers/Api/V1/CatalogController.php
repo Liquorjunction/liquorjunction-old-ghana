@@ -907,7 +907,12 @@ class CatalogController extends Controller
             $subcatOffer = null;
             $catOffer = null;
             $brandOffer = null;
+            $orig = floatval($p['original_price']);
             foreach ($activeOffers as $offer) {
+                // If flat offer, only valid if product selling price > discount amount!
+                if ($offer->offer_type === 'flat' && $orig > 0 && floatval($offer->dis_amount) >= $orig) {
+                    continue; // Skip this flat offer, allowing lower priority eligible offers (e.g. Category percentage) to take effect
+                }
                 if ($offer->product_id && $offer->product_id == $pid) { $productOffer = $offer; break; }
                 if ($offer->subcategory_id && $offer->subcategory_id == $scid && !$subcatOffer) { $subcatOffer = $offer; }
                 if ($offer->category_id && empty($offer->subcategory_id) && $offer->category_id == $cid && !$catOffer) { $catOffer = $offer; }
@@ -936,7 +941,9 @@ class CatalogController extends Controller
                 $orig = floatval($p['original_price']);
                 $calculatedFinal = $orig;
                 if ($matchedOffer->offer_type === 'flat') {
-                    $calculatedFinal = max(0, $orig - floatval($matchedOffer->dis_amount));
+                    if ($orig > floatval($matchedOffer->dis_amount)) {
+                        $calculatedFinal = max(0, $orig - floatval($matchedOffer->dis_amount));
+                    }
                 } elseif ($matchedOffer->offer_type === 'percentage') {
                     $calculatedFinal = max(0, $orig - ($orig * floatval($matchedOffer->dis_amount) / 100));
                 }
@@ -1225,17 +1232,16 @@ class CatalogController extends Controller
             $disAmount = floatval($offer->dis_amount);
 
             if ($offer->offer_type === 'flat') {
-                $expr = "GREATEST(0, {$priceCol} - {$disAmount})";
+                $whenBranches[] = "WHEN {$condStr} AND {$priceCol} > {$disAmount} THEN ({$priceCol} - {$disAmount})";
             } elseif ($offer->offer_type === 'percentage') {
                 $factor = (100.0 - $disAmount) / 100.0;
                 if ($factor < 0) $factor = 0;
                 $factorStr = number_format($factor, 4, '.', '');
                 $expr = "GREATEST(0, ROUND({$priceCol} * {$factorStr}, 2))";
+                $whenBranches[] = "WHEN {$condStr} THEN {$expr}";
             } else {
                 continue;
             }
-
-            $whenBranches[] = "WHEN {$condStr} THEN {$expr}";
         }
 
         if (empty($whenBranches)) {
@@ -1420,6 +1426,16 @@ class CatalogController extends Controller
 
         foreach ($activeOffers as $offer) {
             $q = DB::table('product as p')->where('p.status', 1);
+            if ($offer->offer_type === 'flat') {
+                $dis = floatval($offer->dis_amount);
+                $q->whereExists(function($sq) use ($dis) {
+                    $sq->select(DB::raw(1))
+                       ->from('product_variants as pv_chk')
+                       ->whereColumn('pv_chk.product_id', 'p.id')
+                       ->where('pv_chk.status', 1)
+                       ->where('pv_chk.variant_price', '>', $dis);
+                });
+            }
             if (!empty($offer->product_id)) {
                 $q->where('p.id', $offer->product_id);
             } elseif (!empty($offer->subcategory_id)) {
