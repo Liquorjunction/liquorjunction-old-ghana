@@ -1,4 +1,4 @@
-<a href="{{ route('cart') }}">
+<a href="{{ route('cart') }}" class="floating-cart-link">
 <div class="floating-cart pulse" id="floatingCart">
 
     <!-- 🛒 Cart Icon -->
@@ -19,11 +19,17 @@
    z-index: 990 ensures it sits nicely above standard content,
    but naturally sits UNDER/BEHIND the modal backdrop (1050) and dialog (1060) when a modal opens.
 */
-.floating-cart {
+.floating-cart-link {
     position: fixed;
     right: 80px;
     bottom: 30px;
     z-index: 990 !important;
+    display: inline-block;
+    text-decoration: none;
+}
+
+.floating-cart {
+    position: relative;
 
     height: 70px;
     width: 70px;
@@ -49,6 +55,7 @@
 }
 
 /* When modal is open: stays behind modal backdrop and prevents click interception */
+body.modal-open .floating-cart-link,
 body.modal-open .floating-cart {
     z-index: 990 !important;
     pointer-events: none !important;

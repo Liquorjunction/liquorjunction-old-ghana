@@ -34,6 +34,7 @@ use Carbon\Carbon;
 use App\Models\Bogo;
 use App\Models\Offers;
 use App\Models\LoyaltyPoints;
+use App\Models\Cms;
 
 class ProductController extends Controller
 {
@@ -4014,23 +4015,24 @@ class ProductController extends Controller
                     ->where('store_timing_week.status', 1)
                     ->where('store_timing_week.store_id', $map->id)
                     ->select('store_timing_week.*', 'week_list.name as week_name')
+                    ->orderBy('store_timing_week.week_id', 'ASC')
                     ->get();
 
                 $contactNumber = '';
                 if (!empty($map->phone_code)) {
-                    $contactNumber .= '+' . $map->phone_code . ' ';
+                    $contactNumber .= '+' . trim($map->phone_code) . ' ';
                 }
                 if (!empty($map->contact_number)) {
-                    $contactNumber .= $map->contact_number;
+                    $contactNumber .= trim($map->contact_number);
                 }
 
                 $mapList['id'] = strval($map->id);
                 $mapList['store_id'] = strval($map->id);
                 $mapList['store_name'] = strval($map->store_name);
                 $mapList['store_logo'] = asset('assets/frontend/images/logo.png');
-                $mapList['store_address'] = strval(@$map->address ?? '');
-                $mapList['store_email'] = strval(@$map->email ?? '');
-                $mapList['store_contact_number'] = strval($contactNumber);
+                $mapList['store_address'] = strval(trim(@$map->address ?? ''));
+                $mapList['store_email'] = strval(trim(@$map->email ?? ''));
+                $mapList['store_contact_number'] = strval(trim($contactNumber));
                 $mapList['latitude'] = strval($map->latitude ?? '');
                 $mapList['longitude'] = strval($map->longitude ?? '');
 
@@ -4047,6 +4049,18 @@ class ProductController extends Controller
                     $mapArr[] = $mapList;
                 }
 
+                $cms = Cms::where([
+                    ['status', '=', '1'],
+                    ['id', '=', 28]
+                ])->first();
+
+                $cms_title = $cms->page_name ?? '';
+                $cms_description = $cms->mobile_page_content ?? '';
+                $cms_photo = $cms->photo ?? '';
+
+                $mainArr['cms_title'] = strval($cms_title);
+                $mainArr['cms_description'] = strval(urldecode($cms_description));
+                $mainArr['cms_photo'] = !empty(trim($cms_photo)) ? asset("uploads/cms/" . urldecode($cms_photo)) : '';
                 $mainArr['product_list'] = $mapArr;
 
                 $result['code']     =  strval(1);

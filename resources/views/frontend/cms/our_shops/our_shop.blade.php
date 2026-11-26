@@ -19,18 +19,11 @@
 @endif
 <section class="cms shop pt-40 pb-60">
     <div class="container">
-        <div class="shop-title">
-            <h2><span style="font-size:24px;">Welcome To Our Shops</span></h2>
-            @if(!empty($page_content))
-                <div class="shop-title">
-                    {!! html_entity_decode($page_content) !!}
-                </div>
-            @else
-                <div class="shop-title">
-                    <p>Welcome to Liquor Junction. You can browse our incredible selection of Whiskies, Spirits, Champagnes and much more.</p>
-                </div>
-            @endif
-        </div>
+        @if(!empty($page_content))
+            <div class="shop-title">
+                {!! html_entity_decode($page_content) !!}
+            </div>
+        @endif
 
         <div class="row shop-row">
             @forelse($stores as $store)
