@@ -2,6 +2,8 @@
 /vendor
 /storage/framework/
 /storage/logs/
+/storage/app/public/uploads/*
+!/storage/app/public/uploads/.gitkeep
 .env
 
 # Public: Uploads & Local Generated Files (Ignore All Local Uploads)

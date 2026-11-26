@@ -112,6 +112,13 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="
     padding-left: 80px !important;
 }
 
+/* Brand search input with leading icon retains left padding */
+.brand-search-box input,
+.brand-search-input {
+    padding-left: 38px !important;
+    padding-right: 14px !important;
+}
+
 /* Textarea comfortable rounded styling */
 textarea {
     border-radius: 20px !important;
@@ -370,6 +377,111 @@ textarea {
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f1f5f9;
 }
+
+/* ========================================================
+   10. Product Card Title & Rating Alignment
+   Prevent long titles from colliding with or hiding the rating
+   ======================================================== */
+.bs-box .bs-content {
+    position: relative;
+}
+
+.bs-box .bs-content:has(.product-rating) h6,
+.bs-content:has(.product-rating) h6,
+.offers-content:has(.product-rating) h6 {
+    padding-right: 48px !important;
+    max-width: 100% !important;
+    word-break: break-word;
+}
+
+@supports not (selector(:has(*))) {
+    .bs-box .bs-content h6,
+    .bs-content h6,
+    .offers-content h6 {
+        padding-right: 48px !important;
+        max-width: 100% !important;
+    }
+}
+
+.bs-box .bs-content .product-rating,
+.bs-content .product-rating,
+.offers-content .product-rating {
+    position: absolute !important;
+    top: 2px !important;
+    right: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+    padding: 0 !important;
+    z-index: 2 !important;
+    line-height: 1 !important;
+}
+
+.bs-content .product-rating span,
+.offers-content .product-rating span {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #242424 !important;
+    line-height: 1 !important;
+}
+
+.bs-content .product-rating i,
+.offers-content .product-rating i {
+    display: inline-flex !important;
+    align-items: center !important;
+    line-height: 1 !important;
+}
+
+/* ========================================================
+   11. Product Image Zoom Effect (Stay Within Div Container)
+   ======================================================== */
+.bs-image,
+.offers-image {
+    position: relative !important;
+    overflow: hidden !important;
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    mask-image: radial-gradient(white, black);
+    transform: translateZ(0);
+    border-radius: 14px;
+}
+
+.bs-image > a,
+.offers-image > a {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    position: relative !important;
+    border-radius: inherit;
+}
+
+.bs-image img,
+.offers-image img {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+    transform: scale(1);
+    transform-origin: center center;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.bs-box:hover .bs-image img,
+.offers-box:hover .offers-image img,
+.bs-image:hover img,
+.offers-image:hover img {
+    transform: scale(1.08) !important;
+}
+
 
 
 

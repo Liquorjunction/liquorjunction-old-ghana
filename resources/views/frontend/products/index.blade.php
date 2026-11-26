@@ -578,17 +578,19 @@
     /* Brand Search Box */
     .brand-search-box {
         position: relative;
-        margin-bottom: 10px;
+        margin-top: 6px;
+        margin-bottom: 12px;
         display: flex;
         align-items: center;
+        width: 100%;
     }
     .brand-search-box i {
         position: absolute;
-        left: 10px;
+        left: 14px;
         top: 50%;
         transform: translateY(-50%);
-        font-size: 12px;
-        color: var(--lj-muted);
+        font-size: 13px;
+        color: #94a3b8;
         pointer-events: none;
         display: flex;
         align-items: center;
@@ -596,23 +598,31 @@
         line-height: 1;
         width: 14px;
         height: 14px;
+        z-index: 2;
     }
-    .brand-search-box input {
+    .brand-search-box input,
+    .brand-search-box .brand-search-input {
         width: 100%;
-        height: 32px;
-        padding: 5px 10px 5px 30px;
+        height: 36px;
+        padding: 6px 14px 6px 38px !important;
         border: 1px solid #dcdcdc;
-        border-radius: 6px;
-        font-size: 12.5px;
+        border-radius: 20px !important;
+        font-size: 13px;
         line-height: normal;
         background: #ffffff;
         outline: none;
         box-sizing: border-box;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    .brand-search-box input:focus {
+    .brand-search-box input:focus,
+    .brand-search-box .brand-search-input:focus {
         border-color: var(--lj-gold);
         box-shadow: 0 0 0 2px rgba(251, 181, 22, 0.2);
+    }
+    .brand-search-box input::placeholder,
+    .brand-search-box .brand-search-input::placeholder {
+        color: #94a3b8;
+        font-size: 12.5px;
     }
 
     /* Active Filter Pills Bar (Chips) - Swiper Slider Integration */
@@ -839,6 +849,100 @@
     }
     @media (max-width: 476px) {
         .bs-box .bs-content input[type="checkbox"].favs-icon { top: -266px !important; }
+    }
+
+    /* Product Title & Rating Alignment: Prevent long product titles from overlapping top-right rating */
+    .bs-box .bs-content {
+        position: relative;
+    }
+    .bs-box .bs-content:has(.product-rating) h6,
+    .bs-content:has(.product-rating) h6,
+    .offers-content:has(.product-rating) h6 {
+        padding-right: 48px !important;
+        max-width: 100% !important;
+        word-break: break-word;
+    }
+    @supports not (selector(:has(*))) {
+        .bs-box .bs-content h6,
+        .bs-content h6,
+        .offers-content h6 {
+            padding-right: 48px !important;
+            max-width: 100% !important;
+        }
+    }
+    .bs-box .bs-content .product-rating,
+    .bs-content .product-rating,
+    .offers-content .product-rating {
+        position: absolute !important;
+        top: 2px !important;
+        right: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 3px !important;
+        white-space: nowrap !important;
+        border: 0 !important;
+        padding: 0 !important;
+        z-index: 2 !important;
+        line-height: 1 !important;
+    }
+    .bs-content .product-rating span,
+    .offers-content .product-rating span {
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        color: #242424 !important;
+        line-height: 1 !important;
+    }
+    .bs-content .product-rating i,
+    .offers-content .product-rating i {
+        display: inline-flex !important;
+        align-items: center !important;
+        line-height: 1 !important;
+    }
+
+    /* Product Image Zoom: Keep zoomed image strictly within image container */
+    .bs-image,
+    .offers-image {
+        position: relative !important;
+        overflow: hidden !important;
+        -webkit-mask-image: -webkit-radial-gradient(white, black);
+        mask-image: radial-gradient(white, black);
+        transform: translateZ(0);
+        border-radius: 14px;
+    }
+
+    .bs-image > a,
+    .offers-image > a {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden !important;
+        position: relative !important;
+        border-radius: inherit;
+    }
+
+    .bs-image img,
+    .offers-image img {
+        max-width: 100% !important;
+        max-height: 100% !important;
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain !important;
+        display: block !important;
+        transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+        transform: scale(1);
+        transform-origin: center center;
+        will-change: transform;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+    }
+
+    .bs-box:hover .bs-image img,
+    .offers-box:hover .offers-image img,
+    .bs-image:hover img,
+    .offers-image:hover img {
+        transform: scale(1.08) !important;
     }
 
     /* =========================================================

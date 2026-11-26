@@ -114,6 +114,8 @@
         let customer_mobile_number = "+" + phone_code + mobile_number;
 
         if (order_id && order_status) {
+            $('#updateOrderStatus').modal('hide');
+            $('.loader').css("visibility", "visible");
             $.ajax({
                 url: "{{ route('adminorder.updateOrderStatus') }}",
                 type: 'POST',
@@ -122,7 +124,11 @@
                     order_status: order_status,
                     note: note
                 },
+                beforeSend: function() {
+                    $('.loader').css("visibility", "visible");
+                },
                 success: function(result) {
+                    $('.loader').css("visibility", "hidden");
                     $('#updateOrderStatus').modal('hide');
                     $('#order_type_status').trigger('change');
 
@@ -154,6 +160,16 @@
                             $('#success_file_popup').empty();
                         }, 5000);
                     }
+                },
+                error: function(xhr) {
+                    $('.loader').css("visibility", "hidden");
+                    $('#success_file_popup').append(messages('alert-danger', 'Failed to update order status. Please try again.'));
+                    setTimeout(function() {
+                        $('#success_file_popup').empty();
+                    }, 5000);
+                },
+                complete: function() {
+                    $('.loader').css("visibility", "hidden");
                 }
             });
         } else {

@@ -2467,26 +2467,22 @@ static function getUserCartItems()
             ],
         ];
         $dataString = json_encode($data);
-        $headers = [
-            'Authorization: key=' . $SERVER_API_KEY,
-            'Content-Type: application/json',
-        ];
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'https://fcm.googleapis.com/fcm/send');
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $dataString);
-        $response = curl_exec($ch);
+        $client = new Client();
 
-        if ($response === false) {
-            $result_noti = 0;
-        } else {
-            $result_noti = 1;
+        try {
+            $client->post('https://fcm.googleapis.com/fcm/send', [
+                'headers' => [
+                    'Authorization' => 'key=' . $SERVER_API_KEY,
+                    'Content-Type' => 'application/json',
+                ],
+                'body' => $dataString,
+                'verify' => false,
+                'http_errors' => false,
+            ]);
+            return 1;
+        } catch (\Throwable $e) {
+            return 0;
         }
-        return $result_noti;
     }
 
     static function dateTz($date)
