@@ -283,6 +283,9 @@ class CartController extends Controller
             $userData = DB::table('main_users')->where('uniqid',$request->uniqid)->first();
             $user_id = $userData->id;
 
+            // Real-time sync of active offers & deals for all items in the cart
+            \App\Helpers\Helper::syncCartDeals($user_id, $request->uniqid);
+
             // if($product_variant_details->variant_discounted_price !='' && $product_variant_details->variant_discounted_price != 0.00){   
             //     $varint_pro_price = $product_variant_details->variant_discounted_price;
             //     $tcart_price = @$product_variant_details->variant_discounted_price ? ($product_variant_details->variant_discounted_price * $quantity) : 0; 
@@ -466,6 +469,9 @@ class CartController extends Controller
             $userData = DB::table('main_users')->where('uniqid',$request->uniqid)->first();
             $user_id = $userData->id;
 
+            // Real-time sync of active offers & deals for all items in the cart
+            \App\Helpers\Helper::syncCartDeals($user_id, $request->uniqid);
+
             $cartData = DB::table('cart')->where('user_id',$user_id)->where('product_id',$product_id)->where('status',1)->first();
 
             logger()->info('cartData: ' . json_encode($cartData));
@@ -616,6 +622,9 @@ class CartController extends Controller
         {
             $userData = DB::table('main_users')->where('uniqid',$request->uniqid)->first();
             $user_id = $userData->id;
+
+            // Real-time sync of active offers & deals for all items in the cart
+            \App\Helpers\Helper::syncCartDeals($user_id, $request->uniqid);
 
             $cartData = DB::table('cart')->where('user_id',$user_id)->where('product_id',$product_id)->where('status',1)->first();
 
@@ -855,6 +864,9 @@ class CartController extends Controller
         {
             $userData = DB::table('main_users')->where('uniqid',$request->uniqid)->first();
             $user_id = $userData->id;
+
+            // Real-time sync of active offers & deals for all items in the cart
+            \App\Helpers\Helper::syncCartDeals($user_id, $request->uniqid);
 
             $userAddress = DB::table('user_address')->where('status',1)->where('user_id',$user_id)->where('is_selected_address_id',1)->first();
 
@@ -1098,6 +1110,9 @@ class CartController extends Controller
 
             $userData = DB::table('main_users')->where('uniqid',$request->uniqid)->first();
             $user_id = $userData->id;
+
+            // Real-time sync of active offers & deals for all items in the cart
+            \App\Helpers\Helper::syncCartDeals($user_id, $request->uniqid);
             $order_type = 1;
 
             $updatepsw = Cart::where('user_id', $user_id)->update(array(
@@ -1288,6 +1303,9 @@ class CartController extends Controller
         {
             $userData = DB::table('main_users')->where('uniqid',$request->uniqid)->first();
             $user_id = $userData->id;
+
+            // Real-time sync of active offers & deals for all items in the cart
+            \App\Helpers\Helper::syncCartDeals($user_id, $request->uniqid);
             // echo "<pre>";print_r($user_id);exit();
             $address_id = $request->address_id;
 

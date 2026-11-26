@@ -1170,6 +1170,9 @@ class CheckoutController extends Controller
         $userData = !$isGuest ? DB::table('main_users')->where('uniqid', $request->uniqid)->first() : null;
         $user_id = $userData ? $userData->id : 0;
 
+        // Real-time sync of active offers & deals for all items in checkout
+        \App\Helpers\Helper::syncCartDeals($user_id, $request->uniqid);
+
         $purchase_type = $request->purchase_type;
         $coupon_id = $request->coupon_id;
         if (empty($coupon_id) || strtolower($coupon_id) === 'null') {
@@ -1764,6 +1767,9 @@ class CheckoutController extends Controller
             $userData = DB::table('main_users')->where('uniqid', $request->uniqid)->first();
             $user_id = $userData ? $userData->id : null;
         }
+
+        // Real-time sync of active offers & deals before locking prices for order placement
+        \App\Helpers\Helper::syncCartDeals($user_id, $request->uniqid);
 
         $purchase_type = $request->purchase_type;
         $coupon_id = $request->coupon_id;

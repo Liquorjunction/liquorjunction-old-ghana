@@ -3073,6 +3073,9 @@ class ProductController extends Controller
                 }
                 
                 $userData = DB::table('main_users')->where('uniqid',$request->uniqid)->first();
+                if ($userData) {
+                    Helper::syncCartDeals($userData->id, $request->uniqid);
+                }
                 $cartData = Cart::select(DB::raw('group_concat(product_variant_id) as variantIds'))->where('user_id', $userData->id)->groupBy('user_id')->where('status', 1)->first();
                 
                 if(empty($cartData)){
@@ -3310,6 +3313,9 @@ class ProductController extends Controller
          if($post)
         {
             $userData = DB::table('main_users')->where('uniqid',$request->uniqid)->first();
+            if ($userData) {
+                Helper::syncCartDeals($userData->id, $request->uniqid);
+            }
 
             $cartData = DB::table('cart')
                 ->leftJoin('product', 'product.id', '=', 'cart.product_id')

@@ -46,6 +46,9 @@ class CartController extends Controller
         $user_id = $this->user_id;
         $setting = $this->setting;        
         
+        // Real-time sync of active offers & deals for all items in the cart
+        Helper::syncCartDeals($user_id);
+
         $cart_info = Session::get('cart_info');
         $variantIds = array();
 
@@ -380,6 +383,9 @@ class CartController extends Controller
 
         $user_id = $this->user_id;
         $is_product_discount[] = false;
+
+        // Real-time sync of all cart items
+        Helper::syncCartDeals($user_id);
 
 
         // Resolve Deal for this product (BOGO > Offer, with Priority: Product > Subcat > Cat > Brand)

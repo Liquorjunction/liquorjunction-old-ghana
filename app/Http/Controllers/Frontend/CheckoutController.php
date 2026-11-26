@@ -75,6 +75,9 @@ class CheckoutController extends Controller
         $isGuest = $request->get('mode') === 'guest';
         $user_id = Auth::guard('user')->id() ?: $this->user_id;
 
+        // Real-time sync of active offers & deals for all items in the checkout
+        Helper::syncCartDeals($user_id);
+
         $is_buy_now = 0;
 
         if (empty($user_id) && !$isGuest) {
@@ -1210,6 +1213,10 @@ class CheckoutController extends Controller
     public function getUserAreaTax(Request $request)
     {
         $user_id = $this->user_id;
+
+        // Real-time sync of active offers & deals before locking prices for order placement
+        Helper::syncCartDeals($user_id);
+
         $user_address_id = $request->user_address_id;
         $coupon_code_id = $request->coupon_code_id;
         $isGuest = $request->get('mode') === 'guest' || empty($user_id);
@@ -1649,6 +1656,10 @@ class CheckoutController extends Controller
         }
 
         $user_id = $this->user_id;
+
+        // Real-time sync of active offers & deals before locking prices for order placement
+        Helper::syncCartDeals($user_id);
+
         $user_address_id = $request->user_address_id;
         $user_bill_address_id = $request->user_bill_address_id;
         $payment_method = $request->payment_method;

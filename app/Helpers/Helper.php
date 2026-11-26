@@ -2264,6 +2264,164 @@ static function getUserCartItems()
         ];
     }
 
+    /**
+     * Real-time sync of active Offers and BOGO deals on cart items.
+     * If an offer has expired, is deactivated, or flat threshold is violated,
+     * it updates the cart item in real-time to remove the expired discount or
+     * apply any new active deal.
+     * Supports logged-in user database carts, API guest carts (by uniqid),
+     * web guest session carts ('cart_info'), and Buy Now sessions ('buy_now_info').
+     */
+    public static function syncCartDeals($userId = null, $uniqid = null)
+    {
+        // 1. Database Cart: Logged-in user or API guest with uniqid
+        if (!empty($userId) || !empty($uniqid)) {
+            $query = Cart::where('status', 1);
+            if (!empty($userId)) {
+                $query->where('user_id', $userId);
+            } else {
+                $query->where('uniqid', $uniqid);
+            }
+            $cartItems = $query->get();
+
+            foreach ($cartItems as $cartItem) {
+                $variant = ProductVariants::find($cartItem->product_variant_id);
+                if (!$variant) continue;
+
+                $product = Product::find($cartItem->product_id);
+                if (!$product) continue;
+
+                $deal = self::resolveProductDeal(
+                    $product->id,
+                    $product->category_id,
+                    $product->subcategory_id,
+                    $product->brand_id,
+                    $variant->variant_price
+                );
+
+                $newBogo = $deal['is_bogo'] ? 1 : 0;
+                $newOffer = (!$deal['is_bogo'] && $deal['is_offer']) ? 1 : 0;
+                $newOfferType = $newOffer ? $deal['offer_type'] : null;
+                $newDiscountAmount = $newOffer ? $deal['discount_amount'] : null;
+
+                $qty = (int) $cartItem->quantity;
+                $varint_pro_price = $variant->variant_price;
+                $offer_price = $variant->variant_discounted_price;
+
+                if ($variant->variant_discounted_price != '' && $variant->variant_discounted_price != 0.00) {
+                    $tcart_price = $variant->variant_discounted_price * $qty;
+                } else {
+                    $tcart_price = $variant->variant_price * $qty;
+                }
+
+                $needsUpdate = false;
+                if (
+                    $cartItem->is_bogo != $newBogo ||
+                    $cartItem->is_offer != $newOffer ||
+                    $cartItem->offer_type != $newOfferType ||
+                    $cartItem->discount_amount != $newDiscountAmount ||
+                    $cartItem->product_price != $varint_pro_price
+                ) {
+                    $needsUpdate = true;
+                }
+
+                if ($needsUpdate) {
+                    $cartItem->is_bogo = $newBogo;
+                    $cartItem->is_offer = $newOffer;
+                    $cartItem->offer_type = $newOfferType;
+                    $cartItem->discount_amount = $newDiscountAmount;
+                    $cartItem->product_price = $varint_pro_price;
+                    $cartItem->offer_price = $offer_price;
+                    $cartItem->total_price = $tcart_price;
+                    $cartItem->save();
+                }
+            }
+        }
+
+        // 2. Web Guest Session Cart: Session::get('cart_info')
+        if (Session::has('cart_info')) {
+            $cart_info = Session::get('cart_info');
+            if (!empty($cart_info) && is_array($cart_info)) {
+                $changed = false;
+                foreach ($cart_info as $productId => &$variants) {
+                    if (!is_array($variants)) continue;
+                    $product = Product::find($productId);
+                    if (!$product) continue;
+
+                    foreach ($variants as $variantId => &$itemData) {
+                        if (!is_array($itemData)) continue;
+                        $variant = ProductVariants::find($variantId);
+                        if (!$variant) continue;
+
+                        $deal = self::resolveProductDeal(
+                            $product->id,
+                            $product->category_id,
+                            $product->subcategory_id,
+                            $product->brand_id,
+                            $variant->variant_price
+                        );
+
+                        $newBogo = $deal['is_bogo'] ? 1 : 0;
+                        $newOffer = (!$deal['is_bogo'] && $deal['is_offer']) ? 1 : 0;
+                        $newOfferType = $newOffer ? $deal['offer_type'] : null;
+                        $newDiscountAmount = $newOffer ? $deal['discount_amount'] : null;
+
+                        if (
+                            ($itemData['is_bogo'] ?? 0) != $newBogo ||
+                            ($itemData['is_offer'] ?? 0) != $newOffer ||
+                            ($itemData['offer_type'] ?? null) != $newOfferType ||
+                            ($itemData['discount_amount'] ?? null) != $newDiscountAmount
+                        ) {
+                            $itemData['is_bogo'] = $newBogo;
+                            $itemData['is_offer'] = $newOffer;
+                            $itemData['offer_type'] = $newOfferType;
+                            $itemData['discount_amount'] = $newDiscountAmount;
+                            $changed = true;
+                        }
+                    }
+                }
+                if ($changed) {
+                    Session::put('cart_info', $cart_info);
+                }
+            }
+        }
+
+        // 3. Web Buy Now Session: Session::get('buy_now_info')
+        if (Session::has('buy_now_info')) {
+            $buyNow = Session::get('buy_now_info');
+            if (!empty($buyNow['product_id']) && !empty($buyNow['variantId'])) {
+                $product = Product::find($buyNow['product_id']);
+                $variant = ProductVariants::find($buyNow['variantId']);
+                if ($product && $variant) {
+                    $deal = self::resolveProductDeal(
+                        $product->id,
+                        $product->category_id,
+                        $product->subcategory_id,
+                        $product->brand_id,
+                        $variant->variant_price
+                    );
+                    $newBogo = $deal['is_bogo'] ? 1 : 0;
+                    $newOffer = (!$deal['is_bogo'] && $deal['is_offer']) ? 1 : 0;
+                    $newOfferType = $newOffer ? $deal['offer_type'] : null;
+                    $newDiscountAmount = $newOffer ? $deal['discount_amount'] : null;
+
+                    if (
+                        ($buyNow['is_bogo'] ?? 0) != $newBogo ||
+                        ($buyNow['is_offer'] ?? 0) != $newOffer ||
+                        ($buyNow['offer_type'] ?? null) != $newOfferType ||
+                        ($buyNow['discount_amount'] ?? null) != $newDiscountAmount
+                    ) {
+                        $buyNow['is_bogo'] = $newBogo;
+                        $buyNow['is_offer'] = $newOffer;
+                        $buyNow['offer_type'] = $newOfferType;
+                        $buyNow['discount_amount'] = $newDiscountAmount;
+                        Session::put('buy_now_info', $buyNow);
+                    }
+                }
+            }
+        }
+    }
+
     static function getUserCartQuantity($variantId, $user_id)
     {
         if (!empty($user_id)) {
