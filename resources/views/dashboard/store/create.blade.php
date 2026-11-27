@@ -45,7 +45,7 @@
         <div class="box-tool">
             <ul class="nav">
                 <li class="nav-item inline">
-                    <a class="nav-link" href="{{ route('cms') }}">
+                    <a class="nav-link" href="{{ route('store') }}">
                         <i class="material-icons md-18">×</i>
                     </a>
                 </li>

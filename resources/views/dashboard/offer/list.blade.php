@@ -122,11 +122,12 @@
                         <tr>
                             <th id="offer">Offer Type</th>
                             <th id="product">Applicable On</th>
-                            <th id="amount">Discount Amount/ Percentage(%)</th>
+                            <th id="applied_item">Applied Item</th>
+                            <th id="amount">Discount</th>
                             <th id="start_date">Start Date</th>
                             <th id="expiry">Expiry Date</th>
                             <th id="created">Created On</th>
-                            <th id="count">Total Used Count</th>
+                            <th id="count">Used</th>
                             {{-- <th id="minimum">Minimum Amount</th> --}}
                             {{-- <th id="maximum">Maximum Amount</th> --}}
                             {{-- <th id="use">Usage Limit</th> --}}
@@ -1065,6 +1066,7 @@
                     columns: [
                         { data: 'offer', name: 'offer_type' },
                         { data: 'product', name: 'product_type' },
+                        { data: 'applied_item', name: 'applied_item', orderable: false },
                         { data: 'discount', name: 'dis_amount' },
                         { data: 'startDate', name: 'start_date' },
                         { data: 'expiry', name: 'expiry_date' },

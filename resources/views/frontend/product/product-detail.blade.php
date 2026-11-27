@@ -1030,9 +1030,11 @@ video::-webkit-media-controls-timeline {
                     if (response.is_in_cart == true) {
                         $("#go-to-cart").show();
                         $("#add-to-bucket").hide();
+                        $(".counter__input").val(response.cart_qty || 1);
                     }else{
                         $("#go-to-cart").hide();
                         $("#add-to-bucket").show();
+                        $(".counter__input").val(1);
                     }
                 }
             });

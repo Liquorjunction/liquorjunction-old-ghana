@@ -1,0 +1,343 @@
+/* ==========================================================================
+   Liquor Junction - Split Auth Layout (100% Matched to Frontend Theme)
+   Theme Tokens: #fbb516 (Brand Gold), #fff7e3 (Soft Cream), #242424 (Charcoal), #ffffff (White), Outfit
+   ========================================================================== */
+body#appBody.lj-auth-body {
+    background-color: #ffffff;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+}
+
+.lj-auth-shell {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    background-color: #ffffff;
+}
+
+/* Left Design Side — Desktop Only (>= 992px), Hidden on Mobile */
+.lj-auth-visual {
+    display: none;
+}
+
+@media (min-width: 992px) {
+    .lj-auth-visual {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        width: 48%;
+        flex: 0 0 48%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 32px 40px;
+        background-color: #fff7e3;
+        border-right: 4px solid #fbb516;
+        overflow: hidden;
+    }
+}
+
+.lj-auth-visual__top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lj-auth-visual__logo img {
+    height: 82px;
+    width: auto;
+    object-fit: contain;
+}
+
+.lj-auth-visual__showcase {
+    position: relative;
+    width: 100%;
+    flex: 1 1 auto;
+    margin: 22px 0;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid rgba(36, 36, 36, 0.08);
+    box-shadow: 0px 20px 50px rgba(36, 36, 36, 0.12);
+    background-color: #242424;
+    min-height: 300px;
+}
+
+.lj-auth-visual__showcase img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+.lj-auth-visual__caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 48px 28px 24px;
+    background: linear-gradient(180deg, rgba(36, 36, 36, 0) 0%, rgba(24, 24, 24, 0.78) 48%, rgba(24, 24, 24, 0.94) 100%);
+}
+
+.lj-auth-visual__accent-bar {
+    display: block;
+    width: 48px;
+    height: 4px;
+    border-radius: 4px;
+    background-color: #fbb516;
+    margin-bottom: 12px;
+}
+
+.lj-auth-visual__caption h2 {
+    font-size: 26px;
+    line-height: 34px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 6px;
+}
+
+.lj-auth-visual__caption p {
+    font-size: 14px;
+    line-height: 21px;
+    color: rgba(255, 255, 255, 0.85);
+    margin-bottom: 0;
+}
+
+.lj-auth-visual__footer {
+    text-align: center;
+    color: #695f70;
+    font-size: 13px;
+    font-weight: 500;
+    padding-top: 4px;
+}
+
+/* Right Form Side (Full Width on Mobile) */
+.lj-auth-main {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff;
+    position: relative;
+    z-index: 0;
+    padding: 20px 16px 36px;
+}
+
+/* Subtle warm cream top accent on mobile, matching original .registration::before */
+@media (max-width: 991px) {
+    .lj-auth-main::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 220px;
+        background-color: #fff7e3;
+        z-index: -1;
+    }
+}
+
+@media (min-width: 992px) {
+    .lj-auth-main {
+        width: 52%;
+        flex: 0 0 52%;
+        padding: 28px 44px 40px;
+    }
+}
+
+.lj-auth-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto 18px;
+}
+
+.lj-auth-mobile-logo {
+    display: inline-flex;
+    align-items: center;
+}
+
+.lj-auth-mobile-logo img {
+    height: 62px;
+    width: auto;
+    object-fit: contain;
+}
+
+@media (min-width: 992px) {
+    .lj-auth-mobile-logo {
+        display: none;
+    }
+    .lj-auth-topbar {
+        justify-content: flex-end;
+        margin-bottom: 12px;
+    }
+}
+
+.lj-auth-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border-radius: 20px;
+    background: #ffffff;
+    border: 1px solid #dddddd;
+    color: #242424;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 18px;
+    transition: all 0.3s ease;
+}
+
+.lj-auth-back-link:hover {
+    background: #fbb516;
+    border-color: #fbb516;
+    color: #242424;
+}
+
+.lj-auth-form-center {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.lj-auth-form-wrap {
+    width: 100%;
+    max-width: 475px;
+    margin: 0 auto;
+}
+
+.lj-auth-form-wrap.lj-auth-form-wrap--wide {
+    max-width: 530px;
+}
+
+.lj-auth-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.lj-auth-header h1 {
+    font-size: 36px;
+    line-height: 44px;
+    font-weight: 500;
+    color: #242424;
+    margin-bottom: 0;
+}
+
+.lj-auth-header p {
+    font-size: 14px;
+    line-height: 21px;
+    color: #695f70;
+    font-weight: 400;
+    margin-top: 8px;
+    margin-bottom: 0;
+}
+
+.lj-auth-form-wrap .registration-card {
+    margin-top: 0;
+    padding: 32px;
+    background: #ffffff;
+    border: 1px solid #eeeeee;
+    box-shadow: 0px 23px 59px 0px rgba(222, 226, 230, 0.35);
+    border-radius: 20px !important;
+}
+
+@media (max-width: 575px) {
+    .lj-auth-header h1 {
+        font-size: 28px;
+        line-height: 36px;
+    }
+    .lj-auth-form-wrap .registration-card {
+        padding: 22px 18px;
+    }
+}
+
+/* Form Controls & Theme Consistency */
+.lj-auth-form-wrap .form-group {
+    margin-bottom: 18px;
+}
+
+.lj-auth-form-wrap .form-group label {
+    margin-bottom: 8px;
+}
+
+.lj-auth-form-wrap .toggle-password {
+    top: 43px;
+    right: 12px;
+}
+
+.lj-auth-form-wrap .show-password,
+.lj-auth-form-wrap .hide-password {
+    background: transparent;
+    cursor: pointer;
+}
+
+.lj-auth-form-wrap .phone-number .numbers {
+    z-index: 5;
+    background-color: transparent !important;
+    border: none !important;
+}
+
+.lj-auth-form-wrap .solid-button {
+    padding: 12px 24px !important;
+    font-size: 15px !important;
+    line-height: 22px !important;
+    min-height: 48px;
+    font-weight: 500;
+}
+
+.lj-auth-form-wrap .registration-form p {
+    padding-top: 22px;
+}
+
+.lj-auth-form-wrap .registration-social p {
+    padding-top: 22px;
+    margin-bottom: 14px;
+}
+
+.lj-auth-form-wrap .valid_field,
+.lj-auth-form-wrap .red-text {
+    color: #ff4444;
+}
+
+.lj-auth-form-wrap .pass-wrap {
+    gap: 16px;
+    margin: 6px 0 22px;
+}
+
+.lj-auth-form-wrap .pass-wrap input.otp1 {
+    width: 58px;
+    height: 58px;
+    font-size: 28px;
+    line-height: 42px;
+    padding: 0 !important;
+    border-radius: 11px !important;
+}
+
+@media (max-width: 420px) {
+    .lj-auth-form-wrap .pass-wrap {
+        gap: 10px;
+    }
+    .lj-auth-form-wrap .pass-wrap input.otp1 {
+        width: 48px;
+        height: 48px;
+        font-size: 22px;
+    }
+}
+
+.lj-auth-guest-btn {
+    background: #242424 !important;
+    color: #fbb516 !important;
+    margin-top: 12px;
+}
+
+.lj-auth-guest-btn:hover {
+    background: #fbb516 !important;
+    color: #242424 !important;
+}

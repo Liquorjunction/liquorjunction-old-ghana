@@ -36,4 +36,20 @@ class Offers extends Model
     public function get_offer_images() {
         return $this->hasMany(OfferImage::class, 'offer_id');
     }
+
+    public function brand() {
+        return $this->belongsTo(Brand::class, 'brand_id');
+    }
+
+    public function category() {
+        return $this->belongsTo(Categories::class, 'category_id');
+    }
+
+    public function subcategory() {
+        return $this->belongsTo(SubCategories::class, 'subcategory_id');
+    }
+
+    public function product() {
+        return $this->belongsTo(Product::class, 'product_id');
+    }
 }

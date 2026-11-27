@@ -752,32 +752,45 @@ class BogoController extends Controller
 
      private function productDetail($categoryId,$subcategoryId,$brandId,$productId)
     {
+        static $categories = null, $brand = null, $product = null, $subcategories = null;
 
-        $categories = Categories::where('status', 1)->orderby('title', 'ASC')->get();
-        $brand = Brand::where('status', 1)->orderby('title', 'ASC')->get();
-        $product = Product::where('status', 1)->orderby('product_name', 'ASC')->get();
-        $subcategories = SubCategories::where('status', 1)->orderby('title', 'ASC')->get();
+        if ($categories === null) {
+            $categories = Categories::where('status', 1)->orderby('title', 'ASC')->get();
+            $brand = Brand::where('status', 1)->orderby('title', 'ASC')->get();
+            $product = Product::where('status', 1)->orderby('product_name', 'ASC')->get();
+            $subcategories = SubCategories::where('status', 1)->orderby('title', 'ASC')->get();
+        }
 
         if($categoryId && $subcategoryId)
         {
-            return ucfirst(optional($subcategories->firstWhere('id', $subcategoryId))->title) ?? 'N/A';
+            $cat = optional($categories->firstWhere('id', $categoryId))->title;
+            $subcat = optional($subcategories->firstWhere('id', $subcategoryId))->title;
+            $catTitle = $cat ? ucfirst($cat) . ' > ' : '';
+            $name = $catTitle . ($subcat ? ucfirst($subcat) : 'N/A');
         }
         else if($categoryId)
         {
-            return ucfirst(optional($categories->firstWhere('id', $categoryId))->title) ?? 'N/A';
+            $name = ucfirst(optional($categories->firstWhere('id', $categoryId))->title) ?? 'N/A';
         }
         else if($brandId)
         {
-            return ucfirst(optional($brand->firstWhere('id', $brandId))->title) ?? 'N/A';
+            $name = ucfirst(optional($brand->firstWhere('id', $brandId))->title) ?? 'N/A';
         }
         else if($productId)
         {
-            return ucfirst(optional($product->firstWhere('id', $productId))->product_name) ?? 'N/A';
+            $name = ucfirst(optional($product->firstWhere('id', $productId))->product_name) ?? 'N/A';
         }
         else
         {
-            return 'N/A';
+            $name = 'N/A';
         }
+
+        if ($name && $name !== 'N/A' && mb_strlen($name) > 25) {
+            $truncated = mb_substr($name, 0, 25) . '...';
+            return '<span title="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '" data-toggle="tooltip">' . htmlspecialchars($truncated, ENT_QUOTES, 'UTF-8') . '</span>';
+        }
+
+        return htmlspecialchars($name ?? 'N/A', ENT_QUOTES, 'UTF-8');
     }
 
 

@@ -37,9 +37,18 @@
             <h3>View Bogo offer</h3>
             <small>
                 <a href="{{ route('adminHome') }}">{{ __('backend.dashboard') }}</a> /
-                <a href="{{ route('promocode') }}">Bogo offer</a> /
-                View Bogo offer
+                <a href="{{ route('bogo') }}">Bogo Offer</a> /
+                <span>View Bogo offer</span>
             </small>
+        </div>
+        <div class="box-tool">
+            <ul class="nav">
+                <li class="nav-item inline">
+                    <a class="nav-link" href="{{ route('bogo') }}">
+                        <i class="material-icons md-18">&#xe5cd;</i>
+                    </a>
+                </li>
+            </ul>
         </div>
         <input type="hidden" id="product_type" value="{{$Bogo->product_type}}">
         <div class="box nav-active-border b-info">

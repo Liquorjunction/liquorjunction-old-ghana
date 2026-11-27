@@ -29,6 +29,44 @@
             </div>
         </div>
     </div>
+    @if($offerData->product_type == 1)
+    <div class="form-group row">
+        <label class="col-sm-4 form-control-label">Brand</label>
+        <div class="col-sm-8">
+            <div class="show_blade_div">
+                {{ @$offerData->brand->title ?? (\App\Models\Brand::find($offerData->brand_id)->title ?? '-') }}
+            </div>
+        </div>
+    </div>
+    @elseif($offerData->product_type == 2)
+    <div class="form-group row">
+        <label class="col-sm-4 form-control-label">Category</label>
+        <div class="col-sm-8">
+            <div class="show_blade_div">
+                {{ @$offerData->category->title ?? (\App\Models\Categories::find($offerData->category_id)->title ?? '-') }}
+            </div>
+        </div>
+    </div>
+    @if(!empty($offerData->subcategory_id))
+    <div class="form-group row">
+        <label class="col-sm-4 form-control-label">Subcategory</label>
+        <div class="col-sm-8">
+            <div class="show_blade_div">
+                {{ @$offerData->subcategory->title ?? (\App\Models\SubCategories::find($offerData->subcategory_id)->title ?? '-') }}
+            </div>
+        </div>
+    </div>
+    @endif
+    @elseif($offerData->product_type == 3)
+    <div class="form-group row">
+        <label class="col-sm-4 form-control-label">Product</label>
+        <div class="col-sm-8">
+            <div class="show_blade_div">
+                {{ @$offerData->product->product_name ?? (\App\Models\Product::find($offerData->product_id)->product_name ?? '-') }}
+            </div>
+        </div>
+    </div>
+    @endif
     <div class="form-group row discountAmount">
         <label class="col-sm-4 form-control-label">Discount Amount</label>
         <div class="col-sm-8">
@@ -104,8 +142,16 @@
     <div class="form-group row">
         <label class="col-sm-4 form-control-label">Custom URL</label>
         <div class="col-sm-8">
-            <div class="show_blade_div">
-                {{ @$offerData->custom_url ? $offerData->custom_url : "-" }}
+            <div class="show_blade_div text_url" style="word-break: break-all; overflow-wrap: anywhere; height: auto; min-height: 38px; border-radius: 20px;">
+                @if(!empty($offerData->custom_url))
+                    @php
+                        $customUrl = $offerData->custom_url;
+                        $urlLink = (\Illuminate\Support\Str::startsWith($customUrl, ['http://', 'https://', '/'])) ? $customUrl : 'https://' . $customUrl;
+                    @endphp
+                    <a href="{{ $urlLink }}" target="_blank" style="color: #0c7cd5; text-decoration: underline;">{{ $customUrl }}</a>
+                @else
+                    -
+                @endif
             </div>
         </div>
     </div>
@@ -113,7 +159,7 @@
     <div class="form-group row">
         <label class="col-sm-4 form-control-label">Images</label>
         <div class="col-sm-8">
-            @if ($offerData->get_offer_images[0]->image)
+            @if (isset($offerData->get_offer_images) && count($offerData->get_offer_images) > 0 && !empty($offerData->get_offer_images[0]->image))
             <div class="row">
                 <div class="col-sm-12 images">
                     <div id="user_photo" class="col-sm-12 box p-a-xs">

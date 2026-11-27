@@ -639,6 +639,63 @@ window.addEventListener("scroll", resizeHeaderOnScroll);
 $(document).ready(function () {
   // ------------ Counter BEGIN ------------
   var productDetailQtyTimer = null;
+
+  function syncProductDetailCartQuantity(targetVal, onComplete) {
+    var $counter__input = $(".counter__input");
+    var $incBtn = $(".counter__increment");
+    var variant_id = $incBtn.attr("data-id") || $("input[name='pack_size']:checked").val() || $("input[name='pack_size']").first().val();
+    var product_id = $("#prod_ids").val() || $("#add-to-bucket").attr("data-id") || $("#go-to-cart").attr("data-id") || "";
+    var offer_status = parseInt($("#offer_status").val()) || 0;
+    var _token = $('meta[name="csrf-token"]').attr('content') || $('input[name="_token"]').val() || "";
+    var baseUrl = ($('meta[name="base-url"]').attr('content') || $('body').data('base-url') || (window.location.origin + (window.location.pathname.startsWith('/liquorjunction') ? '/liquorjunction' : ''))).replace(/\/+$/, '');
+
+    if (!variant_id || !product_id) {
+      if (typeof onComplete === 'function') onComplete();
+      return;
+    }
+
+    $.ajax({
+      type: "POST",
+      url: baseUrl + "/cart-increment",
+      data: {
+        product_id: product_id,
+        quantity: targetVal,
+        variantId: variant_id,
+        offer_status: offer_status,
+        _token: _token
+      },
+      success: function (response) {
+        if (response.available_qty !== undefined) {
+          var avail = parseInt(response.available_qty);
+          $("input[name='pack_size']:checked").attr("data-available-qty", avail).data("available-qty", avail);
+          $counter__input.attr("data-available-qty", avail).data("available-qty", avail);
+          $incBtn.attr("data-available-qty", avail).data("available-qty", avail);
+        }
+        if (response.capped) {
+          $counter__input.val(response.capped_quantity);
+          if (typeof window.updateMiniCartQty === 'function') {
+            window.updateMiniCartQty(variant_id, response.capped_quantity);
+          }
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Stock Limit',
+              text: response.message || ('Only ' + response.available_qty + ' item(s) available in stock.'),
+              confirmButtonColor: '#fbb516'
+            });
+          }
+        }
+        if (typeof updateCartUI === 'function') {
+          updateCartUI();
+        }
+        if (typeof onComplete === 'function') onComplete(response);
+      },
+      error: function () {
+        if (typeof onComplete === 'function') onComplete();
+      }
+    });
+  }
+
   $(".counter__increment, .counter__decrement").click(function (e) {
     var $this = $(this);
     if ($this.hasClass("btn-increment") || $this.hasClass("btn-decrement") || $this.hasClass("disabled") || $this.css("pointer-events") === "none") {
@@ -646,18 +703,19 @@ $(document).ready(function () {
     }
     var $counter__input = $(this).parent().find(".counter__input");
     var $currentVal = parseInt($counter__input.val()) || 1;
+    var variant_id = $this.attr("data-id") || $("input[name='pack_size']:checked").val() || $("input[name='pack_size']").first().val();
+
+    var maxStockAttr = $counter__input.attr("data-available-qty") || 
+                       $this.attr("data-available-qty") || 
+                       $("input[name='pack_size']:checked").attr("data-available-qty") || 
+                       $("input[name='pack_size']").first().attr("data-available-qty");
+    var maxStock = (maxStockAttr !== undefined && maxStockAttr !== false && maxStockAttr !== "") ? parseInt(maxStockAttr) : null;
+
+    // Check if product is already added to cart on this page
+    var isAlreadyInCart = ($("#go-to-cart").length > 0 && $("#go-to-cart").css("display") !== "none");
 
     //Increment
     if ($this.hasClass("counter__increment")) {
-      $("#add-to-bucket").show();
-      $("#go-to-cart").hide();
-      var variant_id = $this.attr("data-id") || $("input[name='pack_size']:checked").val() || $("input[name='pack_size']").first().val();
-      var maxStockAttr = $counter__input.attr("data-available-qty") || 
-                         $this.attr("data-available-qty") || 
-                         $("input[name='pack_size']:checked").attr("data-available-qty") || 
-                         $("input[name='pack_size']").first().attr("data-available-qty");
-      var maxStock = (maxStockAttr !== undefined && maxStockAttr !== false && maxStockAttr !== "") ? parseInt(maxStockAttr) : null;
-
       // Local stock limit check (instant UI feedback)
       if (maxStock !== null && !isNaN(maxStock) && maxStock > 0) {
         if ($currentVal >= maxStock) {
@@ -674,52 +732,107 @@ $(document).ready(function () {
         }
       }
 
-      // Optimistic instant increment (no lag on clicks)
+      // Optimistic instant increment
       var newVal = $currentVal + 1;
       if (maxStock !== null && !isNaN(maxStock) && maxStock > 0 && newVal > maxStock) {
         newVal = maxStock;
       }
       $counter__input.val(newVal);
 
-      // Debounced server verification
-      if (variant_id) {
+      if (isAlreadyInCart) {
+        // Keep GO TO CART button visible, do NOT revert to ADD TO CART
+        $("#go-to-cart").show();
+        $("#add-to-bucket").hide();
+
+        if (typeof window.updateMiniCartQty === 'function' && variant_id) {
+          window.updateMiniCartQty(variant_id, newVal);
+        }
+
+        // Debounced direct cart sync
         if (productDetailQtyTimer) clearTimeout(productDetailQtyTimer);
         productDetailQtyTimer = setTimeout(function () {
           var targetVal = parseInt($counter__input.val()) || 1;
-          $.ajax({
-            data: { variant_id: variant_id, currentVal: targetVal - 1 },
-            url: ($('meta[name="base-url"]').attr('content') || $('body').data('base-url') || (window.location.origin + (window.location.pathname.startsWith('/liquorjunction') ? '/liquorjunction' : ''))).replace(/\/+$/, '') + "/check-qty",
-            success: function (response) {
-              if (response.available_qty !== undefined) {
-                var avail = parseInt(response.available_qty);
-                $("input[name='pack_size']:checked").attr("data-available-qty", avail);
-                $counter__input.attr("data-available-qty", avail);
-                $this.attr("data-available-qty", avail);
-                if (targetVal > avail) {
-                  $counter__input.val(avail);
-                  if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                      icon: 'warning',
-                      title: 'Stock Limit',
-                      text: response.message || ('Only ' + avail + ' item(s) available in stock.'),
-                      confirmButtonColor: '#fbb516'
-                    });
+          syncProductDetailCartQuantity(targetVal);
+        }, 350);
+      } else {
+        // Product is not in cart yet: keep ADD TO CART button visible
+        $("#add-to-bucket").show();
+        $("#go-to-cart").hide();
+
+        // Debounced server verification
+        if (variant_id) {
+          if (productDetailQtyTimer) clearTimeout(productDetailQtyTimer);
+          productDetailQtyTimer = setTimeout(function () {
+            var targetVal = parseInt($counter__input.val()) || 1;
+            var baseUrl = ($('meta[name="base-url"]').attr('content') || $('body').data('base-url') || (window.location.origin + (window.location.pathname.startsWith('/liquorjunction') ? '/liquorjunction' : ''))).replace(/\/+$/, '');
+            $.ajax({
+              data: { variant_id: variant_id, currentVal: targetVal - 1 },
+              url: baseUrl + "/check-qty",
+              success: function (response) {
+                if (response.available_qty !== undefined) {
+                  var avail = parseInt(response.available_qty);
+                  $("input[name='pack_size']:checked").attr("data-available-qty", avail);
+                  $counter__input.attr("data-available-qty", avail);
+                  $this.attr("data-available-qty", avail);
+                  if (targetVal > avail) {
+                    $counter__input.val(avail);
+                    if (typeof Swal !== 'undefined') {
+                      Swal.fire({
+                        icon: 'warning',
+                        title: 'Stock Limit',
+                        text: response.message || ('Only ' + avail + ' item(s) available in stock.'),
+                        confirmButtonColor: '#fbb516'
+                      });
+                    }
                   }
                 }
               }
-            }
-          });
-        }, 350);
+            });
+          }, 350);
+        }
       }
     }
     //Decrement
     else if ($this.hasClass("counter__decrement")) {
       if (productDetailQtyTimer) clearTimeout(productDetailQtyTimer);
       if ($currentVal > 1) {
-        $("#add-to-bucket").show();
-        $("#go-to-cart").hide();
-        $counter__input.val($currentVal - 1);
+        var newVal = $currentVal - 1;
+        $counter__input.val(newVal);
+
+        if (isAlreadyInCart) {
+          // Keep GO TO CART button visible, do NOT revert to ADD TO CART
+          $("#go-to-cart").show();
+          $("#add-to-bucket").hide();
+
+          if (typeof window.updateMiniCartQty === 'function' && variant_id) {
+            window.updateMiniCartQty(variant_id, newVal);
+          }
+
+          // Debounced direct cart sync
+          productDetailQtyTimer = setTimeout(function () {
+            var targetVal = parseInt($counter__input.val()) || 1;
+            syncProductDetailCartQuantity(targetVal);
+          }, 350);
+        } else {
+          // Product is not in cart yet: keep ADD TO CART button visible
+          $("#add-to-bucket").show();
+          $("#go-to-cart").hide();
+        }
       }
+    }
+  });
+
+  // If user clicks "Go to cart" while debounced cart update is still pending, flush it immediately before navigating
+  $(document).on('click', '#go-to-cart', function (e) {
+    if (productDetailQtyTimer) {
+      e.preventDefault();
+      clearTimeout(productDetailQtyTimer);
+      productDetailQtyTimer = null;
+      var targetVal = parseInt($(".counter__input").val()) || 1;
+      var href = $(this).attr('href') || '/cart';
+      syncProductDetailCartQuantity(targetVal, function () {
+        window.location.href = href;
+      });
     }
   });
   // ------------ Counter END ------------

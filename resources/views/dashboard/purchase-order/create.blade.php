@@ -26,7 +26,7 @@
                 </h3>
                 <small>
                     <a href="{{ route('adminHome') }}">{{ __('backend.dashboard') }}</a> /
-                    <a href="{{ route('blog') }}">{{ __('backend.purchase_order') }}</a>
+                    <a href="{{ route('adminpurchaseorder') }}">{{ __('backend.purchase_order') }}</a>
                 </small>
             </div>
             <div class="box-tool">

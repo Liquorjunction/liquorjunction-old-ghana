@@ -725,7 +725,11 @@ class OfferController extends Controller
         $offerData = Offers::with([
             'get_offer_images' => function ($q) {
                 return $q->where('status', '=', 1);
-            }
+            },
+            'brand',
+            'category',
+            'subcategory',
+            'product'
         ])->where('id', $offer_id)->where('status', '!=', 2)->first();
 
         if ($offerData) {
@@ -930,13 +934,26 @@ class OfferController extends Controller
                   ->orWhere('min_amount', 'like', "%$search%")
                   ->orWhere('max_amount', 'like', "%$search%")
                   ->orWhere('total_usage', 'like', "%$search%")
-                  ->orWhere('max_users', 'like', "%$search%");
+                  ->orWhere('max_users', 'like', "%$search%")
+                  ->orWhereHas('brand', function ($b) use ($search) {
+                      $b->where('title', 'like', "%$search%");
+                  })
+                  ->orWhereHas('category', function ($c) use ($search) {
+                      $c->where('title', 'like', "%$search%");
+                  })
+                  ->orWhereHas('subcategory', function ($sc) use ($search) {
+                      $sc->where('title', 'like', "%$search%");
+                  })
+                  ->orWhereHas('product', function ($p) use ($search) {
+                      $p->where('product_name', 'like', "%$search%");
+                  });
             });
         }
     
         $totalRecords = $query->count();
     
-        $offers = $query->orderBy($columnName, $columnSortOrder)
+        $offers = $query->with(['brand', 'category', 'subcategory', 'product'])
+            ->orderBy($columnName, $columnSortOrder)
             ->skip($start)
             ->take($rowperpage)
             ->get();
@@ -977,10 +994,20 @@ class OfferController extends Controller
                 }
             }
     
+            $discountDisplay = '-';
+            if ($offer->dis_amount !== null && $offer->dis_amount !== '') {
+                if ($offer->offer_type == 'percentage') {
+                    $discountDisplay = ($offer->dis_amount + 0) . '%';
+                } else {
+                    $discountDisplay = 'GH₵ ' . $offer->dis_amount;
+                }
+            }
+
             $data_arr[] = [
                 'offer' => ucfirst($offer->offer_type),
                 'product' => $this->mapProductType($offer->product_type), 
-                'discount' => $offer->dis_amount,
+                'applied_item' => $this->getAppliedItemName($offer),
+                'discount' => $discountDisplay,
                 'startDate' => !empty($offer->start_date) ? date('Y-m-d', strtotime($offer->start_date)) : '-',
                 'expiry' => date('Y-m-d', strtotime($offer->expiry_date)),
                 'created' => date('Y-m-d', strtotime($offer->created_at)),
@@ -1007,6 +1034,30 @@ class OfferController extends Controller
             case 3: return 'Product';
             default: return 'N/A';
         }
+    }
+
+    private function getAppliedItemName($offer)
+    {
+        $name = '-';
+        if ($offer->product_type == 1) {
+            $name = $offer->brand ? ucfirst($offer->brand->title) : '-';
+        } elseif ($offer->product_type == 2) {
+            if (!empty($offer->subcategory_id) && $offer->subcategory) {
+                $catTitle = $offer->category ? ucfirst($offer->category->title) . ' > ' : '';
+                $name = $catTitle . ucfirst($offer->subcategory->title);
+            } elseif ($offer->category) {
+                $name = ucfirst($offer->category->title);
+            }
+        } elseif ($offer->product_type == 3) {
+            $name = $offer->product ? ucfirst($offer->product->product_name) : '-';
+        }
+
+        if ($name !== '-' && mb_strlen($name) > 25) {
+            $truncated = mb_substr($name, 0, 25) . '...';
+            return '<span title="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '" data-toggle="tooltip">' . htmlspecialchars($truncated, ENT_QUOTES, 'UTF-8') . '</span>';
+        }
+
+        return htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
     }
 
     private function findConflictingOffer($product_type, $brand_id, $category_id, $subcategory_id, $product_id, $start_date, $expiry_date, $ignore_id = null)

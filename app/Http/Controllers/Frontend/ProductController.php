@@ -1305,7 +1305,8 @@ class ProductController extends Controller
             'discounted_price' => Helper::numberFormat($discounted_price),
             'product_stock' => $instock,
             'available_qty' => (int) $varinat_info->available_qty,
-            'is_in_cart' => $is_in_cart
+            'is_in_cart' => $is_in_cart,
+            'cart_qty' => !empty($user_cart_count) ? (int)$user_cart_count : 1
         ]);
 
 

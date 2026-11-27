@@ -1578,12 +1578,19 @@ table.dataTable.no-footer .ui-check input:checked + i:before{
     width: 100%;
     padding: 0.5rem 0.75rem;
     font-size: 1rem;
-    line-height: 1.25;
+    line-height: 1.4;
     background-color: transparent;
     border-color: #dfdfdf !important;
     color: #000 !important;
     border: 1px solid rgba(180, 182, 184, 0.4) !important;
     border-radius: 45px !important;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    min-height: 38px;
+    height: auto !important;
+}
+.show_blade_div.text_url {
+    border-radius: 20px !important;
 }
 #blah{
     height: 50% !important;

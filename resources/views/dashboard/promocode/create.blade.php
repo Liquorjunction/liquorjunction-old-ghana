@@ -20,7 +20,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/boot
     <div class="box-tool">
         <ul class="nav">
             <li class="nav-item inline">
-                <a class="nav-link" href="{{ route('users') }}">
+                <a class="nav-link" href="{{ route('promocode') }}">
                 <i class="material-icons md-18">×</i>
                 </a>
             </li>
