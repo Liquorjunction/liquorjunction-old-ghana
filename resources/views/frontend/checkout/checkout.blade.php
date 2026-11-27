@@ -1420,7 +1420,7 @@
                                 $freeItems[] = $result;
                             }
                     @endphp
-                    <div class="single-product">
+                    <div class="single-product cart-product-item" id="cart-item-row-{{ $result->id }}" data-variant-id="{{ $result->id }}">
                         <div class="product-img">
                             <a href="{{ route('productdetails', ['id' => Helper::encodeUrl($result->get_product_details->id)]) }}">
                                 @if (file_exists(public_path() . '/uploads/product/' . $product_image->image))
@@ -1554,9 +1554,9 @@
                 
                 <!-- Free Items Section -->
                 @if (count($freeItems) > 0)
-                    <div class="cart-item-list toggled-on free-item-section">
-                        <h5>
-                            You have unlocked {{ count($freeItems) }} free {{ count($freeItems) === 1 ? 'item' : 'items' }}! 
+                    <div class="cart-item-list toggled-on free-item-section" id="free-items-section">
+                        <h5 id="free-items-heading">
+                            You have unlocked <span id="free-items-count">{{ count($freeItems) }}</span> free <span id="free-items-unit">{{ count($freeItems) === 1 ? 'item' : 'items' }}</span>! 
                             <i class="fas fa-smile" style="font-size: 20px;"></i>
                         </h5>
                         @foreach ($freeItems as $freeItem)
@@ -1567,7 +1567,7 @@
                                     ? $freeItem->variant_discounted_price
                                     : $freeItem->variant_price;
                             @endphp
-                            <div class="single-product">
+                            <div class="single-product free-product-item" id="free-item-row-{{ $freeItem->id }}" data-variant-id="{{ $freeItem->id }}">
                                 <div class="product-img">
                                      <a href="#">
                                     @if ($product_image && file_exists(public_path('uploads/product/' . $product_image->image)))
@@ -1588,7 +1588,7 @@
                                             $qty =$variant_quantity;
                                         }
                                         @endphp
-                                        <p class="quantity"> Free {{@Helper::language('quantity')}}: <span>{{$qty}}</span></p>
+                                        <p class="quantity"> Free {{@Helper::language('quantity')}}: <span class="free-item-qty" id="free-qty-{{ $freeItem->id }}">{{$qty}}</span></p>
                                     </div>
                                     <ul>
                                         <li class="product-pricing">
@@ -1719,21 +1719,19 @@
                                 {{-- Final discounted price --}}
                                 <li>
                                     <strong></strong>
-                                    <span class="discounted">
+                                    <span class="discounted cart-final-price">
                                         {{ number_format($finalPrice, 2) }} {{ Helper::Settings('currency_symbol') }}
                                     </span>
                                 </li>
                             @else
 
-                                <li> <strong>Total MRP:</strong> <span>{{@Helper::numberFormat($original_price)}} {{Helper::Settings('currency_symbol')}}</span></li>
-                                  @if($total_discount_price>0)
-                                    <li>
-                                        <span>Discount on MRP:</span>
-                                        <span class="discounted">
-                                            - {{ number_format($total_discount_price, 2) }} {{ Helper::Settings('currency_symbol') }}
-                                        </span>
-                                    </li>
-                                @endif
+                                <li> <strong>Total MRP:</strong> <span id="total-mrp-amount">{{@Helper::numberFormat($original_price)}} {{Helper::Settings('currency_symbol')}}</span></li>
+                                <li id="li-discount-on-mrp" style="{{ $total_discount_price > 0 ? '' : 'display: none;' }}">
+                                    <span>Discount on MRP:</span>
+                                    <span class="discounted" id="discount-on-mrp-amount">
+                                        - {{ number_format($total_discount_price, 2) }} {{ Helper::Settings('currency_symbol') }}
+                                    </span>
+                                </li>
                                 
                             @endif
                         </div>
@@ -2872,8 +2870,8 @@
             if (result.isConfirmed) {
                 const _token = $('meta[name="csrf-token"]').attr('content');
                 const $itemRow = btnElement 
-                    ? $(btnElement).closest('.single-product') 
-                    : $('#qty_ince_' + variant_id).closest('.single-product');
+                    ? $(btnElement).closest('.cart-product-item, .single-product') 
+                    : $('#qty_ince_' + variant_id).closest('.cart-product-item, .single-product');
 
                 $.ajax({
                     type: "post",
@@ -2883,7 +2881,7 @@
                     },
                     url: "{{ route('cartremove') }}",
                     success: function(response) {
-                        const remainingItems = $(".single-product").length - 1;
+                        const remainingItems = $(".cart-item-list:not(.free-item-section) .single-product").length - 1;
 
                         // Update floating & header cart counters
                         if (typeof response.cart_count !== 'undefined') {
@@ -2899,7 +2897,27 @@
                             // Smoothly remove item from DOM and recalculate all checkout totals & coupons
                             $itemRow.fadeOut(300, function() {
                                 $(this).remove();
-                                updateCheckoutTotals();
+
+                                // Also remove corresponding free item if this was BOGO
+                                const $freeRow = $('#free-item-row-' + variant_id);
+                                if ($freeRow.length) {
+                                    $freeRow.remove();
+                                    const remainingFree = $('.free-product-item').length;
+                                    $('#freeItemCount').val(remainingFree);
+                                    if (remainingFree <= 0) {
+                                        $('#free-items-section, .free-item-section').fadeOut(300, function() {
+                                            $(this).remove();
+                                        });
+                                    } else {
+                                        $('#free-items-count').text(remainingFree);
+                                        $('#free-items-unit').text(remainingFree === 1 ? 'item' : 'items');
+                                        $('#free-items-heading').html(
+                                            'You have unlocked <span id="free-items-count">' + remainingFree + '</span> free <span id="free-items-unit">' + (remainingFree === 1 ? 'item' : 'items') + '</span>! <i class="fas fa-smile" style="font-size: 20px;"></i>'
+                                        );
+                                    }
+                                }
+
+                                updateCheckoutTotals(response);
                                 if (typeof updateCartUI === 'function') {
                                     updateCartUI();
                                 }
@@ -3285,6 +3303,9 @@
         // 1. Instant Optimistic UI Update - NO LAG, NO DISABLED STATE!
         qtyInput.val(currentQty);
         qtyInput.closest('.single-product').find("input[name='buy_quantity[]']").val(currentQty);
+        if ($('#free-qty-' + variantId).length) {
+            $('#free-qty-' + variantId).text(currentQty);
+        }
         if (typeof window.updateMiniCartQty === 'function') {
             window.updateMiniCartQty(variantId, currentQty);
         }
@@ -3460,8 +3481,9 @@
         let totalDiscounted = 0;
         let totalQty = 0;
 
-        $(".single-product").each(function () {
+        $(".cart-item-list:not(.free-item-section) .single-product").each(function () {
             const $item = $(this);
+            const variantId = $item.find("input[name='pvariant_Ids[]']").val();
             const qty = parseInt($item.find(".counters__input").val()) || 0;
             const orgPrice = parseFloat($item.find("input[name='buy_org_price']").val()) || 0;
             const discPrice = parseFloat($item.find("input[name='buy_discounted_price']").val()) || 0;
@@ -3470,6 +3492,11 @@
             const offerType = $item.find("input[name='offer_type[]']").val();
             const discountAmt = parseFloat($item.find("input[name='discount_amount[]']").val()) || 0;
             const isBogo = parseInt($item.find("input[name='bogo_status[]']").val()) || 0;
+
+            // Sync Free item quantity if BOGO product
+            if (isBogo && variantId && $('#free-qty-' + variantId).length) {
+                $('#free-qty-' + variantId).text(qty);
+            }
 
             let lineOriginal = orgPrice * qty;
             let lineDiscount = lineOriginal;
@@ -3497,20 +3524,50 @@
         $(".price-detail h6").first().html(
             '{{ @Helper::language("price_detail_label") }}' + '( ' + totalQty + ' {{ @Helper::language("items") }})'
         );
+        if ($('#basket_total').length) {
+            $('#basket_total').html('Basket Total ( ' + totalQty + ' items)');
+        }
 
         // --- Update price summary section ---
         const mrpDiscount = totalOriginal - totalDiscounted;
-        const baseTotal = totalDiscounted;
+        let effectiveOriginal = totalOriginal;
+        let effectiveDiscount = mrpDiscount;
+        if (response && response.total_products_price !== undefined) {
+            effectiveOriginal = parseFloat(response.total_products_price) || totalOriginal;
+        }
+        if (response && response.total_discount_price !== undefined) {
+            effectiveDiscount = parseFloat(response.total_discount_price) || mrpDiscount;
+        }
+        const baseTotal = Math.max(0, effectiveOriginal - effectiveDiscount);
 
         // Update Total MRP
-        $(".cart-total-summary").find("li").first().find("span").last().text(
-            totalOriginal.toFixed(2) + ' ' + currencySymbol
-        );
+        const $mrpSpan = $("#total-mrp-amount").length ? $("#total-mrp-amount") : $(".cart-total-summary").find("li").first().find("span").last();
+        $mrpSpan.text(effectiveOriginal.toFixed(2) + ' ' + currencySymbol);
 
-        // Update discount line if present
-        if (mrpDiscount > 0) {
-            $(".cart-discount").text('- ' + mrpDiscount.toFixed(2) + ' ' + currencySymbol);
-            $(".discounted").text(totalDiscounted.toFixed(2) + ' ' + currencySymbol);
+        // Update Discount on MRP
+        if (effectiveDiscount > 0) {
+            $("#li-discount-on-mrp").show();
+            $("#discount-on-mrp-amount").text('- ' + effectiveDiscount.toFixed(2) + ' ' + currencySymbol);
+            $(".cart-total-summary li").each(function () {
+                if ($(this).text().indexOf('Discount on MRP') !== -1) {
+                    $(this).show();
+                    $(this).find(".discounted, span:last").text('- ' + effectiveDiscount.toFixed(2) + ' ' + currencySymbol);
+                }
+            });
+            $(".cart-discount").text('- ' + effectiveDiscount.toFixed(2) + ' ' + currencySymbol);
+        } else {
+            $("#li-discount-on-mrp").hide();
+            $("#discount-on-mrp-amount").text('0.00 ' + currencySymbol);
+            $(".cart-total-summary li").each(function () {
+                if ($(this).text().indexOf('Discount on MRP') !== -1) {
+                    $(this).hide();
+                }
+            });
+            $(".cart-discount").text('0.00 ' + currencySymbol);
+        }
+
+        if ($(".cart-total-summary .cart-final-price").length) {
+            $(".cart-total-summary .cart-final-price").text(totalDiscounted.toFixed(2) + ' ' + currencySymbol);
         }
 
         // --- Coupon discount recalculation ---
