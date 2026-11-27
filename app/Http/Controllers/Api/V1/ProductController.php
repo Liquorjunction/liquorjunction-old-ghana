@@ -101,8 +101,7 @@ class ProductController extends Controller
     }
 
 
-    public function special(Request $request)
-    {
+    public function special(Request $request){
 
         $result = [];
         $today = Carbon::now()->toDateString();
@@ -303,16 +302,35 @@ class ProductController extends Controller
 
             $deal = Helper::resolveProductDeal($product->product_id, $product->category_id, $product->subcategory_id, $product->brand_id, $product->final_price ?? $product->variant_price);
 
+            $orig_price = $product->variant_price ?? '';
+            $disc_price = (!empty($product->variant_discounted_price) && $product->variant_discounted_price != 0.00)
+                ? $product->variant_discounted_price
+                : null;
+            $deal_offer_status = (bool)($deal['is_offer'] ?? false);
+            $deal_discount_amount = $deal['discount_amount'] ?? 0;
+            $deal_offer_type = $deal['offer_type'] ?? '';
+
+            if ($deal_offer_status) {
+                if ($deal_offer_type == 'flat') {
+                    if ((float)$orig_price > (float)$deal_discount_amount) {
+                        $disc_price = number_format(max(0, (float)$orig_price - (float)$deal_discount_amount), 2, '.', '');
+                    } else {
+                        $deal_offer_status = false;
+                    }
+                } elseif ($deal_offer_type == 'percentage') {
+                    $calc_disc = max(0, (float)$orig_price * (float)$deal_discount_amount / 100);
+                    $disc_price = number_format(max(0, (float)$orig_price - $calc_disc), 2, '.', '');
+                }
+            }
+
             $offerProductArr[] = [
                 'product_id' => strval(@$product->product_id),
                 'product_title' => strval($title),
                 'product_rating' => strval(@$product->average_rating),
                 'product_size' => strval($size),
                 'product_image' => $image_path,
-                'product_orignal_price' => $product->variant_price ?? '',
-                'product_discounted_price' => (!empty($product->variant_discounted_price) && $product->variant_discounted_price != 0.00)
-                    ? $product->variant_discounted_price
-                    : null,
+                'product_orignal_price' => $orig_price,
+                'product_discounted_price' => $disc_price,
                 'is_favourite' => $is_favourite,
                 'variant_id' => strval(@$product->id),
                 'product_available_qty' => $product->available_qty,
@@ -1026,7 +1044,7 @@ class ProductController extends Controller
                     }
 
                     $original_price = ($data->variant_price) ? $data->variant_price :'';
-                    $discounted_price = ($data->variant_discounted_price!='' && $data->variant_discounted_price!=0.00)? $data->variant_discounted_price :NULL;
+                    $discounted_price = (!empty($data->variant_discounted_price) && $data->variant_discounted_price != 0.00) ? $data->variant_discounted_price : NULL;
 
                     // Deal resolution (BOGO > Offer, with Product > Subcategory > Category > Brand)
                     $deal = Helper::resolveProductDeal($data->productId, $data->category_id, $data->subcategory_id, $data->brand_id, $original_price);
@@ -1047,9 +1065,13 @@ class ProductController extends Controller
 
                         if ($final_offer_type == 'flat') {
                             $final_offer_label = 'Flat ' . $formatted_discount  . ' GH₵ off';
+                            if ((float)$original_price > (float)$final_discount_amount) {
+                                $discounted_price = number_format(max(0, (float)$original_price - (float)$final_discount_amount), 2, '.', '');
+                            }
                         } elseif ($final_offer_type == 'percentage') {
                             $final_offer_label = $formatted_discount . '% off';
                             $final_discount_amount = max(0, $original_price * $formatted_discount / 100);
+                            $discounted_price = number_format(max(0, (float)$original_price - (float)$final_discount_amount), 2, '.', '');
                         }
                     }
 
@@ -1095,8 +1117,7 @@ class ProductController extends Controller
     }
 
     //new
-    public function getRealtedProduct(Request $request)
-    {
+    public function getRealtedProduct(Request $request){
         $validator = \Validator::make($request->all(), [
             'product_id' => 'required',
             'subcategory_id' => 'required',
@@ -1184,7 +1205,7 @@ class ProductController extends Controller
 
                 $original_price = ($product_variant->variant_price) ? $product_variant->variant_price :'';
 
-                $discounted_price = ($product_variant->variant_discounted_price=='' && $product_variant->variant_discounted_price==0)? $product_variant->variant_discounted_price :NULL;
+                $discounted_price = (!empty($product_variant->variant_discounted_price) && $product_variant->variant_discounted_price != 0.00) ? $product_variant->variant_discounted_price : NULL;
 
                 // offer and Bogo status 
                     $offer_status = $data->offer_status ? true: false;
@@ -1200,9 +1221,13 @@ class ProductController extends Controller
 
                         if ($offer_type == 'flat') {
                             $offer_label = 'Flat ' . $formatted_discount  . ' GH₵ off';
+                            if ((float)$original_price > (float)$discount_amount) {
+                                $discounted_price = number_format(max(0, (float)$original_price - (float)$discount_amount), 2, '.', '');
+                            }
                         } elseif ($offer_type == 'percentage') {
                             $offer_label = $formatted_discount  . '% off';
                             $discount_amount= max(0, $original_price * $formatted_discount / 100);
+                            $discounted_price = number_format(max(0, (float)$original_price - (float)$discount_amount), 2, '.', '');
                         }
                     }
 
@@ -1243,8 +1268,7 @@ class ProductController extends Controller
         return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));     
     }  
     //new
-    public function getCommonProducts(Request $request)
-    {   
+    public function getCommonProducts(Request $request){   
         $validator = \Validator::make($request->all(), [
             'type' => 'required',
         ]);
@@ -1398,7 +1422,7 @@ class ProductController extends Controller
 
                 $original_price = ($product_variant->variant_price) ? $product_variant->variant_price :'';
 
-                $discounted_price = ($product_variant->variant_discounted_price=='' && $product_variant->variant_discounted_price==0)? $product_variant->variant_discounted_price :NULL;
+                $discounted_price = (!empty($product_variant->variant_discounted_price) && $product_variant->variant_discounted_price != 0.00) ? $product_variant->variant_discounted_price : NULL;
 
 
                 // === Resolve Deal (BOGO > Offer, with Product > Subcategory > Category > Brand) ===
@@ -1417,9 +1441,13 @@ class ProductController extends Controller
 
                     if ($offer_type == 'flat') {
                         $offer_label = 'Flat ' . $formatted_discount  . ' GH₵ off';
+                        if ((float)$original_price > (float)$discount_amount) {
+                            $discounted_price = number_format(max(0, (float)$original_price - (float)$discount_amount), 2, '.', '');
+                        }
                     } elseif ($offer_type == 'percentage') {
                         $offer_label = $formatted_discount  . '% off';
-                        $discount_amount= max(0, $original_price * $formatted_discount / 100);
+                        $discount_amount = max(0, $original_price * $formatted_discount / 100);
+                        $discounted_price = number_format(max(0, (float)$original_price - (float)$discount_amount), 2, '.', '');
                     }
                 }
 
@@ -1456,8 +1484,7 @@ class ProductController extends Controller
         return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));     
     }  
     //new
-    public function getRecentlyProducts(Request $request)
-    {   
+    public function getRecentlyProducts(Request $request){   
         $validator = \Validator::make($request->all(), [
             'product_id' => 'required',
             'subcategory_id' => 'required',
@@ -1545,7 +1572,7 @@ class ProductController extends Controller
 
                 $original_price = ($product_variant->variant_price) ? $product_variant->variant_price :'';
 
-                $discounted_price = ($product_variant->variant_discounted_price=='' && $product_variant->variant_discounted_price==0)? $product_variant->variant_discounted_price :NULL;
+                $discounted_price = (!empty($product_variant->variant_discounted_price) && $product_variant->variant_discounted_price != 0.00) ? $product_variant->variant_discounted_price : NULL;
 
                 // offer and Bogo status 
                 $offer_status = $data->offer_status ? true: false;
@@ -1561,9 +1588,13 @@ class ProductController extends Controller
 
                     if ($offer_type == 'flat') {
                         $offer_label = 'Flat ' . $formatted_discount  . ' GH₵ off';
+                        if ((float)$original_price > (float)$discount_amount) {
+                            $discounted_price = number_format(max(0, (float)$original_price - (float)$discount_amount), 2, '.', '');
+                        }
                     } elseif ($offer_type == 'percentage') {
                         $offer_label = $formatted_discount  . '% off';
                         $discount_amount = max(0, $original_price * $formatted_discount / 100);
+                        $discounted_price = number_format(max(0, (float)$original_price - (float)$discount_amount), 2, '.', '');
                     }
                 }
 
@@ -1603,8 +1634,7 @@ class ProductController extends Controller
         return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));     
     }  
     //new
-    public function productDetail(Request $request)
-    {
+    public function productDetail(Request $request){
         $result = [];
         $validator = \Validator::make($request->all(), [
             'product_id' => 'required',
@@ -2277,8 +2307,7 @@ class ProductController extends Controller
     //     $mainResult = $result;       
     //     return response()->json(new \App\Http\Resources\V1\SettingResource($mainResult));     
 
-    public function favoriteList(Request $request)
-    {   
+    public function favoriteList(Request $request){   
          $validator = \Validator::make($request->all(), [
              'uniqid' => 'required',
              'token' => 'required',
@@ -2355,7 +2384,7 @@ class ProductController extends Controller
     
                     $original_price = ($product_variant->variant_price) ? $product_variant->variant_price :'';
                     
-                    $discounted_price = ($product_variant->variant_discounted_price == '' && $product_variant->variant_discounted_price == 0) ? $product_variant->variant_discounted_price : NULL;
+                    $discounted_price = (!empty($product_variant->variant_discounted_price) && $product_variant->variant_discounted_price != 0.00) ? $product_variant->variant_discounted_price : NULL;
                     
                     // offer and Bogo status 
                     $offer_status = $data->offer_status ? true: false;
@@ -2371,9 +2400,13 @@ class ProductController extends Controller
 
                         if ($offer_type == 'flat') {
                             $offer_label = 'Flat ' . $formatted_discount  . ' GH₵ off';
+                            if ((float)$original_price > (float)$discount_amount) {
+                                $discounted_price = number_format(max(0, (float)$original_price - (float)$discount_amount), 2, '.', '');
+                            }
                         } elseif ($offer_type == 'percentage') {
                             $offer_label = $formatted_discount  . '% off';
                             $discount_amount= max(0, $original_price * $formatted_discount / 100);
+                            $discounted_price = number_format(max(0, (float)$original_price - (float)$discount_amount), 2, '.', '');
                         }
                     }
 
